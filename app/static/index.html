@@ -290,7 +290,36 @@
             </header>
 
             <!-- MAIN CONTENT APP -->
-            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 bg-slate-50 max-w-7xl w-full mx-auto">
+            <main class="flex-1 overflow-y-auto p-4 pb-24 sm:p-6 lg:p-8 space-y-6 bg-slate-50 max-w-7xl w-full mx-auto">
+
+      <!-- BOTTOM NAV MOBILE -->
+      <nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 flex justify-between px-1 py-2 pb-safe shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] overflow-x-auto">
+        <button @click="abaAtiva = 'ciclo'" :class="abaAtiva === 'ciclo' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center flex-1 min-w-[60px] p-1">
+          <i class="fa-solid fa-arrows-spin text-xl mb-1"></i>
+          <span class="text-[10px] font-medium leading-none">Ciclo</span>
+        </button>
+        <button @click="abaAtiva = 'editais'" :class="abaAtiva === 'editais' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center flex-1 min-w-[60px] p-1">
+          <i class="fa-solid fa-sliders text-xl mb-1"></i>
+          <span class="text-[10px] font-medium leading-none">Editais</span>
+        </button>
+        <button @click="abaAtiva = 'verticalizado'" :class="abaAtiva === 'verticalizado' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center flex-1 min-w-[60px] p-1">
+          <i class="fa-solid fa-list-check text-xl mb-1"></i>
+          <span class="text-[10px] font-medium leading-none">Vert.</span>
+        </button>
+        <button @click="abaAtiva = 'diario'" :class="abaAtiva === 'diario' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center flex-1 min-w-[60px] p-1">
+          <i class="fa-solid fa-calendar-check text-xl mb-1"></i>
+          <span class="text-[10px] font-medium leading-none">Sessões</span>
+        </button>
+        <button @click="abrirDashboard()" :class="abaAtiva === 'dashboard' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center flex-1 min-w-[60px] p-1">
+          <i class="fa-solid fa-chart-pie text-xl mb-1"></i>
+          <span class="text-[10px] font-medium leading-none">Dash</span>
+        </button>
+        <button @click="abaAtiva = 'heatmap'" :class="abaAtiva === 'heatmap' ? 'text-blue-600' : 'text-slate-400'" class="flex flex-col items-center flex-1 min-w-[60px] p-1">
+          <i class="fa-solid fa-calendar-days text-xl mb-1"></i>
+          <span class="text-[10px] font-medium leading-none">Dias</span>
+        </button>
+      </nav>
+
                 
                 <!-- ABA 1: CICLO ATUAL -->
                 <div v-if="abaAtiva === 'ciclo'" class="space-y-6">
