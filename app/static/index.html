@@ -1,0 +1,1081 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Ciclo de Estudos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#eff6ff', 100: '#dbeafe', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' }
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        [v-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col antialiased">
+    <div id="app" v-cloak class="flex-1 flex flex-col">
+
+        <!-- ALERTA GLOBAL FLUTUANTE -->
+        <div v-if="mensagemAlerta" :class="tipoAlerta === 'erro' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-[100] p-4 rounded-xl border flex items-center shadow-lg transition-all min-w-[300px]">
+            <i :class="tipoAlerta === 'erro' ? 'fa-solid fa-circle-exclamation' : 'fa-solid fa-circle-check'" class="mr-3"></i>
+            <span class="text-sm font-medium flex-1">{{ mensagemAlerta }}</span>
+            <button @click="mensagemAlerta = ''" class="ml-4 opacity-70 hover:opacity-100"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- WIZARD INICIAL DE PREPARAÇÃO               -->
+        <!-- ========================================== -->
+        <div v-if="estadoAplicacao === 'wizard'" class="flex-1 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl border border-slate-200 shadow-xl max-w-4xl w-full p-8 md:p-12">
+                
+                <!-- BOAS VINDAS -->
+                <div v-if="wizardPasso === 0" class="text-center">
+                    <div class="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6 text-4xl shadow-inner">
+                        <i class="fa-solid fa-graduation-cap"></i>
+                    </div>
+                    <h2 class="text-3xl font-extrabold text-slate-900 mb-4">Bem-vindo ao Ciclo de Estudos</h2>
+                    <p class="text-slate-600 mb-8 max-w-lg mx-auto">Sua ferramenta inteligente para organizar, planejar e acompanhar seu desempenho em concursos públicos de forma verticalizada.</p>
+                    <button @click="wizardPasso = 1" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-blue-500/30 transition-all text-lg flex items-center mx-auto">
+                        <i class="fa-solid fa-plus-circle mr-2"></i> Incluir Preparação
+                    </button>
+                    
+                    <div v-if="editais.length > 0" class="mt-8 pt-8 border-t border-slate-100">
+                        <p class="text-sm text-slate-500 mb-4">Ou retome uma preparação existente:</p>
+                        <button @click="iniciarApp()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-6 py-2 rounded-xl transition-all">
+                            Ir para Dashboard
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PASSO 1: DADOS DO CONCURSO -->
+                <div v-if="wizardPasso === 1" class="animate-in fade-in zoom-in-95">
+                    <div class="mb-8">
+                        <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Passo 1 de 4</span>
+                        <h3 class="text-2xl font-bold text-slate-900 mt-1">Qual o seu objetivo?</h3>
+                        <p class="text-slate-500 text-sm">Dê um nome para a sua nova preparação.</p>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Nome do Concurso/Edital *</label>
+                            <input v-model="wizardDados.nome" placeholder="Ex: TSE Unificado 2024" class="w-full text-base border border-slate-300 rounded-xl px-4 py-3 focus:ring-2 focus:ring-blue-500 outline-none transition-all">
+                        </div>
+                        <div class="flex justify-end pt-6">
+                            <button @click="wizardPasso = 2" :disabled="!wizardDados.nome" class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-bold px-6 py-3 rounded-xl transition-all">
+                                Próximo <i class="fa-solid fa-arrow-right ml-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASSO 2: INGESTÃO DE EDITAL -->
+                <div v-if="wizardPasso === 2" class="animate-in fade-in slide-in-from-right-4">
+                    <div class="mb-6">
+                        <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Passo 2 de 4</span>
+                        <h3 class="text-2xl font-bold text-slate-900 mt-1">Ingestão do Edital</h3>
+                        <p class="text-slate-500 text-sm">Cole abaixo as disciplinas e tópicos divididos por área.</p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Conhecimentos Básicos</label>
+                            <textarea v-model="wizardDados.texto_basicos" rows="8" placeholder="Ex: LÍNGUA PORTUGUESA: 1 Compreensão de texto. 2 Ortografia..." class="w-full text-xs font-mono border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-blue-500 outline-none resize-none"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Conhecimentos Específicos</label>
+                            <textarea v-model="wizardDados.texto_especificos" rows="8" placeholder="Ex: DIREITO CONSTITUCIONAL: 1 Direitos..." class="w-full text-xs font-mono border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-emerald-500 outline-none resize-none"></textarea>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center pt-2">
+                        <button @click="preencherExemploWizard()" class="text-xs font-medium text-slate-500 hover:text-blue-600 underline">Preencher Exemplo TSE</button>
+                        <div class="flex space-x-3">
+                            <button @click="wizardPasso = 1" class="text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold px-6 py-3 rounded-xl transition-all">Voltar</button>
+                            <button @click="processarEditalWizard()" :disabled="!wizardDados.texto_basicos && !wizardDados.texto_especificos || processandoEdital" class="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white font-bold px-6 py-3 rounded-xl transition-all flex items-center">
+                                <i v-if="processandoEdital" class="fa-solid fa-spinner fa-spin mr-2"></i>
+                                <span v-else>Processar Edital <i class="fa-solid fa-arrow-right ml-2"></i></span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PASSO 3: PESOS E DIFICULDADE (BÁSICOS) -->
+                <div v-if="wizardPasso === 3" class="animate-in fade-in slide-in-from-right-4">
+                    <div class="mb-6">
+                        <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">Passo 3 de 5</span>
+                        <h3 class="text-2xl font-bold text-slate-900 mt-1">Conhecimentos Básicos</h3>
+                        <p class="text-slate-500 text-sm">Ajuste o Peso e a Dificuldade Pessoal das matérias gerais.</p>
+                    </div>
+                    
+                    <div class="overflow-y-auto max-h-[50vh] border border-slate-200 rounded-xl mb-6">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead class="bg-slate-50 sticky top-0 shadow-sm">
+                                <tr>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">No Ciclo?</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700">Disciplina</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">Peso</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">Qtd Questões (Opc.)</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">Dificuldade Pessoal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template v-for="disc in wizardEditalGerado?.disciplinas" :key="disc.id">
+                                    <tr v-if="disc.grupo_conhecimento === 'BASICOS'" class="hover:bg-slate-50">
+                                        <td class="py-2 px-4 text-center">
+                                            <input type="checkbox" v-model="disc.incluir_no_ciclo" @change="salvarPesoDisciplina(disc)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                                        </td>
+                                        <td class="py-2 px-4 font-medium text-slate-900">{{ disc.nome }}</td>
+                                        <td class="py-2 px-4 text-center">
+                                            <input type="number" step="0.5" min="0.5" max="10" v-model.number="disc.peso_prova" @change="salvarPesoDisciplina(disc)" class="w-20 text-center border border-slate-300 rounded-lg py-1 px-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        </td>
+                                        <td class="py-2 px-4 text-center">
+                                            <input type="number" min="0" placeholder="-" v-model.number="disc.qtd_questoes_prova" @change="salvarPesoDisciplina(disc)" class="w-20 text-center border border-slate-300 rounded-lg py-1 px-2 focus:ring-2 focus:ring-blue-500 outline-none">
+                                        </td>
+                                        <td class="py-2 px-4 text-center">
+                                            <div class="flex items-center justify-center space-x-1">
+                                                <button v-for="star in 5" :key="star" @click="disc.relevancia_dificuldade = star; salvarPesoDisciplina(disc)" :class="star <= disc.relevancia_dificuldade ? 'text-amber-400' : 'text-slate-200'" class="text-lg focus:outline-none hover:scale-110 transition-transform">★</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                        <button @click="wizardPasso = 2" class="text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold px-6 py-3 rounded-xl transition-all">Voltar</button>
+                        <button @click="wizardPasso = 4" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md">Avançar para Específicas <i class="fa-solid fa-arrow-right ml-2"></i></button>
+                    </div>
+                </div>
+
+                <!-- PASSO 4: PESOS E DIFICULDADE (ESPECÍFICOS) -->
+                <div v-if="wizardPasso === 4" class="animate-in fade-in slide-in-from-right-4">
+                    <div class="mb-6">
+                        <span class="text-xs font-bold text-emerald-600 uppercase tracking-wider">Passo 4 de 5</span>
+                        <h3 class="text-2xl font-bold text-slate-900 mt-1">Conhecimentos Específicos</h3>
+                        <p class="text-slate-500 text-sm">Ajuste o Peso e a Dificuldade Pessoal das matérias específicas.</p>
+                    </div>
+                    
+                    <div class="overflow-y-auto max-h-[50vh] border border-slate-200 rounded-xl mb-6">
+                        <table class="w-full text-left text-sm border-collapse">
+                            <thead class="bg-slate-50 sticky top-0 shadow-sm">
+                                <tr>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">No Ciclo?</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700">Disciplina</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">Peso</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">Qtd Questões (Opc.)</th>
+                                    <th class="py-3 px-4 font-semibold text-slate-700 text-center">Dificuldade Pessoal</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                <template v-for="disc in wizardEditalGerado?.disciplinas" :key="disc.id">
+                                    <tr v-if="disc.grupo_conhecimento === 'ESPECIFICOS'" class="hover:bg-slate-50">
+                                        <td class="py-2 px-4 text-center">
+                                            <input type="checkbox" v-model="disc.incluir_no_ciclo" @change="salvarPesoDisciplina(disc)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer">
+                                        </td>
+                                        <td class="py-2 px-4 font-medium text-slate-900">{{ disc.nome }}</td>
+                                        <td class="py-2 px-4 text-center">
+                                            <input type="number" step="0.5" min="0.5" max="10" v-model.number="disc.peso_prova" @change="salvarPesoDisciplina(disc)" class="w-20 text-center border border-emerald-300 rounded-lg py-1 px-2 focus:ring-2 focus:ring-emerald-500 outline-none">
+                                        </td>
+                                        <td class="py-2 px-4 text-center">
+                                            <input type="number" min="0" placeholder="-" v-model.number="disc.qtd_questoes_prova" @change="salvarPesoDisciplina(disc)" class="w-20 text-center border border-emerald-300 rounded-lg py-1 px-2 focus:ring-2 focus:ring-emerald-500 outline-none">
+                                        </td>
+                                        <td class="py-2 px-4 text-center">
+                                            <div class="flex items-center justify-center space-x-1">
+                                                <button v-for="star in 5" :key="star" @click="disc.relevancia_dificuldade = star; salvarPesoDisciplina(disc)" :class="star <= disc.relevancia_dificuldade ? 'text-amber-400' : 'text-slate-200'" class="text-lg focus:outline-none hover:scale-110 transition-transform">★</button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-100">
+                        <button @click="wizardPasso = 3" class="text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold px-6 py-3 rounded-xl transition-all">Voltar</button>
+                        <button @click="wizardPasso = 5" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md">Próximo Passo <i class="fa-solid fa-arrow-right ml-2"></i></button>
+                    </div>
+                </div>
+
+                <!-- PASSO 5: GERAR CICLO -->
+                <div v-if="wizardPasso === 5" class="animate-in fade-in slide-in-from-right-4">
+                    <div class="mb-6 text-center">
+                        <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">
+                            <i class="fa-solid fa-check-double"></i>
+                        </div>
+                        <h3 class="text-2xl font-bold text-slate-900 mt-1">Pronto para gerar o Ciclo</h3>
+                        <p class="text-slate-500 text-sm mt-2 max-w-md mx-auto">Quase lá! Defina apenas sua disponibilidade de tempo e a duração desejada para os blocos de estudo.</p>
+                    </div>
+                    
+                    <div class="max-w-md mx-auto space-y-5 bg-slate-50 p-6 rounded-2xl border border-slate-100 mb-8">
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Carga Horária Semanal (Horas)</label>
+                            <input type="number" v-model.number="cicloForm.carga_horaria_semanal" min="5" max="80" class="w-full text-base border border-slate-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-800 text-center">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-semibold text-slate-700 mb-2">Duração de cada Bloco (Minutos)</label>
+                            <select v-model.number="cicloForm.duracao_bloco_minutos" class="w-full text-base border border-slate-300 rounded-xl px-4 py-3 bg-white focus:ring-2 focus:ring-blue-500 outline-none text-center">
+                                <option :value="50">50 minutos</option>
+                                <option :value="60">60 minutos (Recomendado)</option>
+                                <option :value="90">90 minutos</option>
+                                <option :value="120">120 minutos</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-between items-center pt-2 max-w-md mx-auto">
+                        <button @click="wizardPasso = 4" class="text-slate-600 bg-slate-100 hover:bg-slate-200 font-bold px-6 py-4 rounded-xl transition-all">Voltar</button>
+                        <button @click="finalizarWizard()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-4 rounded-xl transition-all shadow-lg shadow-emerald-500/30 flex items-center">
+                            <i class="fa-solid fa-play mr-2"></i> Iniciar Estudos
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- APLICAÇÃO PRINCIPAL (APP)                  -->
+        <!-- ========================================== -->
+        <div v-if="estadoAplicacao === 'app'" class="flex-1 flex flex-col min-h-0">
+            <!-- HEADER APP -->
+            <header class="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-sm flex-shrink-0">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20">
+                            <i class="fa-solid fa-repeat text-lg"></i>
+                        </div>
+                        <div>
+                            <h1 class="font-bold text-lg text-slate-900 leading-tight">Ciclo de Estudos</h1>
+                            <p class="text-[10px] text-slate-500 font-medium tracking-wide">MÉTRICAS & VERTICALIZADO</p>
+                        </div>
+                    </div>
+
+                    <nav class="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl">
+                        <button @click="abaAtiva = 'ciclo'" :class="abaAtiva === 'ciclo' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-arrows-spin"></i><span class="hidden xl:inline">Ciclo</span>
+                        </button>
+                        <button @click="abaAtiva = 'editais'" :class="abaAtiva === 'editais' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-sliders"></i><span class="hidden xl:inline">Editais</span>
+                        </button>
+                        <button @click="abaAtiva = 'verticalizado'" :class="abaAtiva === 'verticalizado' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-list-check"></i><span class="hidden xl:inline">Verticalizado</span>
+                        </button>
+                        <button @click="abaAtiva = 'diario'" :class="abaAtiva === 'diario' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-check"></i><span class="hidden xl:inline">Sessões</span>
+                        </button>
+                        <button @click="abrirDashboard()" :class="abaAtiva === 'dashboard' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-chart-pie"></i><span class="hidden xl:inline">Dashboard</span>
+                        </button>
+                        <button @click="abaAtiva = 'heatmap'" :class="abaAtiva === 'heatmap' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-600 hover:text-slate-900'" class="px-4 py-2 rounded-lg text-sm font-semibold transition-all flex items-center space-x-2">
+                            <i class="fa-solid fa-calendar-days"></i><span class="hidden xl:inline">Controle Dias</span>
+                        </button>
+                    </nav>
+
+                    <button @click="abrirModalCheckin()" class="bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm px-4 py-2 rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center space-x-2">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <span class="hidden sm:inline">Check-in Manual</span>
+                    </button>
+                </div>
+            </header>
+
+            <!-- MAIN CONTENT APP -->
+            <main class="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 bg-slate-50 max-w-7xl w-full mx-auto">
+                
+                <!-- ABA 1: CICLO ATUAL -->
+                <div v-if="abaAtiva === 'ciclo'" class="space-y-6">
+                    <div v-if="!cicloAtivo" class="bg-white p-8 rounded-3xl border border-slate-200 text-center shadow-sm">
+                        <p class="text-slate-500 mb-4">Nenhum ciclo ativo encontrado.</p>
+                        <button @click="voltarAoWizard()" class="bg-blue-600 text-white px-6 py-2 rounded-xl">Criar Nova Preparação</button>
+                    </div>
+                    <div v-else class="space-y-6">
+                        <!-- BANNER DO BLOCO -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <div class="lg:col-span-2 bg-gradient-to-br from-slate-900 via-slate-800 to-indigo-950 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden flex flex-col justify-between">
+                                <div>
+                                    <div class="flex items-center justify-between mb-4">
+                                        <div class="flex space-x-2 items-center">
+                                            <span class="px-3 py-1 bg-blue-500/20 text-blue-300 rounded-full text-xs font-bold border border-blue-400/30 uppercase tracking-wider">
+                                                Bloco: #{{ (cicloAtivo.bloco_atual_index + 1) }} de {{ cicloAtivo.blocos.length }}
+                                            </span>
+                                            <!-- Meta movida para cá -->
+                                            <span class="px-2 py-1 bg-slate-800/80 rounded-full text-[10px] font-bold text-slate-300 border border-slate-700 tracking-wide uppercase">
+                                                <i class="fa-regular fa-clock text-blue-400 mr-1"></i> Meta: {{ blocoAtual.duracao_minutos }} min
+                                            </span>
+                                        </div>
+                                        <span class="text-xs text-slate-400 font-medium px-2 py-1 bg-slate-800 rounded-lg">Ciclo: {{ cicloAtivo.nome }}</span>
+                                    </div>
+                                    <div v-if="blocoAtual" class="mt-2">
+                                        <div class="text-xs font-bold uppercase tracking-wider mb-2 flex items-center space-x-2">
+                                            <!-- Grupo -->
+                                            <span :class="blocoAtual.disciplina.grupo_conhecimento === 'BASICOS' ? 'text-blue-400' : 'text-teal-400'">
+                                                {{ blocoAtual.disciplina.grupo_conhecimento === 'BASICOS' ? 'Básicas' : 'Específicas' }}
+                                            </span>
+                                            <span class="text-slate-500/50">•</span>
+                                            <!-- Categoria -->
+                                            <span v-if="blocoAtual.disciplina.categoria === 'EXATAS_LOGICA'" class="text-amber-400"><i class="fa-solid fa-microchip mr-1"></i> Exatas</span>
+                                            <span v-else class="text-emerald-400"><i class="fa-solid fa-scale-balanced mr-1"></i> Teórica</span>
+                                            <span class="text-slate-500/50">•</span>
+                                            <!-- Peso -->
+                                            <span class="text-slate-300"><i class="fa-solid fa-weight-hanging text-amber-500/70 mr-1"></i> Peso {{ blocoAtual.disciplina.peso_prova }}</span>
+                                        </div>
+                                        <h2 class="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">{{ blocoAtual.disciplina.nome }}</h2>
+                                        
+                                        <!-- TAGS INFORMATIVAS -->
+                                        <div class="mt-4 flex flex-wrap gap-2">
+                                            <!-- Qtd Questoes Prova -->
+                                            <span title="Total de questões desta disciplina esperadas na prova oficial (conforme edital)" v-if="blocoAtual.disciplina.qtd_questoes_prova" class="px-2 py-1 bg-slate-800/80 rounded-lg text-xs font-medium text-slate-300 border border-slate-700 cursor-help">
+                                                <i class="fa-solid fa-file-signature text-purple-400 mr-1"></i> {{ blocoAtual.disciplina.qtd_questoes_prova }} Qtd. Prova
+                                            </span>
+                                            <!-- Dificuldade Pessoal -->
+                                            <span title="Sua dificuldade pessoal mapeada para esta disciplina (1 a 5 estrelas)" class="px-2 py-1 bg-slate-800/80 rounded-lg text-xs font-medium text-slate-300 border border-slate-700 cursor-help">
+                                                Nível: 
+                                                <span class="text-amber-400 ml-1">
+                                                    <i v-for="n in blocoAtual.disciplina.relevancia_dificuldade" :key="n" class="fa-solid fa-star text-[10px]"></i>
+                                                </span>
+                                            </span>
+                                            <!-- Resolvidas -->
+                                            <span title="Total de questões desta disciplina já resolvidas por você e registradas no histórico" class="px-2 py-1 bg-slate-800/80 rounded-lg text-xs font-medium text-slate-300 border border-slate-700 cursor-help">
+                                                <i class="fa-solid fa-list-check text-emerald-400 mr-1"></i> {{ getEstatisticasDisciplina(blocoAtual.disciplina_id).qtd }} Questões
+                                            </span>
+                                            <!-- % Acerto -->
+                                            <span title="Seu percentual geral de acerto baseado no histórico de questões registradas" v-if="getEstatisticasDisciplina(blocoAtual.disciplina_id).qtd > 0" class="px-2 py-1 rounded-lg text-xs font-bold border cursor-help" :class="badgeTaxaAcertoBg(getEstatisticasDisciplina(blocoAtual.disciplina_id).perc)">
+                                                <i class="fa-solid fa-bullseye mr-1"></i> {{ getEstatisticasDisciplina(blocoAtual.disciplina_id).perc.toFixed(1) }}% Acerto
+                                            </span>
+                                            <!-- % Visto -->
+                                            <span title="Progresso geral de tópicos do edital já estudados e marcados nas sessões" v-if="getEstatisticasDisciplina(blocoAtual.disciplina_id).perc_vistos > 0" class="px-2 py-1 bg-indigo-900/50 rounded-lg text-xs font-bold text-indigo-300 border border-indigo-700 cursor-help">
+                                                <i class="fa-solid fa-book-open mr-1"></i> {{ getEstatisticasDisciplina(blocoAtual.disciplina_id).perc_vistos.toFixed(1) }}% da Disciplina Vista
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- ESTATÍSTICAS GERAIS DO EDITAL -->
+                                <div class="flex-grow flex items-center justify-center gap-8 w-full py-10">
+                                    <div :class="[getAproveitamentoClasses(dashboardData?.metricas_gerais?.percentual_acerto_geral || 0).border]" class="bg-gradient-to-br from-slate-800/80 to-slate-900/80 rounded-3xl p-8 flex flex-col items-center justify-center min-w-[260px] shadow-2xl relative overflow-hidden group transition-all border">
+                                        <div :class="[getAproveitamentoClasses(dashboardData?.metricas_gerais?.percentual_acerto_geral || 0).bg]" class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <div class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3 text-center leading-relaxed z-10">
+                                            Aproveitamento Geral<br><span class="text-slate-300">Questões</span>
+                                        </div>
+                                        <div :class="[getAproveitamentoClasses(dashboardData?.metricas_gerais?.percentual_acerto_geral || 0).text]" class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br z-10 drop-shadow-md">
+                                            {{ dashboardData && dashboardData.metricas_gerais ? dashboardData.metricas_gerais.percentual_acerto_geral : 0 }}%
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="bg-gradient-to-br from-slate-800/80 to-slate-900/80 border border-indigo-500/20 hover:border-indigo-500/50 rounded-3xl p-8 flex flex-col items-center justify-center min-w-[260px] shadow-2xl relative overflow-hidden group transition-all">
+                                        <div class="absolute inset-0 bg-indigo-500/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                                        <div class="text-slate-400 text-xs font-bold uppercase tracking-widest mb-3 text-center leading-relaxed z-10">
+                                            Edital Visto<br><span class="text-slate-300">(Todas Disciplinas)</span>
+                                        </div>
+                                        <div class="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-br from-indigo-400 to-indigo-200 z-10 drop-shadow-md">
+                                            {{ percentualGlobalEdital }}%
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-8 pt-6 border-t border-slate-700/60 flex flex-wrap items-center justify-between gap-4">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="text-4xl font-mono font-bold text-blue-400">{{ formatarTempoTimer(timerSegundos) }}</div>
+                                        <div class="flex space-x-2">
+                                            <button @click="toggleTimer()" :class="timerRodando ? 'bg-amber-600' : 'bg-blue-600'" class="w-12 h-12 rounded-xl text-white flex items-center justify-center transition-all shadow-lg"><i :class="timerRodando ? 'fa-solid fa-pause' : 'fa-solid fa-play'"></i></button>
+                                            <button @click="resetTimer()" class="w-12 h-12 rounded-xl bg-slate-800 text-slate-300 flex items-center justify-center hover:bg-slate-700 transition-all"><i class="fa-solid fa-rotate-left"></i></button>
+                                        </div>
+                                    </div>
+                                    <div class="flex space-x-3">
+                                        <button @click="avancarBloco()" class="px-4 py-3 rounded-xl bg-slate-800 text-slate-300 text-sm font-semibold hover:text-white transition-all">Pular</button>
+                                        <button @click="abrirModalCheckinComBloco(blocoAtual)" class="px-6 py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 transition-all">Concluir Sessão</button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RESUMO CICLO -->
+                            <div class="bg-white rounded-3xl border border-slate-200 p-6 flex flex-col shadow-sm">
+                                <h3 class="font-bold text-slate-900 text-lg mb-4 text-center">{{ blocoAtual ? blocoAtual.disciplina.nome : 'Progresso do Ciclo' }}</h3>
+                                
+                                <div class="relative w-full max-w-[300px] mx-auto mb-4 flex items-center justify-center aspect-square">
+                                    <canvas id="chartCicloDonut"></canvas>
+                                    <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                                        <span class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Estudei</span>
+                                        <span class="text-lg font-bold text-slate-800 leading-tight">{{ getTempoEstudadoCicloAtual() }}</span>
+                                        <span class="text-[10px] text-slate-500 font-medium">de {{ cicloAtivo.carga_horaria_semanal }}h</span>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-2 mt-auto">
+                                    <div class="flex justify-between px-3 py-2 bg-slate-50 rounded-lg items-center">
+                                        <span class="text-xs text-slate-500 font-semibold">Ciclos Realizados</span>
+                                        <span class="text-xs font-bold text-slate-900">{{ cicloAtivo.voltas_completas }}</span>
+                                    </div>
+                                    <div class="flex justify-between px-3 py-2 bg-slate-50 rounded-lg items-center">
+                                        <span class="text-xs text-slate-500 font-semibold">Horas Totais</span>
+                                        <span class="text-xs font-bold text-slate-900">{{ getTempoTotalCicloAtual() }}</span>
+                                    </div>
+                                    <div class="flex justify-between px-3 py-2 bg-slate-50 rounded-lg items-center">
+                                        <span class="text-xs text-slate-500 font-semibold">Fila Atual</span>
+                                        <span class="text-xs font-bold text-slate-900">{{ cicloAtivo.blocos.length }} blocos</span>
+                                    </div>
+                                    <div class="flex justify-between px-3 py-2 bg-slate-50 rounded-lg items-center">
+                                        <span class="text-xs text-slate-500 font-semibold">Volta Concluída</span>
+                                        <span class="text-xs font-bold text-blue-600">{{ Math.round(((cicloAtivo.bloco_atual_index + 1) / cicloAtivo.blocos.length) * 100) }}%</span>
+                                    </div>
+                                </div>
+                                <button @click="voltarAoWizard()" class="mt-4 w-full py-2.5 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-xs hover:bg-slate-50 transition-all">Nova Preparação</button>
+                            </div>
+                        </div>
+
+                        <!-- ESTEIRA ROTATIVA -->
+                        <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm overflow-hidden">
+                            <h3 class="font-bold text-slate-900 text-lg mb-4">Esteira de Estudos Gerada</h3>
+                            <div id="esteira-container" class="flex space-x-3 overflow-x-auto pb-4 pt-2 snap-x smooth-scroll">
+                                <div v-for="(b, idx) in cicloAtivo.blocos" :key="b.id" :id="'bloco-' + idx" @click="selecionarBlocoManual(idx)" :class="idx === cicloAtivo.bloco_atual_index ? 'border-blue-500 bg-blue-50 shadow-md ring-2 ring-blue-500/20' : 'border-slate-200 bg-white hover:border-slate-400'" class="snap-start cursor-pointer border-2 rounded-2xl p-4 min-w-[200px] flex-shrink-0 transition-all duration-300">
+                                    <div class="flex justify-between mb-2 items-center">
+                                        <span class="text-xs font-bold text-slate-400">#{{ idx + 1 }}</span>
+                                        <div class="flex space-x-1">
+                                            <span v-if="b.disciplina.categoria !== 'REVISAO_ANKI'" :class="b.disciplina.grupo_conhecimento === 'BASICOS' ? 'bg-blue-100 text-blue-700' : 'bg-teal-100 text-teal-700'" class="text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                                                {{ b.disciplina.grupo_conhecimento === 'BASICOS' ? 'Básicas' : 'Específicas' }}
+                                            </span>
+                                            <span :class="b.disciplina.categoria === 'REVISAO_ANKI' ? 'bg-purple-100 text-purple-700 ring-1 ring-purple-200' : (b.disciplina.categoria === 'EXATAS_LOGICA' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700')" class="text-[10px] font-bold px-2 py-0.5 rounded uppercase">
+                                                {{ b.disciplina.categoria === 'REVISAO_ANKI' ? 'Revisão Anki' : (b.disciplina.categoria === 'EXATAS_LOGICA' ? 'Exatas' : 'Teórica') }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <h4 class="font-bold text-slate-800 text-sm truncate" :title="b.disciplina.nome">{{ b.disciplina.nome }}</h4>
+                                    <div class="mt-3 flex justify-between items-center text-xs text-slate-500 font-medium">
+                                        <span><i class="fa-regular fa-clock"></i> {{ b.duracao_minutos }}m</span>
+                                        <span v-if="idx === cicloAtivo.bloco_atual_index" class="text-blue-600 font-bold uppercase tracking-wider text-[10px]">Atual <i class="fa-solid fa-arrow-right ml-1"></i></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ABA 2: EDITAIS E VERTICALIZADO -->
+                <div v-if="abaAtiva === 'editais'" class="space-y-6">
+                    
+                    <div v-for="ed in editais" :key="ed.id" class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden mb-6">
+                        <div class="p-6 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+                            <div>
+                                <h3 class="text-xl font-bold text-slate-900">{{ ed.nome }}</h3>
+                                <span class="text-xs text-slate-500 font-medium">Edital de Referência</span>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <button @click="excluirEdital(ed.id)" class="text-sm font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-4 py-2 rounded-xl transition-all border border-rose-200 bg-white">
+                                    <i class="fa-solid fa-trash-can mr-2"></i> Excluir Edital
+                                </button>
+                                <button @click="carregarEditalVerticalizado(ed.id)" class="text-sm font-semibold text-blue-600 hover:text-blue-700 bg-blue-50 px-4 py-2 rounded-xl transition-all border border-blue-100">
+                                    <i class="fa-solid fa-list-check mr-2"></i> Atualizar Relatório
+                                </button>
+                            </div>
+                        </div>
+                        <!-- ESTATÍSTICAS GLOBAIS DO EDITAL -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 px-6 pt-6">
+                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Horas Estudadas</span>
+                                <span class="text-3xl font-black text-blue-600">{{ getEstatisticasEdital(ed).horas }}</span>
+                            </div>
+                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tópicos Vistos</span>
+                                <span class="text-3xl font-black text-slate-800">{{ getEstatisticasEdital(ed).topicos_vistos }} <span class="text-lg text-slate-400 font-medium">/ {{ getEstatisticasEdital(ed).topicos_total }}</span></span>
+                            </div>
+                            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
+                                <span class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Edital Batido</span>
+                                <span class="text-3xl font-black text-indigo-600">{{ getEstatisticasEdital(ed).perc_visto.toFixed(1) }}%</span>
+                            </div>
+                        </div>
+
+                        <!-- TABELA CONFIGURACAO PESOS -->
+                        <div class="p-6">
+                            <h4 class="font-bold text-slate-800 text-sm mb-4">Ajuste Fino de Parâmetros</h4>
+                            <div class="overflow-x-auto rounded-xl border border-slate-200">
+                                <table class="w-full text-left text-xs">
+                                    <thead class="bg-slate-50 text-slate-600">
+                                        <tr>
+                                            <th class="py-3 px-4 text-center">No Ciclo?</th>
+                                            <th class="py-3 px-4">Disciplina</th>
+                                            <th class="py-3 px-4">Categoria</th>
+                                            <th class="py-3 px-4 text-center">Grupo</th>
+                                            <th class="py-3 px-4 text-center">Peso</th>
+                                            <th class="py-3 px-4 text-center">Qtd. Prova</th>
+                                            <th class="py-3 px-4 text-center">Dificuldade</th>
+                                            <th class="py-3 px-4 text-center">Resolvidas</th>
+                                            <th class="py-3 px-4 text-center">% Acerto</th>
+                                            <th class="py-3 px-4 text-center">% Visto</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100">
+                                        <tr v-for="disc in ed.disciplinas" :key="disc.id" v-show="disc.categoria !== 'REVISAO_ANKI'" class="hover:bg-slate-50">
+                                            <td class="py-2 px-4 text-center">
+                                                <input type="checkbox" v-model="disc.incluir_no_ciclo" @change="salvarPesoDisciplina(disc)" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-50 cursor-pointer">
+                                            </td>
+                                            <td class="py-2 px-4 font-semibold text-slate-800">{{ disc.nome }}</td>
+                                            <td class="py-2 px-4">
+                                                <select v-model="disc.categoria" @change="salvarPesoDisciplina(disc)" class="bg-transparent border border-slate-300 rounded px-2 py-1 outline-none font-medium text-slate-700">
+                                                    <option value="TEORICA_DIREITO">Teórica</option>
+                                                    <option value="EXATAS_LOGICA">Exatas</option>
+                                                </select>
+                                            </td>
+                                            <td class="py-2 px-4 text-center">
+                                                <span :class="disc.grupo_conhecimento === 'BASICOS' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'" class="text-[10px] font-bold px-2 py-1 rounded">
+                                                    {{ disc.grupo_conhecimento }}
+                                                </span>
+                                            </td>
+                                            <td class="py-2 px-4 text-center">
+                                                <input type="number" step="0.5" v-model.number="disc.peso_prova" @change="salvarPesoDisciplina(disc)" class="w-16 border border-slate-300 rounded px-2 py-1 outline-none text-center">
+                                            </td>
+                                            <td class="py-2 px-4 text-center">
+                                                <input type="number" min="0" placeholder="-" v-model.number="disc.qtd_questoes_prova" @change="salvarPesoDisciplina(disc)" class="w-16 border border-slate-300 rounded px-2 py-1 outline-none text-center">
+                                            </td>
+                                            <td class="py-2 px-4 text-center">
+                                                <div class="flex justify-center text-sm"><button v-for="star in 5" :key="star" @click="disc.relevancia_dificuldade = star; salvarPesoDisciplina(disc)" :class="star <= disc.relevancia_dificuldade ? 'text-amber-400' : 'text-slate-200'" class="hover:scale-110">★</button></div>
+                                            </td>
+                                            <td class="py-2 px-4 text-center font-bold text-slate-600">
+                                                {{ getEstatisticasDisciplina(disc.id).qtd }}
+                                            </td>
+                                            <td class="py-2 px-4 text-center">
+                                                <span v-if="getEstatisticasDisciplina(disc.id).qtd > 0" :class="badgeTaxaAcertoBg(getEstatisticasDisciplina(disc.id).perc)" class="px-2 py-1 rounded text-[10px] font-bold">
+                                                    {{ getEstatisticasDisciplina(disc.id).perc.toFixed(1) }}%
+                                                </span>
+                                                <span v-else class="text-slate-400 font-medium">-</span>
+                                            </td>
+                                            <td class="py-2 px-4 text-center">
+                                                <span v-if="getEstatisticasDisciplina(disc.id).perc_vistos > 0" class="px-2 py-1 rounded text-[10px] font-bold bg-indigo-100 text-indigo-700">
+                                                    {{ getEstatisticasDisciplina(disc.id).perc_vistos.toFixed(1) }}%
+                                                </span>
+                                                <span v-else class="text-slate-400 font-medium">-</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="mt-4 flex justify-end">
+                                <button @click="gerarCicloNovoComEdital(ed.id)" class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2 rounded-xl shadow-md transition-all">Regerar Ciclo com Novos Pesos</button>
+                            </div>
+                        </div> <!-- fecha p-6 -->
+                    </div> <!-- fecha bg-white (ed) -->
+                </div> <!-- fecha abaAtiva === 'editais' -->
+
+                <!-- ABA 3: EDITAL VERTICALIZADO -->
+                <div v-if="abaAtiva === 'verticalizado'" class="space-y-6">
+                    <div v-if="editalVerticalizadoData.BASICOS" class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                        <h4 class="font-bold text-slate-900 text-xl mb-1">Edital Verticalizado</h4>
+                        <p class="text-sm text-slate-500 mb-8 font-medium">Controle granular do seu avanço por assunto e tópico</p>
+
+                        <!-- Botões de Troca de Abas Internas -->
+                        <div class="flex flex-col sm:flex-row gap-4 mb-8">
+                            <button @click="abaVerticalizado = 'basicos'" :class="abaVerticalizado === 'basicos' ? 'bg-blue-50 text-blue-700 border-blue-200 shadow-sm' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'" class="flex-1 flex items-center justify-center py-4 px-6 rounded-2xl border transition-all font-bold text-sm">
+                                <i class="fa-solid fa-layer-group mr-3"></i> CONHECIMENTOS BÁSICOS
+                            </button>
+                            <button @click="abaVerticalizado = 'especificos'" :class="abaVerticalizado === 'especificos' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'" class="flex-1 flex items-center justify-center py-4 px-6 rounded-2xl border transition-all font-bold text-sm">
+                                <i class="fa-solid fa-crosshairs mr-3"></i> CONHECIMENTOS ESPECÍFICOS
+                            </button>
+                        </div>
+
+                        <!-- BÁSICOS -->
+                        <div v-if="abaVerticalizado === 'basicos'">
+                            <div v-if="editalVerticalizadoData.resumo_basicos" class="mb-6 flex justify-end">
+                                <span class="bg-blue-100 text-blue-800 text-sm font-bold px-4 py-2 rounded-xl border border-blue-200 shadow-sm">
+                                    Total Visto: {{ editalVerticalizadoData.resumo_basicos.topicos_vistos }} / {{ editalVerticalizadoData.resumo_basicos.total_topicos }} ({{ editalVerticalizadoData.resumo_basicos.cobertura_percentual }}%)
+                                </span>
+                            </div>
+                            <div class="space-y-4">
+                                <div v-for="disc in editalVerticalizadoData.BASICOS" :key="disc.id" class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm transition-all hover:shadow-md">
+                                    <div @click="toggleVerticalizado(disc.id)" class="bg-slate-50 border-b border-slate-200 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                        <div class="font-bold text-base text-slate-800 flex-1 flex items-center">
+                                            <i :class="verticalizadoAberto[disc.id] ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right'" class="mr-3 text-slate-400 w-4 text-center"></i>
+                                            {{ disc.nome }}
+                                        </div>
+                                        <div class="flex space-x-3">
+                                            <div class="text-xs font-bold px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 border border-blue-200">
+                                                Cobertura: {{ disc.topicos_vistos }}/{{ disc.total_topicos }} ({{ disc.cobertura_percentual }}%)
+                                            </div>
+                                            <div class="text-xs font-bold px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 border border-purple-200">
+                                                Revisões Anki: {{ disc.revisoes_anki || 0 }}
+                                            </div>
+                                            <div class="text-xs font-bold px-3 py-1.5 rounded-lg" :class="badgeTaxaAcertoBg(disc.percentual)">
+                                                Desempenho: {{ disc.certas }}/{{ disc.resolvidas }} ({{ disc.percentual }}%)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-if="verticalizadoAberto[disc.id]" class="divide-y divide-slate-100 bg-white">
+                                        <div v-for="topico in disc.topicos" :key="topico.id" class="p-4 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50 transition-colors">
+                                            <div class="flex items-start space-x-3 sm:w-2/3">
+                                                <i :class="topico.visto ? 'fa-solid text-blue-500' : 'fa-regular text-slate-300'" class="fa-circle-check mt-0.5 text-lg"></i>
+                                                <span class="text-slate-700 font-medium leading-relaxed">{{ topico.titulo }}</span>
+                                            </div>
+                                            <div class="flex flex-col items-end sm:w-1/3">
+                                                <div class="flex items-center space-x-3 mb-1">
+                                                    <span class="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100" title="Revisões no Anki">Anki: {{ topico.revisoes_anki || 0 }}</span>
+                                                    <span class="text-xs font-semibold text-slate-500">{{ topico.resolvidas }} questões</span>
+                                                    <span class="font-bold text-base" :class="badgeTextTaxa(topico.percentual)">{{ topico.percentual }}%</span>
+                                                </div>
+                                                <span v-if="topico.ultima_data" class="text-[11px] text-slate-400 font-medium"><i class="fa-regular fa-clock mr-1"></i>Último estudo: {{ formatarData(topico.ultima_data) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ESPECIFICOS -->
+                        <div v-if="abaVerticalizado === 'especificos'">
+                            <div v-if="editalVerticalizadoData.resumo_especificos" class="mb-6 flex justify-end">
+                                <span class="bg-emerald-100 text-emerald-800 text-sm font-bold px-4 py-2 rounded-xl border border-emerald-200 shadow-sm">
+                                    Total Visto: {{ editalVerticalizadoData.resumo_especificos.topicos_vistos }} / {{ editalVerticalizadoData.resumo_especificos.total_topicos }} ({{ editalVerticalizadoData.resumo_especificos.cobertura_percentual }}%)
+                                </span>
+                            </div>
+                            <div class="space-y-4">
+                                <div v-for="disc in editalVerticalizadoData.ESPECIFICOS" :key="disc.id" class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm transition-all hover:shadow-md">
+                                    <div @click="toggleVerticalizado(disc.id)" class="bg-slate-50 border-b border-slate-200 p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 cursor-pointer hover:bg-slate-100 transition-colors">
+                                        <div class="font-bold text-base text-slate-800 flex-1 flex items-center">
+                                            <i :class="verticalizadoAberto[disc.id] ? 'fa-solid fa-chevron-down' : 'fa-solid fa-chevron-right'" class="mr-3 text-slate-400 w-4 text-center"></i>
+                                            {{ disc.nome }}
+                                        </div>
+                                        <div class="flex space-x-3">
+                                            <div class="text-xs font-bold px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-200">
+                                                Cobertura: {{ disc.topicos_vistos }}/{{ disc.total_topicos }} ({{ disc.cobertura_percentual }}%)
+                                            </div>
+                                            <div class="text-xs font-bold px-3 py-1.5 rounded-lg bg-purple-100 text-purple-700 border border-purple-200">
+                                                Revisões Anki: {{ disc.revisoes_anki || 0 }}
+                                            </div>
+                                            <div class="text-xs font-bold px-3 py-1.5 rounded-lg" :class="badgeTaxaAcertoBg(disc.percentual)">
+                                                Desempenho: {{ disc.certas }}/{{ disc.resolvidas }} ({{ disc.percentual }}%)
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-if="verticalizadoAberto[disc.id]" class="divide-y divide-slate-100 bg-white">
+                                        <div v-for="topico in disc.topicos" :key="topico.id" class="p-4 text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:bg-slate-50 transition-colors">
+                                            <div class="flex items-start space-x-3 sm:w-2/3">
+                                                <i :class="topico.visto ? 'fa-solid text-emerald-500' : 'fa-regular text-slate-300'" class="fa-circle-check mt-0.5 text-lg"></i>
+                                                <span class="text-slate-700 font-medium leading-relaxed">{{ topico.titulo }}</span>
+                                            </div>
+                                            <div class="flex flex-col items-end sm:w-1/3">
+                                                <div class="flex items-center space-x-3 mb-1">
+                                                    <span class="text-xs font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded border border-purple-100" title="Revisões no Anki">Anki: {{ topico.revisoes_anki || 0 }}</span>
+                                                    <span class="text-xs font-semibold text-slate-500">{{ topico.resolvidas }} questões</span>
+                                                    <span class="font-bold text-base" :class="badgeTextTaxa(topico.percentual)">{{ topico.percentual }}%</span>
+                                                </div>
+                                                <span v-if="topico.ultima_data" class="text-[11px] text-slate-400 font-medium"><i class="fa-regular fa-clock mr-1"></i>Último estudo: {{ formatarData(topico.ultima_data) }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <!-- ABA 3: DIÁRIO DE ESTUDOS -->
+                <div v-if="abaAtiva === 'diario'" class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="font-bold text-slate-900 text-lg">Histórico de Sessões de Estudo</h3>
+                        <div class="flex gap-2">
+                            <button @click="excluirTodasSessoes()" class="bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm">
+                                <i class="fa-solid fa-trash mr-1"></i> Excluir Todas
+                            </button>
+                            <button @click="abrirModalCheckin()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-sm">Check-in Avulso</button>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-50 text-slate-600 border-y border-slate-200">
+                                <tr>
+                                    <th class="py-3 px-4 font-semibold">Data</th>
+                                    <th class="py-3 px-4 font-semibold">Disciplina</th>
+                                    <th class="py-3 px-4 font-semibold">Tempo</th>
+                                    <th class="py-3 px-4 font-semibold">Certas</th>
+                                    <th class="py-3 px-4 font-semibold">Resolvidas</th>
+                                    <th class="py-3 px-4 font-semibold">Aproveitamento</th>
+                                    <th class="py-3 px-4 font-semibold text-center">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 text-slate-800">
+                                <tr v-for="s in sessoes" :key="s.id" class="hover:bg-slate-50">
+                                    <td class="py-3 px-4 font-medium text-slate-500">{{ formatarData(s.data) }}</td>
+                                    <td class="py-3 px-4 font-bold">{{ getNomeDisciplina(s.disciplina_id) }}</td>
+                                    <td class="py-3 px-4">{{ s.tempo_estudado_minutos }}m</td>
+                                    <td class="py-3 px-4">
+                                        <span v-if="s.is_revisao_anki" class="text-slate-400 font-medium">-</span>
+                                        <span v-else class="text-emerald-600 font-bold">{{ s.qtd_acertos }}</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span v-if="s.is_revisao_anki" class="text-slate-400 font-medium">-</span>
+                                        <span v-else class="text-slate-600 font-bold">{{ s.qtd_questoes_total }}</span>
+                                    </td>
+                                    <td class="py-3 px-4">
+                                        <span v-if="s.is_revisao_anki" class="font-bold px-2.5 py-1 rounded-md bg-purple-100 text-purple-700 border border-purple-200">Revisão Anki</span>
+                                        <span v-else :class="badgeTaxaAcertoBg(s.percentual_acerto)" class="font-bold px-2.5 py-1 rounded-md">{{ s.percentual_acerto }}%</span>
+                                    </td>
+                                    <td class="py-3 px-4 text-center space-x-2">
+                                        <button @click="editarSessao(s)" class="text-blue-500 hover:text-blue-700" title="Editar Sessão"><i class="fa-solid fa-pen"></i></button>
+                                        <button @click="excluirSessao(s.id)" class="text-rose-500 hover:text-rose-700" title="Excluir Sessão"><i class="fa-solid fa-trash"></i></button>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- ABA 4: DASHBOARD & MATRIZ -->
+                <div v-if="abaAtiva === 'dashboard'" class="space-y-6">
+                    <!-- CARDS DE MÉTRICAS -->
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                            <div class="text-xs text-slate-500 font-bold uppercase mb-2 cursor-help" title="Total acumulado de horas em todas as sessões de estudo concluídas deste edital">Horas Estudadas</div>
+                            <div class="text-3xl font-extrabold text-blue-600">{{ formatarHorasDecimais(dashboardData.metricas_gerais?.tempo_total_horas) }}</div>
+                        </div>
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                            <div class="text-xs text-slate-500 font-bold uppercase mb-2 cursor-help" title="Quantidade absoluta de sessões de estudo finalizadas e salvas">Sessões Concluídas</div>
+                            <div class="text-3xl font-extrabold text-indigo-600">{{ dashboardData.metricas_gerais?.total_sessoes || 0 }}</div>
+                        </div>
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                            <div class="text-xs text-slate-500 font-bold uppercase mb-2 cursor-help" title="Soma de todas as questões (certas e erradas) resolvidas nas sessões concluídas">Questões Resolvidas</div>
+                            <div class="text-3xl font-extrabold text-slate-800">{{ dashboardData.metricas_gerais?.total_questoes || 0 }}</div>
+                        </div>
+                        <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
+                            <div class="text-xs text-slate-500 font-bold uppercase mb-2 cursor-help" title="Média geral de acertos baseada no total de questões de todas as sessões registradas">Aproveitamento Global</div>
+                            <div class="text-3xl font-extrabold text-emerald-600">{{ dashboardData.metricas_gerais?.percentual_acerto_geral || 0 }}%</div>
+                        </div>
+                    </div>
+
+                    <!-- MATRIZ SEMANAL DA IMAGEM 2 -->
+                    <div v-if="matrizSemanalData.labels && matrizSemanalData.labels.length > 0" class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                        <h4 class="font-bold text-slate-900 text-lg mb-1 cursor-help" title="Comparativo semanal do seu tempo estudado com a sua taxa de acerto nas questões. Útil para identificar se mais horas resultaram em mais qualidade.">Matriz de Resultados Semanais</h4>
+                        <p class="text-xs text-slate-500 mb-6 font-medium">Acompanhamento consolidado por semana (Acertos / Total)</p>
+                        
+                        <div class="overflow-x-auto rounded-xl border border-slate-200">
+                            <table class="w-full text-left text-xs border-collapse">
+                                <thead>
+                                    <tr class="text-slate-600 bg-slate-50 border-b border-slate-200 uppercase tracking-wide">
+                                        <th class="py-3 px-4 font-bold">Disciplina</th>
+                                        <th v-for="lab in matrizSemanalData.labels" :key="lab" class="py-3 px-4 font-bold text-center border-l border-slate-200 whitespace-nowrap">{{ lab }}</th>
+                                        <th class="py-3 px-4 font-bold text-center border-l border-blue-200 bg-blue-100 text-blue-800 whitespace-nowrap">Total Geral (%)</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <tr class="bg-slate-100/50"><td :colspan="matrizSemanalData.labels.length + 2" class="py-2 px-4 font-black text-slate-800 tracking-wider">BÁSICAS</td></tr>
+                                    <tr v-for="item in matrizSemanalData.dados?.BASICOS" :key="item.disciplina" class="hover:bg-slate-50">
+                                        <td class="py-2.5 px-4 font-bold text-slate-700 truncate max-w-[200px]" :title="item.disciplina">{{ item.disciplina }}</td>
+                                        <td v-for="(sem, i) in item.semanas" :key="i" class="py-2.5 px-4 text-center border-l border-slate-100">
+                                            <div v-if="sem.resolvidas > 0" class="font-bold" :class="badgeTextTaxa(sem.percentual)">{{ sem.certas }}/{{ sem.resolvidas }} <span class="text-[10px]">({{ sem.percentual }}%)</span></div>
+                                            <div v-else class="text-slate-300 font-medium">-</div>
+                                        </td>
+                                        <td class="py-2.5 px-4 text-center border-l border-blue-100 bg-blue-50/50">
+                                            <div class="font-black" :class="badgeTextTaxa(item.percentual_total)">{{ item.total_certas }}/{{ item.total_resolvidas }} <span class="text-[10px]">({{ item.percentual_total }}%)</span></div>
+                                        </td>
+                                    </tr>
+                                    <tr class="bg-slate-100/50"><td :colspan="matrizSemanalData.labels.length + 2" class="py-2 px-4 font-black text-slate-800 tracking-wider border-t border-slate-200">ESPECÍFICAS</td></tr>
+                                    <tr v-for="item in matrizSemanalData.dados?.ESPECIFICOS" :key="item.disciplina" class="hover:bg-slate-50">
+                                        <td class="py-2.5 px-4 font-bold text-slate-700 truncate max-w-[200px]" :title="item.disciplina">{{ item.disciplina }}</td>
+                                        <td v-for="(sem, i) in item.semanas" :key="i" class="py-2.5 px-4 text-center border-l border-slate-100">
+                                            <div v-if="sem.resolvidas > 0" class="font-bold" :class="badgeTextTaxa(sem.percentual)">{{ sem.certas }}/{{ sem.resolvidas }} <span class="text-[10px]">({{ sem.percentual }}%)</span></div>
+                                            <div v-else class="text-slate-300 font-medium">-</div>
+                                        </td>
+                                        <td class="py-2.5 px-4 text-center border-l border-blue-100 bg-blue-50/50">
+                                            <div class="font-black" :class="badgeTextTaxa(item.percentual_total)">{{ item.total_certas }}/{{ item.total_resolvidas }} <span class="text-[10px]">({{ item.percentual_total }}%)</span></div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                                <tfoot v-if="getTotaisMatrizSemanal()" class="bg-blue-600 text-white shadow-inner">
+                                    <tr>
+                                        <td class="py-3 px-4 font-black uppercase tracking-wider">Total da Semana</td>
+                                        <td v-for="(sem, i) in getTotaisMatrizSemanal().semanas" :key="i" class="py-3 px-4 text-center border-l border-blue-500">
+                                            <div v-if="sem.resolvidas > 0" class="font-bold text-white">{{ sem.certas }}/{{ sem.resolvidas }} <span class="text-[10px] opacity-80">({{ sem.percentual }}%)</span></div>
+                                            <div v-else class="text-blue-300 font-medium">-</div>
+                                        </td>
+                                        <td class="py-3 px-4 text-center border-l border-blue-500 bg-blue-700">
+                                            <div class="font-black text-white">{{ getTotaisMatrizSemanal().totalGeral.certas }}/{{ getTotaisMatrizSemanal().totalGeral.resolvidas }} <span class="text-[10px] opacity-80">({{ getTotaisMatrizSemanal().totalGeral.percentual }}%)</span></div>
+                                        </td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- RANKING MELHORES E PIORES -->
+                    <div v-if="dashboardData.rendimento_disciplinas" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div class="bg-white rounded-3xl border border-rose-200 p-6 shadow-sm relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 w-24 h-24 bg-rose-50 rounded-full z-0 opacity-50"></div>
+                            <h4 class="font-bold text-rose-800 text-lg mb-4 relative z-10 flex items-center cursor-help" title="As 3 disciplinas em que você possui a menor taxa de acerto acumulada">
+                                <span class="bg-rose-100 text-rose-600 w-8 h-8 flex items-center justify-center rounded-lg mr-3"><i class="fa-solid fa-triangle-exclamation"></i></span>
+                                Foco: Top 3 Piores
+                            </h4>
+                            <ul class="space-y-3 relative z-10">
+                                <li v-for="(disc, idx) in getRankingDisciplinas().piores" :key="disc.disciplina_nome" class="flex justify-between items-center bg-rose-50/50 p-3 rounded-xl border border-rose-100">
+                                    <span class="font-bold text-sm text-slate-700 truncate pr-2" :title="disc.disciplina_nome"><span class="text-rose-500 mr-1">{{idx+1}}º</span> {{ disc.disciplina_nome }}</span>
+                                    <span class="font-black text-rose-700 bg-white px-2 py-1 rounded shadow-sm text-xs border border-rose-100">{{ disc.percentual_acerto }}%</span>
+                                </li>
+                                <li v-if="!getRankingDisciplinas().piores.length" class="text-sm text-slate-500 italic">Dados insuficientes</li>
+                            </ul>
+                        </div>
+                        <div class="bg-white rounded-3xl border border-emerald-200 p-6 shadow-sm relative overflow-hidden">
+                            <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full z-0 opacity-50"></div>
+                            <h4 class="font-bold text-emerald-800 text-lg mb-4 relative z-10 flex items-center cursor-help" title="As 3 disciplinas em que você possui a maior taxa de acerto acumulada">
+                                <span class="bg-emerald-100 text-emerald-600 w-8 h-8 flex items-center justify-center rounded-lg mr-3"><i class="fa-solid fa-trophy"></i></span>
+                                Ranking: Top 3 Melhores
+                            </h4>
+                            <ul class="space-y-3 relative z-10">
+                                <li v-for="(disc, idx) in getRankingDisciplinas().melhores" :key="disc.disciplina_nome" class="flex justify-between items-center bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+                                    <span class="font-bold text-sm text-slate-700 truncate pr-2" :title="disc.disciplina_nome"><span class="text-emerald-500 mr-1">{{idx+1}}º</span> {{ disc.disciplina_nome }}</span>
+                                    <span class="font-black text-emerald-700 bg-white px-2 py-1 rounded shadow-sm text-xs border border-emerald-100">{{ disc.percentual_acerto }}%</span>
+                                </li>
+                                <li v-if="!getRankingDisciplinas().melhores.length" class="text-sm text-slate-500 italic">Dados insuficientes</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <!-- GRÁFICOS -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-sm cursor-help" title="Evolução da sua média de acertos, consolidada semana a semana">Progresso Acumulado</h4>
+                                    <p class="text-[10px] text-slate-500 font-medium">% Acertos (Semana a Semana)</p>
+                                </div>
+                            </div>
+                            <div class="h-56 relative"><canvas id="chartEvolucaoSemanal"></canvas></div>
+                        </div>
+                        <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-sm cursor-help" title="Média de acerto de todas as questões resolvidas em cada dia">Rendimento Diário</h4>
+                                    <p class="text-[10px] text-slate-500 font-medium">% Global de Acertos por Dia</p>
+                                </div>
+                            </div>
+                            <div class="h-56 relative"><canvas id="chartEvolucao"></canvas></div>
+                        </div>
+                        <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                            <div class="flex justify-between items-start mb-4">
+                                <div>
+                                    <h4 class="font-bold text-slate-900 text-sm cursor-help" title="Sua taxa de acerto (%) isolada em cada matéria. As cores indicam o nível: Verde (>=80%), Amarelo (60~79%), Vermelho (<60%).">Rendimento por Disciplina</h4>
+                                    <p class="text-[10px] text-slate-500 font-medium">% Global de Acertos</p>
+                                </div>
+                            </div>
+                            <div class="h-56 relative"><canvas id="chartDisciplinas"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ABA 5: HEATMAP -->
+                <div v-if="abaAtiva === 'heatmap'" class="space-y-6">
+                    <div v-if="calendarioData.dias_labels && calendarioData.dias_labels.length > 0" class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                        <h4 class="font-bold text-slate-900 text-lg mb-1 cursor-help" title="Visualização no estilo painel GitHub do seu histórico. Cada quadrado representa uma matéria em um dia. A cor muda conforme a volta do ciclo atual.">Controle de Dias Estudados (Heatmap)</h4>
+                        <p class="text-xs text-slate-500 mb-6 font-medium">Histórico visual do preenchimento das sessões de estudo</p>
+                        
+                        <div id="heatmap-container" class="overflow-x-auto pb-6 custom-scrollbar scroll-smooth">
+                            <div class="inline-flex flex-col min-w-full">
+                                <div class="flex border-b border-slate-100 mb-1">
+                                    <div class="w-48 flex-shrink-0 sticky left-0 bg-white z-20 text-xs font-bold text-slate-400 uppercase py-2 flex items-end pb-1 border-r border-slate-100">Disciplina</div>
+                                    <div v-for="(lab, idx) in calendarioData.dias_labels" :key="idx" :id="lab.is_hoje ? 'heatmap-hoje-label' : ''" class="w-7 flex-shrink-0 flex flex-col justify-end items-center pb-1 text-center" :class="lab.is_hoje ? 'text-blue-600' : (lab.is_fim_semana ? 'text-slate-500 bg-slate-100/80 rounded-t-sm' : 'text-slate-400')">
+                                          <div class="h-4 w-full flex items-end justify-center mb-0.5"><i v-if="lab.is_hoje" class="fa-solid fa-location-pin text-[12px] text-blue-500"></i></div>
+                                          <span class="text-[9px] font-bold leading-tight">{{ lab.dia_semana }}</span>
+                                          <span class="text-[8px] font-semibold leading-tight">{{ lab.label }}</span>
+                                      </div>
+                                </div>
+                                <div v-for="disc in calendarioData.disciplinas" :key="disc.disciplina" class="flex items-center">
+                                    <div class="w-48 flex-shrink-0 sticky left-0 bg-white z-20 text-[11px] font-bold text-slate-700 truncate pr-2 border-r border-slate-100 py-0.5" :title="disc.disciplina">{{ disc.disciplina }}</div>
+                                    <div v-for="(dia, i) in disc.dias" :key="i" class="w-7 flex-shrink-0 flex justify-center py-0.5 rounded-sm" :class="dia.is_hoje ? 'bg-blue-100/50' : (dia.is_fim_semana ? 'bg-slate-100/80' : '')">
+        <div v-if="dia.estudou" class="w-5 h-5 rounded shadow-sm border border-black/10" :style="{ backgroundColor: dia.cor_hex }" :title="dia.minutos + ' min'"></div>
+        <div v-else class="w-5 h-5 rounded border" :class="dia.is_fim_semana ? 'bg-slate-200 border-slate-300/80' : 'bg-slate-50 border-slate-200'"></div>
+    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-2 pt-4 border-t border-slate-100 flex gap-4 text-[10px] font-bold text-slate-500 uppercase flex-wrap items-center">
+                            <span>LEGENDA DAS VOLTAS DO CICLO:</span>
+                            <div v-for="leg in calendarioData.legenda" :key="leg.nome" class="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded border border-slate-200">
+                                <span class="w-3 h-3 rounded shadow-sm" :style="{ backgroundColor: leg.cor_hex }"></span>
+                                {{ leg.nome }}
+                            </div>
+                        </div>
+                    </div>
+                    <div v-else class="bg-white p-8 rounded-3xl border border-slate-200 text-center shadow-sm">
+                        <p class="text-slate-500 mb-4">Nenhum dado registrado para o controle de dias no edital atual.</p>
+                    </div>
+                    <!-- INDICADORES ANALÍTICOS (Heatmap Inferior) -->
+                    <div v-if="calendarioData.analytics && calendarioData.analytics.current_streak !== undefined" class="mt-8 space-y-6">
+                        <!-- Linha 1: Consistência e Aderência -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- KPI Cards -->
+                            <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col justify-center items-center text-center space-y-6">
+                                <div class="w-full">
+                                    <h4 class="text-4xl font-extrabold text-blue-600 mb-1">{{ calendarioData.analytics.current_streak }} DIAS</h4>
+                                    <p class="text-xs font-bold text-slate-500 uppercase cursor-help" title="Dias seguidos que você estudou até hoje, sem falhar.">Sequência Atual</p>
+                                </div>
+                                <div class="w-full border-t border-slate-100 pt-6">
+                                    <h4 class="text-4xl font-extrabold text-emerald-600 mb-1">{{ calendarioData.analytics.max_streak }} DIAS</h4>
+                                    <p class="text-xs font-bold text-slate-500 uppercase cursor-help" title="O maior número de dias consecutivos em que você registrou ao menos uma sessão de estudo">Maior Sequência Histórica</p>
+                                </div>
+                                      <div class="w-full border-t border-slate-100 pt-6">
+                                          <h4 class="text-4xl font-extrabold text-indigo-500 mb-1">{{ calendarioData.analytics.media_horas_dia_fmt || (calendarioData.analytics.media_horas_dia + 'h') }}</h4>
+                                          <p class="text-xs font-bold text-slate-500 uppercase cursor-help" title="O tempo médio estudado por dia (desconsiderando os dias em que você não estudou nada)">Média em Dias Estudados</p>
+                                      </div>
+                            </div>
+                            
+                            <!-- Aderencia -->
+                            <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm flex flex-col items-center">
+                                <h4 class="font-bold text-slate-900 mb-4 cursor-help" title="Percentual de dias em que você registrou estudo em relação ao total de dias.">Taxa de Aderência de Estudo</h4>
+                                <div class="relative w-48 h-48">
+                                    <canvas id="chartAderencia"></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- Rendimento por Dia -->
+                            <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                                <h4 class="font-bold text-slate-900 mb-4 cursor-help" title="Desempenho da sua taxa de acerto (%) agrupada por dia da semana. Ajuda a descobrir se você rende melhor em determinados dias.">Rendimento por Dia da Semana</h4>
+                                <div class="relative h-48 w-full">
+                                    <canvas id="chartDiaSemana"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Linha 2: Distribuição e Zonas de Risco -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- Distribuição -->
+                            <div class="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                                <h4 class="font-bold text-slate-900 mb-4 cursor-help" title="Onde você investiu seu tempo. Gráfico proporcional que divide suas horas totais entre as diferentes matérias.">Distribuição de Intensidade</h4>
+                                <div class="relative h-64 w-full">
+                                    <canvas id="chartIntensidade"></canvas>
+                                </div>
+                            </div>
+                            
+                            <!-- Evolução -->
+                            <div class="md:col-span-2 bg-white rounded-3xl border border-slate-200 p-6 shadow-sm">
+                                <h4 class="font-bold text-slate-900 mb-4 cursor-help" title="Acompanhamento diário de horas estudadas frente à sua média móvel de 7 e 30 dias. Barras acima da Zona de Burnout indicam excesso pontual.">Evolução Contínua & Zonas de Risco</h4>
+                                <div class="relative h-64 w-full">
+                                    <canvas id="chartEvolucaoRisco"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </main>
+        </div>
+
+        <!-- MODAL DE CHECK-IN -->
+        <div v-if="modalCheckinAberto" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl animate-in zoom-in-95">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-bold text-slate-900">Registrar Sessão Estudo</h3>
+                    <button @click="modalCheckinAberto = false" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+                <form @submit.prevent="salvarSessaoEstudo" class="space-y-5">
+                    
+                    <div v-if="formSessao.is_revisao_anki" class="bg-purple-100 border border-purple-200 text-purple-800 px-4 py-3 rounded-xl flex items-center space-x-3 mb-2">
+                        <i class="fa-solid fa-layer-group text-lg"></i>
+                        <div>
+                            <p class="font-bold text-sm">Modo de Revisão (Anki)</p>
+                            <p class="text-[11px] opacity-80 leading-tight">Indique qual matéria você acabou de revisar. Questões não são contabilizadas neste modo.</p>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Disciplina</label>
+                        <select v-model="formSessao.disciplina_id" @change="formSessao.topico_id = ''" class="w-full border border-slate-300 rounded-xl px-4 py-3 bg-slate-50 outline-none text-sm font-semibold text-slate-800" required>
+                            <option v-for="d in todasDisciplinas" :key="d.id" :value="d.id">{{ d.nome }}</option>
+                        </select>
+                    </div>
+                    <div v-if="topicosDaDisciplina.length > 0">
+                        <label class="block text-sm font-bold text-slate-700 mb-1">Tópico Estudado <span class="text-rose-500">*</span></label>
+                        <select v-model="formSessao.topico_id" class="w-full border border-slate-300 rounded-xl px-4 py-3 bg-slate-50 outline-none text-sm font-medium text-slate-700" :required="!formSessao.is_revisao_anki">
+                            <option value="">-- Selecione o Tópico --</option>
+                            <option v-for="t in topicosDaDisciplina" :key="t.id" :value="t.id" :title="t.titulo">
+                                {{ t.titulo.length > 65 ? t.titulo.substring(0, 65) + '...' : t.titulo }}
+                            </option>
+                        </select>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Tempo (min)</label>
+                            <input type="number" v-model.number="formSessao.tempo_estudado_minutos" required min="1" class="w-full border border-slate-300 rounded-xl px-4 py-2 outline-none font-bold text-center">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">Data</label>
+                            <input type="date" v-model="formSessao.data" required :max="new Date().toISOString().split('T')[0]" class="w-full border border-slate-300 rounded-xl px-4 py-2 outline-none text-sm font-bold">
+                        </div>
+                    </div>
+                    
+                    <div v-if="!formSessao.is_revisao_anki" class="border-t border-slate-100 pt-5">
+                        <label class="block text-sm font-bold text-slate-900 mb-3"><i class="fa-solid fa-list-check text-blue-600 mr-2"></i> Questões Resolvidas</label>
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Acertos</label>
+                                <input type="number" min="0" required v-model.number="formSessao.qtd_acertos" class="w-full border border-emerald-300 bg-emerald-50 text-emerald-700 rounded-xl px-4 py-2 outline-none font-black text-center text-lg">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1">Erros</label>
+                                <input type="number" min="0" required v-model.number="formSessao.qtd_erros" class="w-full border border-rose-300 bg-rose-50 text-rose-700 rounded-xl px-4 py-2 outline-none font-black text-center text-lg">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="pt-4 flex justify-end space-x-3">
+                        <button type="button" @click="modalCheckinAberto = false" class="px-5 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
+                        <button type="submit" class="px-6 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md">Salvar Estudo</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL DE RESUMO DE SESSÃO -->
+        <div v-if="modalResumoAberto" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl max-w-sm w-full p-8 shadow-2xl animate-in zoom-in-95 relative overflow-hidden">
+                <div class="absolute top-0 left-0 right-0 h-16 bg-gradient-to-r from-blue-500 to-indigo-600"></div>
+                
+                <div class="relative z-10 flex flex-col items-center pt-2">
+                    <div class="w-16 h-16 bg-white rounded-2xl shadow-lg flex items-center justify-center text-blue-600 text-3xl mb-4 border border-slate-100">
+                        <i class="fa-solid fa-clipboard-check"></i>
+                    </div>
+                    
+                    <h3 class="text-xl font-extrabold text-slate-900 text-center mb-1">Sessão Concluída</h3>
+                    <p class="text-sm font-medium text-slate-500 text-center mb-6">{{ resumoSessaoAtual.bloco.disciplina.nome }}</p>
+                    
+                    <div class="w-full space-y-4 mb-8">
+                        <div class="flex justify-between items-center py-3 border-b border-slate-100">
+                            <span class="text-sm font-bold text-slate-500"><i class="fa-regular fa-clock mr-2"></i>Tempo</span>
+                            <span class="text-base font-black text-slate-800">{{ resumoSessaoAtual.sessao.tempo_estudado_minutos }} min</span>
+                        </div>
+                        
+                        <div v-if="!resumoSessaoAtual.sessao.is_revisao_anki" class="flex justify-between items-center py-3 border-b border-slate-100">
+                            <span class="text-sm font-bold text-slate-500"><i class="fa-solid fa-bullseye mr-2"></i>Aproveitamento</span>
+                            <span :class="badgeTaxaAcertoBg(resumoSessaoAtual.sessao.percentual_acerto)" class="px-3 py-1 rounded-lg text-sm font-bold shadow-sm">
+                                {{ resumoSessaoAtual.sessao.percentual_acerto }}%
+                            </span>
+                        </div>
+                        <div v-else class="flex justify-between items-center py-3 border-b border-slate-100">
+                            <span class="text-sm font-bold text-slate-500"><i class="fa-solid fa-layer-group mr-2"></i>Modo</span>
+                            <span class="px-3 py-1 rounded-lg text-sm font-bold bg-purple-100 text-purple-700">Revisão Anki</span>
+                        </div>
+                        
+                        <div v-if="!resumoSessaoAtual.sessao.is_revisao_anki" class="flex justify-between items-center py-3">
+                            <span class="text-sm font-bold text-slate-500"><i class="fa-solid fa-check-double mr-2"></i>Questões</span>
+                            <div class="flex space-x-3 text-sm font-black">
+                                <span class="text-emerald-500">{{ resumoSessaoAtual.sessao.qtd_acertos }} ✓</span>
+                                <span class="text-rose-500">{{ resumoSessaoAtual.sessao.qtd_erros }} ✗</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button @click="modalResumoAberto = false" class="w-full py-3 rounded-xl font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md transition-all">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+Disciplina;Topico;Categoria;Peso;Dificuldade
+Língua Portuguesa;Compreensão e Interpretação de Texto;TEORICA_DIREITO;1.5;3
+Língua Portuguesa;Ortografia Oficial e Acentuação Gráfica;TEORICA_DIREITO;1.5;2
+Língua Portuguesa;Sintaxe da Oração e do Período;TEORICA_DIREITO;1.5;4
+Língua Portuguesa;Pontuação e Concordância Verbal/Nominal;TEORICA_DIREITO;1.5;4
+Raciocínio Lógico e Matemático;Estruturas Lógicas e Tabelas Verdade;EXATAS_LOGICA;1.0;3
+Raciocínio Lógico e Matemático;Lógica de Primeira Ordem e Diagramas;EXATAS_LOGICA;1.0;4
+Raciocínio Lógico e Matemático;Probabilidade e Análise Combinatória;EXATAS_LOGICA;1.0;5
+Direito Constitucional;Direitos e Garantias Fundamentais (Art. 5º);TEORICA_DIREITO;2.0;2
+Direito Constitucional;Organização Político-Administrativa do Estado;TEORICA_DIREITO;2.0;3
+Direito Constitucional;Poder Judiciário e Funções Essenciais à Justiça;TEORICA_DIREITO;2.0;3
+Direito Administrativo;Princípios Expressos e Implícitos da Administração;TEORICA_DIREITO;2.0;2
+Direito Administrativo;Atos Administrativos (Requisitos, Atributos e Extinção);TEORICA_DIREITO;2.0;3
+Direito Administrativo;Nova Lei de Licitações e Contratos (Lei 14.133/2021);TEORICA_DIREITO;2.0;4
+Direito Administrativo;Regime Jurídico dos Servidores Públicos (Lei 8.112/1990);TEORICA_DIREITO;2.0;3
+Tecnologia da Informação;Modelagem Relacional, Normalização e SQL ANSI;EXATAS_LOGICA;3.0;3
+Tecnologia da Informação;Arquitetura de Microsserviços e APIs REST;EXATAS_LOGICA;3.0;2
+Tecnologia da Informação;DevOps, Docker, CI/CD e Git;EXATAS_LOGICA;3.0;3
+Tecnologia da Informação;Segurança da Informação, Criptografia e LGPD;EXATAS_LOGICA;3.0;4
+Tecnologia da Informação;Engenharia de Software, Design Patterns e Clean Code;EXATAS_LOGICA;3.0;3

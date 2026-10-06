@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Monta a pasta data para manter o banco SQLite persistente caso não use Postgres
+      - ./data:/app/data
+    environment:
+      # Se for usar PostgreSQL, comente a linha abaixo e adicione o DATABASE_URL
+      # - DATABASE_URL=postgresql://user:password@db:5432/estudo
+      - TZ=America/Sao_Paulo
+
+  # Descomente abaixo se for rodar o PostgreSQL junto via Docker
+  # db:
+  #   image: postgres:15
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data/
+  #   environment:
+  #     - POSTGRES_USER=user
+  #     - POSTGRES_PASSWORD=password
+  #     - POSTGRES_DB=estudo
+  #   ports:
+  #     - "5432:5432"
+
+# volumes:
+#   postgres_data:
