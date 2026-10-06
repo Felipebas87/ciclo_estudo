@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -7,7 +7,7 @@ class Topico(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     disciplina_id = Column(Integer, ForeignKey("disciplinas.id", ondelete="CASCADE"), nullable=False)
-    titulo = Column(String(300), nullable=False)
+    titulo = Column(Text, nullable=False)
     ordem = Column(Integer, default=0)
     concluido = Column(Boolean, default=False)
 

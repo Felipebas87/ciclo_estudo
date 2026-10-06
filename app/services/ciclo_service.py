@@ -173,7 +173,7 @@ def gerar_ciclo_para_edital(
     db.query(CicloEstudos).filter(CicloEstudos.edital_id == edital_id).update({"ativo": False})
 
     # Filtra as disciplinas que devem ir para o ciclo
-    disciplinas_ativas = [d for d in edital.disciplinas if d.incluir_no_ciclo]
+    disciplinas_ativas = [d for d in edital.disciplinas if d.incluir_no_ciclo and d.nome != "REVISÃO ANKI"]
     
     if not disciplinas_ativas:
         # Usuário não marcou nenhuma. Vamos rankear as top 8 automaticamente
