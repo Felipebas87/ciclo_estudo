@@ -29,7 +29,9 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
     """
     disc = db.query(Disciplina).filter(Disciplina.id == dados.disciplina_id).first()
     if not disc:
-        raise HTTPException(status_code=404, detail="Disciplina não encontrada")
+        raise HTTPException(status_code=404, detail="Disciplina nao encontrada")
+    if disc.edital.encerrado:
+        raise HTTPException(status_code=403, detail="Edital ja encerrado")
 
     # Validação e cálculo das questões
     total_q = dados.qtd_questoes_total

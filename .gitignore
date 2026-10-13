@@ -48,3 +48,7 @@ htmlcov/
 
 # Antigravity artifacts
 scratch/
+.antigravity/
+test_html.html
+upgrade_db.py
+

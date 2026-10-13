@@ -12,3 +12,7 @@ __all__ = [
     "BlocoCiclo",
     "SessaoEstudo"
 ]
+
+from app.models.resultado import ResultadoConcurso
+
+from .resultado_avulso import ResultadoAvulsoDB

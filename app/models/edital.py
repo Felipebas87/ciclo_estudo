@@ -14,7 +14,9 @@ class Edital(Base):
     orgao = Column(String(100), nullable=True)
     cargo = Column(String(100), nullable=True)
     ativo = Column(Boolean, default=True)
+    encerrado = Column(Boolean, default=False)
     data_criacao = Column(DateTime, default=utc_now)
 
     disciplinas = relationship("Disciplina", back_populates="edital", cascade="all, delete-orphan")
     ciclos = relationship("CicloEstudos", back_populates="edital", cascade="all, delete-orphan")
+    resultado = relationship("ResultadoConcurso", back_populates="edital", uselist=False, cascade="all, delete-orphan")

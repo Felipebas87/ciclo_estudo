@@ -1,218 +1,538 @@
 const { createApp, ref, computed, onMounted, nextTick } = Vue;
 
-createApp({
+const app = createApp({
     setup() {
         // Estado Global
         const estadoAplicacao = ref('app'); // 'wizard' ou 'app'
         const abaAtiva = ref('ciclo');
-        const abaVerticalizado = ref('basicos'); // 'basicos', 'especificos'
-        const mensagemAlerta = ref('');
-        const tipoAlerta = ref('sucesso');
-        
-        // Dados API
-        const editais = ref([]);
+        const resultadoAtual = ref(null);
+        const carregandoResultados = ref(false);
+
+        const abaRaizResultados = ref('registrar'); // 'registrar', 'historico'
+        const abaRegistrar = ref('antiga'); // 'antiga', 'encerramento'
+        const abaHistorico = ref('avulsos'); // 'avulsos', 'encerrados'
+
         const cicloAtivo = ref(null);
+        const editandoCiclo = ref(false);
+        const formResultado = ref({ nota_final: 0, nota_corte: 0, total_pontos_prova: '', nota_minima_aprovados: '', nota_maxima_aprovados: '', posicao: 0, total_vagas: 0, resultado_final: 'Aprovado' });
+        const editais = ref([]);
         const sessoes = ref([]);
-        
-        // Dados de Relatório
-        const dashboardData = ref({});
+        const dashboardData = ref(null);
         const matrizSemanalData = ref({});
-        const calendarioData = ref({});
+        const calendarioData = ref([]);
         const editalVerticalizadoData = ref({});
-        
-        // Wizard Form
         const wizardPasso = ref(0);
-        const wizardDados = ref({ nome: '', texto_basicos: '', texto_especificos: '' });
+        const wizardDados = ref({ nome: '', bancas: '', data: '', descricao: '' });
         const wizardEditalGerado = ref(null);
         const processandoEdital = ref(false);
         const cicloForm = ref({ carga_horaria_semanal: 20, duracao_bloco_minutos: 60 });
-
-        // Cronometro
         const timerSegundos = ref(0);
         const timerRodando = ref(false);
-        let timerInterval = null;
-
-        // Modal Checkin
         const modalCheckinAberto = ref(false);
         const formSessao = ref({
-            disciplina_id: null, bloco_ciclo_id: null, topico_id: null,
-            data: new Date().toISOString().split('T')[0],
-            tempo_estudado_minutos: 60, qtd_questoes_total: 0,
-            qtd_acertos: 0, qtd_erros: 0, observacoes: '', avancar_ciclo: true,
-            is_revisao_anki: false
+            disciplina_id: '', topico_id: '', duracao_minutos: 0, acertos: 0, erros: 0, questoes_totais: 0,
+            nivel_concentracao: 3, desempenho_subjetivo: 3, material_utilizado: '',
+            is_revisao_anki: false, notas_observacoes: ''
         });
-
+        const topicosDaDisciplina = ref([]);
+        const verticalizadoAberto = ref({});
         const modalResumoAberto = ref(false);
         const resumoSessaoAtual = ref(null);
 
-        // Charts
-        let chartDiscInstance = null;
-        let chartEvolucaoInstance = null;
-        let chartCicloDonutInstance = null;
 
-        // Computed
-        const blocoAtual = computed(() => {
-            if (!cicloAtivo.value || !cicloAtivo.value.blocos || cicloAtivo.value.blocos.length === 0) return null;
-            return cicloAtivo.value.blocos[cicloAtivo.value.bloco_atual_index || 0];
+        const rankingRevisoes = computed(() => {
+            if (!resultadoAtual.value || !resultadoAtual.value.desempenho_disciplinas) return [];
+            return [...resultadoAtual.value.desempenho_disciplinas].sort((a, b) => b.revisoes - a.revisoes);
         });
 
-        const todasDisciplinas = computed(() => {
-            const list = [];
-            editais.value.forEach(e => {
-                if (e.disciplinas) e.disciplinas.forEach(d => {
-                    if (d.nome !== "REVISÃO ANKI") list.push(d);
-                });
-            });
-            return list;
-        });
-
-        const topicosDaDisciplina = computed(() => {
-            if (!formSessao.value.disciplina_id) return [];
-            const d = todasDisciplinas.value.find(x => x.id === formSessao.value.disciplina_id);
-            return d && d.topicos ? d.topicos : [];
-        });
-
-        const percentualGlobalEdital = computed(() => {
-            if (!editais.value || editais.value.length === 0) return 0;
-            const ed = editais.value[0]; // Edital atual
-            if (!ed || !ed.disciplinas) return 0;
-
-            let totalTopicos = 0;
-            let topicosVistos = new Set();
-
-            ed.disciplinas.forEach(d => {
-                if (d.categoria !== 'REVISAO_ANKI' && d.topicos) {
-                    totalTopicos += d.topicos.length;
-                    const sessoesDisc = sessoes.value.filter(s => s.disciplina_id === d.id && s.topico_id !== null);
-                    sessoesDisc.forEach(s => topicosVistos.add(s.topico_id));
-                }
-            });
-
-            if (totalTopicos === 0) return 0;
-            return (topicosVistos.size / totalTopicos * 100).toFixed(1);
-        });
-
-        // Helpers
-        function mostrarAlerta(msg, tipo = 'sucesso') {
-            mensagemAlerta.value = msg;
-            tipoAlerta.value = tipo;
-            setTimeout(() => { if (mensagemAlerta.value === msg) mensagemAlerta.value = ''; }, 4000);
-        }
-
-        function formatarTempoTimer(s) {
-            const hrs = Math.floor(s / 3600);
-            const mins = Math.floor((s % 3600) / 60);
-            const secs = s % 60;
-            return `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
-        }
+        const quadrantesRaioX = computed(() => {
+            const quad = {
+                dominado: [],
+                eficienciaAlta: [],
+                eficienciaBaixa: [],
+                lacuna: []
+            };
 
         
-        function formatarHorasDecimais(h) {
-            if(!h) return '0h00m';
-            if (typeof h === 'string' && h.includes('h')) return h;
-            const val = parseFloat(h);
-            const horas = Math.floor(val);
-            const minutos = Math.round((val - horas) * 60);
-            return `${horas}h${minutos.toString().padStart(2, '0')}m`;
-        }
 
-        function formatarData(isoStr) {
+            if (!resultadoAtual.value || !resultadoAtual.value.desempenho_disciplinas) return quad;
+            
+            // Mediana de tempo para dividir alto/baixo tempo
+            const tempos = resultadoAtual.value.desempenho_disciplinas.map(d => d.horas_dedicadas).sort((a,b)=>a-b);
+            const medianaTempo = tempos.length > 0 ? tempos[Math.floor(tempos.length/2)] : 0;
+            const tempoCorte = medianaTempo > 0 ? medianaTempo : 5.0; // fallback para 5h se não houver mediana boa
+            
+            resultadoAtual.value.desempenho_disciplinas.forEach(d => {
+                if (d.horas_dedicadas === 0 && d.questoes_resolvidas === 0 && (!d.acertos_prova_perc || d.acertos_prova_perc === 0)) return; // ignorar se não houve estudo nem prova
+                const acerto = (d.acertos_prova_perc !== undefined && d.acertos_prova_perc !== null && d.acertos_prova_perc > 0) ? d.acertos_prova_perc : (d.percentual_acerto || 0);
+                
+                if (d.horas_dedicadas >= tempoCorte && acerto >= 70) quad.dominado.push(d);
+                else if (d.horas_dedicadas < tempoCorte && acerto >= 70) quad.eficienciaAlta.push(d);
+                else if (d.horas_dedicadas >= tempoCorte && acerto < 70) quad.eficienciaBaixa.push(d);
+                else quad.lacuna.push(d);
+            });
+            return quad;
+        });
+
+        const gerarInsightsRaioX = () => {
+            insightsRaioX.value = [];
+            const q = quadrantesRaioX.value;
+            
+            if (q.eficienciaBaixa.length > 0) {
+                const nomes = q.eficienciaBaixa.map(d => d.nome).join(', ');
+                insightsRaioX.value.push(`<b>Alerta de Retorno:</b> Você investiu muito tempo em <b>${nomes}</b> mas o acerto ficou abaixo de 70%. É recomendado mudar o material base ou o método (ex: trocar vídeo por PDF).`);
+            }
+            if (q.eficienciaAlta.length > 0) {
+                const nomes = q.eficienciaAlta.slice(0, 2).map(d => d.nome).join(', ');
+                insightsRaioX.value.push(`<b>Alta Retenção:</b> <b>${nomes}</b> tiveram excelente desempenho com poucas horas. Provavelmente você tem base forte; mantenha apenas via revisões e questões.`);
+            }
+            if (q.lacuna.length > 0) {
+                const nomes = q.lacuna.slice(0, 2).map(d => d.nome).join(', ');
+                insightsRaioX.value.push(`<b>Prioridade Urgente:</b> <b>${nomes}</b> estão com baixo tempo e baixo rendimento. Devem ser o foco principal no seu próximo ciclo de estudos.`);
+            }
+            if (insightsRaioX.value.length === 0) {
+                insightsRaioX.value.push("Sua preparação está equilibrada. Continue mantendo a constância nos estudos e revisões.");
+            }
+        };
+
+        let chartRaioX = null;
+
+        const disciplinasEncerramento = ref([]);
+        const insightsRaioX = ref([]);
+        const resultadosEncerrados = ref([]);
+        const resultadosAvulsos = ref([]);
+        const avulsoSelecionado = ref(null);
+        const idEmEdicaoAvulso = ref(null);
+        const abrirModalDetalhesAvulso = (av) => { avulsoSelecionado.value = av; };
+        
+        const mudarAbaHistorico = (aba) => {
+            abaHistorico.value = aba;
+            nextTick(() => {
+                setTimeout(() => {
+                    if (aba === 'avulsos') renderGraficosAvulsos();
+                    if (aba === 'encerrados') renderizarGraficosResultados();
+                }, 150);
+            });
+        };
+
+        const fecharModalDetalhesAvulso = () => { avulsoSelecionado.value = null; };
+
+        const formAvulso = ref({
+            nome_prova: '', banca: '', data_prova: '', nota_final: '', nota_corte: '', total_pontos_prova: '',
+            acertos_basicos: '', erros_basicos: '', nota_basicos: '',
+            acertos_especificos: '', erros_especificos: '', nota_especificos: '',
+            nota_discursiva: '', posicao: '', resultado_final: 'Aprovado'
+        });
+
+        const editarResultadoAvulso = (av) => {
+            if (!av) return;
+            idEmEdicaoAvulso.value = av.id;
+            formAvulso.value = {
+                nome_prova: av.nome_prova || '',
+                banca: av.banca || '',
+                data_prova: av.data_prova || '',
+                acertos_basicos: (av.acertos_basicos !== null && av.acertos_basicos !== undefined) ? av.acertos_basicos : '',
+                erros_basicos: (av.erros_basicos !== null && av.erros_basicos !== undefined) ? av.erros_basicos : '',
+                nota_basicos: (av.nota_basicos !== null && av.nota_basicos !== undefined) ? av.nota_basicos : '',
+                acertos_especificos: (av.acertos_especificos !== null && av.acertos_especificos !== undefined) ? av.acertos_especificos : '',
+                erros_especificos: (av.erros_especificos !== null && av.erros_especificos !== undefined) ? av.erros_especificos : '',
+                nota_especificos: (av.nota_especificos !== null && av.nota_especificos !== undefined) ? av.nota_especificos : '',
+                nota_discursiva: (av.nota_discursiva !== null && av.nota_discursiva !== undefined) ? av.nota_discursiva : '',
+                nota_final: (av.nota_final !== null && av.nota_final !== undefined) ? av.nota_final : '',
+                total_pontos_prova: (av.total_pontos_prova !== null && av.total_pontos_prova !== undefined) ? av.total_pontos_prova : '',
+                nota_corte: (av.nota_corte !== null && av.nota_corte !== undefined) ? av.nota_corte : '',
+                posicao: (av.posicao !== null && av.posicao !== undefined) ? av.posicao : '',
+                resultado_final: av.resultado_final || 'Aprovado'
+            };
+            abaAtiva.value = 'resultados';
+            abaRaizResultados.value = 'registrar';
+            abaRegistrar.value = 'antiga';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const cancelarEdicaoAvulso = () => {
+            idEmEdicaoAvulso.value = null;
+            formAvulso.value = {
+                nome_prova: '', banca: '', data_prova: '', total_pontos_prova: '',
+                acertos_basicos: '', erros_basicos: '', nota_basicos: '',
+                acertos_especificos: '', erros_especificos: '', nota_especificos: '',
+                nota_discursiva: '', nota_final: '', nota_corte: '', posicao: '', resultado_final: 'Aprovado'
+            };
+        };
+
+// Gráficos Avulsos
+let chartEvolucaoAvulsosInstance = null;
+let chartDesempenhoAvulsosInstance = null;
+
+
+const formatarPercentualBR = (val) => {
+    if (val === null || val === undefined || isNaN(val)) return '-';
+    const num = Number(val);
+    const s = num.toFixed(2);
+    if (s.endsWith('.00')) {
+        return num.toFixed(0) + '%';
+    } else if (s.endsWith('0')) {
+        return num.toFixed(1).replace('.', ',') + '%';
+    }
+    return num.toFixed(2).replace('.', ',') + '%';
+};
+
+const calcularPercentualTotal = (a) => {
+    if (!a) return '-';
+    const ac = (Number(a.acertos_basicos) || 0) + (Number(a.acertos_especificos) || 0);
+    const er = (Number(a.erros_basicos) || 0) + (Number(a.erros_especificos) || 0);
+    if (ac + er === 0) return '-';
+    return ((ac / (ac + er)) * 100).toFixed(1) + '%';
+};
+
+const calcularPercentualRendimento = (av) => {
+    if (!av) return '-';
+    const totalPts = Number(av.total_pontos_prova);
+    const nota = Number(av.nota_final);
+    if (totalPts > 0) {
+        return formatarPercentualBR((nota / totalPts) * 100);
+    }
+    return calcularPercentualTotal(av);
+};
+
+const calcularPercentualCorte = (av) => {
+    if (!av) return '-';
+    const totalPts = Number(av.total_pontos_prova);
+    const corte = Number(av.nota_corte);
+    if (totalPts > 0 && av.nota_corte !== null && av.nota_corte !== undefined && av.nota_corte !== '') {
+        return formatarPercentualBR((corte / totalPts) * 100);
+    }
+    return '-';
+};
+
+const calcularRendimentoRaioX = (res) => {
+    if (!res) return '-';
+    const totalPts = Number(res.total_pontos_prova);
+    const nota = Number(res.nota_final);
+    if (totalPts > 0) {
+        return formatarPercentualBR((nota / totalPts) * 100);
+    }
+    let totalQ = 0;
+    if (res.disciplinas_resultado && res.disciplinas_resultado.length > 0) {
+        totalQ = res.disciplinas_resultado.reduce((acc, d) => acc + (Number(d.acertos) || 0) + (Number(d.erros) || 0), 0);
+    }
+    if (totalQ > 0) {
+        return formatarPercentualBR((nota / totalQ) * 100);
+    }
+    if (res.acerto_geral_perc > 0) return formatarPercentualBR(res.acerto_geral_perc);
+    return '-';
+};
+
+const calcularCorteRaioX = (res) => {
+    if (!res) return '-';
+    const totalPts = Number(res.total_pontos_prova);
+    const corte = Number(res.nota_corte);
+    if (corte === null || corte === undefined || corte === 0) return '-';
+    if (totalPts > 0) {
+        return formatarPercentualBR((corte / totalPts) * 100);
+    }
+    let totalQ = 0;
+    if (res.disciplinas_resultado && res.disciplinas_resultado.length > 0) {
+        totalQ = res.disciplinas_resultado.reduce((acc, d) => acc + (Number(d.acertos) || 0) + (Number(d.erros) || 0), 0);
+    }
+    if (totalQ > 0) {
+        return formatarPercentualBR((corte / totalQ) * 100);
+    }
+    return '-';
+};
+
+const calcularComparativoInfo = (av) => {
+    if (!av) return { texto: '-', classes: 'bg-slate-100 text-slate-600' };
+    const totalPts = Number(av.total_pontos_prova);
+    const nota = Number(av.nota_final) || 0;
+    const temCorte = (av.nota_corte !== null && av.nota_corte !== undefined && av.nota_corte !== '');
+    const corte = temCorte ? Number(av.nota_corte) : null;
+    
+    if (totalPts > 0 && corte !== null) {
+        const diff = ((nota - corte) / totalPts) * 100;
+        const diffFmt = (diff >= 0 ? '+' : '') + diff.toFixed(2).replace('.', ',') + '%';
+        const isAprovado = diff >= 0;
+        let statusTexto = isAprovado ? 'Aprovado' : 'Reprovado';
+        if (av.resultado_final === 'Lista de Espera' || av.resultado_final === 'Cadastro Reserva') {
+            statusTexto = av.resultado_final;
+        }
+        return {
+            texto: `${statusTexto} (${diffFmt})`,
+            classes: isAprovado ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'
+        };
+    } else if (corte !== null && corte > 0) {
+        const diff = ((nota / corte) - 1) * 100;
+        const diffFmt = (diff >= 0 ? '+' : '') + diff.toFixed(2).replace('.', ',') + '%';
+        const isAprovado = diff >= 0;
+        let statusTexto = isAprovado ? 'Aprovado' : 'Reprovado';
+        if (av.resultado_final === 'Lista de Espera' || av.resultado_final === 'Cadastro Reserva') {
+            statusTexto = av.resultado_final;
+        }
+        return {
+            texto: `${statusTexto} (${diffFmt})`,
+            classes: isAprovado ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'
+        };
+    }
+    
+    const isAprovado = av.resultado_final === 'Aprovado';
+    return {
+        texto: av.resultado_final || '-',
+        classes: isAprovado ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' : 'bg-rose-100 text-rose-800 border border-rose-200'
+    };
+};
+
+const renderGraficosAvulsos = () => {
+    setTimeout(() => {
+        if(chartEvolucaoAvulsosInstance) { chartEvolucaoAvulsosInstance.destroy(); chartEvolucaoAvulsosInstance = null; }
+        if(chartDesempenhoAvulsosInstance) { chartDesempenhoAvulsosInstance.destroy(); chartDesempenhoAvulsosInstance = null; }
+        
+        const canvasEv = document.getElementById('chartEvolucaoAvulsos');
+        const canvasDes = document.getElementById('chartDesempenhoAvulsos');
+        if(!canvasEv || !canvasDes) return;
+        
+        // Ordenar cronologicamente para a linha do tempo (da mais antiga para a mais nova)
+        const dadosOrdenados = [...resultadosAvulsos.value].sort((a, b) => {
+            const dataA = a.data_prova ? String(a.data_prova).trim() : '';
+            const dataB = b.data_prova ? String(b.data_prova).trim() : '';
+            if (!dataA && !dataB) return (a.id || 0) - (b.id || 0);
+            if (!dataA) return -1;
+            if (!dataB) return 1;
+            if (dataA !== dataB) return dataA.localeCompare(dataB);
+            return (a.id || 0) - (b.id || 0);
+        });
+        const labels = dadosOrdenados.map(a => a.nome_prova);
+        
+        const ctxEv = canvasEv.getContext('2d');
+        chartEvolucaoAvulsosInstance = new Chart(ctxEv, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Distância do Corte (%)',
+                        data: dadosOrdenados.map(a => {
+                            if (a.nota_corte === null || a.nota_corte === undefined || a.nota_final === null || a.nota_final === undefined) return null;
+                            const nota = Number(a.nota_final);
+                            const corte = Number(a.nota_corte);
+                            const totalPts = Number(a.total_pontos_prova);
+                            if (totalPts > 0) {
+                                return (((nota - corte) / totalPts) * 100).toFixed(2);
+                            }
+                            if (corte > 0) {
+                                return (((nota / corte) - 1) * 100).toFixed(2);
+                            }
+                            return null;
+                        }),
+                        borderColor: '#4f46e5',
+                        backgroundColor: '#4f46e520',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 6,
+                        pointHoverRadius: 8,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderWidth: 2
+                    },
+                    {
+                        label: 'Nota de Corte (0%)',
+                        data: dadosOrdenados.map(a => 0),
+                        borderColor: '#ef4444',
+                        borderDash: [5, 5],
+                        fill: false,
+                        tension: 0,
+                        pointRadius: 0,
+                        pointHoverRadius: 0
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false,
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) {
+                                    const yVal = Number(context.parsed.y);
+                                    label += (yVal >= 0 ? '+' : '') + yVal.toFixed(2).replace('.', ',') + '%';
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        const ctxDes = canvasDes.getContext('2d');
+        chartDesempenhoAvulsosInstance = new Chart(ctxDes, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Básicos (% Acerto)',
+                        data: dadosOrdenados.map(a => {
+                            const ac = Number(a.acertos_basicos) || 0;
+                            const er = Number(a.erros_basicos) || 0;
+                            return (ac + er > 0) ? ((ac / (ac + er)) * 100).toFixed(1) : 0;
+                        }),
+                        backgroundColor: '#0ea5e9'
+                    },
+                    {
+                        label: 'Específicos (% Acerto)',
+                        data: dadosOrdenados.map(a => {
+                            const ac = Number(a.acertos_especificos) || 0;
+                            const er = Number(a.erros_especificos) || 0;
+                            return (ac + er > 0) ? ((ac / (ac + er)) * 100).toFixed(1) : 0;
+                        }),
+                        backgroundColor: '#8b5cf6'
+                    }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    y: { min: 0, max: 100, ticks: { callback: function(value) { return value + "%" } } }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) { label += ': '; }
+                                if (context.parsed.y !== null) { label += context.parsed.y + '%'; }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }, 100);
+};
+
+        
+        
+        const toggleVerticalizado = (id) => {
+            verticalizadoAberto.value[id] = !verticalizadoAberto.value[id];
+        };
+        const formatarHorasDecimais = (h) => {
+            if (!h) return "0h";
+            return h.toFixed(1) + "h";
+        };
+        const getAproveitamentoClasses = (perc) => {
+            if (perc >= 80) return { bg: "from-emerald-500/20 to-emerald-600/20", text: "from-emerald-400 to-emerald-200", border: "border-emerald-500/30" };
+            if (perc >= 60) return { bg: "from-blue-500/20 to-blue-600/20", text: "from-blue-400 to-blue-200", border: "border-blue-500/30" };
+            if (perc >= 40) return { bg: "from-amber-500/20 to-amber-600/20", text: "from-amber-400 to-amber-200", border: "border-amber-500/30" };
+            return { bg: "from-rose-500/20 to-rose-600/20", text: "from-rose-400 to-rose-200", border: "border-rose-500/30" };
+        };
+        const abrirResultados = async () => {
+            abaAtiva.value = 'resultados';
+            abaRaizResultados.value = 'registrar';
+            await carregarResultadosAvulsos();
+            await carregarResultadosEncerrados();
+        };
+        const carregarResultados = async () => {};
+        const salvarResultado = async () => {};
+
+
+// formatarDataCurta
+const formatarDataCurta = (isoStr) => {
             if (!isoStr) return '';
             const p = isoStr.split('-');
-            if (p.length >= 3) return `${p[2].substring(0,2)}/${p[1]}`;
+            if (p.length >= 3) {
+                const day = p[2].includes('T') ? p[2].split('T')[0] : p[2].substring(0,2);
+                return `${day}/${p[1]}/${p[0]}`;
+            }
             return isoStr;
         }
 
-        function badgeTaxaAcertoBg(perc) {
-            if (perc >= 80) return 'bg-emerald-100 text-emerald-800';
-            if (perc >= 60) return 'bg-amber-100 text-amber-800';
-            return 'bg-rose-100 text-rose-800';
-        }
+// encerrarPreparacaoAvulsa
+const encerrarPreparacaoAvulsa = async () => {
+            if (!confirm("Tem certeza que deseja encerrar esta preparação e registrá-la como Resultado Oficial? Esta ação travará a inserção de novas horas de estudo para este edital.")) return;
+            
+            formResultado.value.nota_final = formAvulso.value.nota_final || 0;
+            formResultado.value.nota_corte = formAvulso.value.nota_corte || 0;
+            formResultado.value.nota_minima_aprovados = 0;
+            formResultado.value.nota_maxima_aprovados = 0;
+            formResultado.value.posicao = formAvulso.value.posicao || 0;
+            formResultado.value.total_vagas = 0;
+            formResultado.value.resultado_final = formAvulso.value.resultado_final || 'Aprovado';
 
-        function badgeTextTaxa(perc) {
-            if (perc >= 80) return 'text-emerald-600';
-            if (perc >= 60) return 'text-amber-500';
-            return 'text-rose-500';
-        }
-
-        function getAproveitamentoClasses(perc) {
-            if (perc >= 81) return { text: 'from-blue-400 to-blue-200', border: 'border-blue-500/20 hover:border-blue-500/50', bg: 'bg-blue-500/5' };
-            if (perc >= 71) return { text: 'from-emerald-400 to-emerald-200', border: 'border-emerald-500/20 hover:border-emerald-500/50', bg: 'bg-emerald-500/5' };
-            if (perc >= 60) return { text: 'from-amber-400 to-amber-200', border: 'border-amber-500/20 hover:border-amber-500/50', bg: 'bg-amber-500/5' };
-            return { text: 'from-rose-400 to-rose-200', border: 'border-rose-500/20 hover:border-rose-500/50', bg: 'bg-rose-500/5' };
-        }
-
-        function getNomeDisciplina(id) {
-            const d = todasDisciplinas.value.find(x => x.id === id);
-            return d ? d.nome : `ID: ${id}`;
-        }
-
-        // Api Calls - Lifecycle
-        async function loadAllData() {
             try {
-                const rEd = await fetch('/api/editais');
-                if (rEd.ok) {
-                    editais.value = await rEd.json();
-                    if (editais.value.length === 0) {
-                        estadoAplicacao.value = 'wizard';
-                        wizardPasso.value = 0;
-                        return;
-                    } else {
-                        estadoAplicacao.value = 'app';
-                    }
+                const response = await fetch('/api/resultados/' + cicloAtivo.value.edital_id + '/encerrar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formResultado.value)
+                });
+                if (response.ok) {
+                    resultadoAtual.value = await response.json();
+                    alert("Preparação encerrada com sucesso!");
+                    setTimeout(() => { renderGraficosAvulsos(); }, 100);
+                } else {
+                    const errorData = await response.json();
+                    alert(errorData.detail || "Erro ao encerrar.");
                 }
-
-                const rCiclo = await fetch('/api/ciclos/ativo');
-                if (rCiclo.ok) cicloAtivo.value = await rCiclo.json();
-
-                const rSess = await fetch('/api/sessoes?limite=100');
-                if (rSess.ok) sessoes.value = await rSess.json();
-
-                if (abaAtiva.value === 'ciclo') renderDonut();
-
-                if (cicloAtivo.value) {
-                    await carregarDashboardData(cicloAtivo.value.edital_id);
-                } else if (editais.value.length > 0) {
-                    await carregarDashboardData(editais.value[0].id);
-                }
-            } catch (e) {
-                console.error(e);
+            } catch (error) {
+                console.error("Erro ao encerrar:", error);
+                alert("Erro de conexão ao encerrar a preparação.");
             }
         }
 
-        async function carregarDashboardData(edital_id) {
-            const rDash = await fetch('/api/dashboard');
-            if (rDash.ok) dashboardData.value = await rDash.json();
+// salvarResultadoAvulso
+const salvarResultadoAvulso = async () => {
+            try {
+                const toNumOrNull = (v) => (v === '' || v === null || v === undefined) ? null : Number(v);
+                const toIntOrNull = (v) => (v === '' || v === null || v === undefined) ? null : parseInt(v);
 
-            const rMat = await fetch(`/api/dashboard/matriz-semanal?edital_id=${edital_id}`);
-            if (rMat.ok) matrizSemanalData.value = await rMat.json();
+                const payload = {
+                    nome_prova: formAvulso.value.nome_prova,
+                    banca: formAvulso.value.banca || null,
+                    data_prova: formAvulso.value.data_prova || null,
+                    nota_final: Number(formAvulso.value.nota_final) || 0,
+                    nota_corte: toNumOrNull(formAvulso.value.nota_corte),
+                    total_pontos_prova: toNumOrNull(formAvulso.value.total_pontos_prova),
+                    acertos_basicos: toIntOrNull(formAvulso.value.acertos_basicos),
+                    erros_basicos: toIntOrNull(formAvulso.value.erros_basicos),
+                    nota_basicos: toNumOrNull(formAvulso.value.nota_basicos),
+                    acertos_especificos: toIntOrNull(formAvulso.value.acertos_especificos),
+                    erros_especificos: toIntOrNull(formAvulso.value.erros_especificos),
+                    nota_especificos: toNumOrNull(formAvulso.value.nota_especificos),
+                    nota_discursiva: toNumOrNull(formAvulso.value.nota_discursiva),
+                    posicao: toIntOrNull(formAvulso.value.posicao) || 0,
+                    resultado_final: formAvulso.value.resultado_final || 'Aprovado'
+                };
 
-            const rCal = await fetch(`/api/dashboard/calendario-estudos?edital_id=${edital_id}&dias=30`);
-            if (rCal.ok) calendarioData.value = await rCal.json();
+                const isEdicao = Boolean(idEmEdicaoAvulso.value);
+                const url = isEdicao ? `/api/resultados_avulsos/${idEmEdicaoAvulso.value}` : '/api/resultados_avulsos';
+                const method = isEdicao ? 'PUT' : 'POST';
 
-            const rVert = await fetch(`/api/dashboard/edital-verticalizado?edital_id=${edital_id}`);
-            if (rVert.ok) editalVerticalizadoData.value = await rVert.json();
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (response.ok) {
+                    mostrarAlerta(isEdicao ? "Prova antiga atualizada com sucesso!" : "Prova antiga cadastrada com sucesso!", "sucesso");
+                    cancelarEdicaoAvulso();
+                    await carregarResultadosAvulsos();
+                    abaRaizResultados.value = 'historico';
+                    abaHistorico.value = 'avulsos';
+                    setTimeout(renderGraficosAvulsos, 150);
+                } else {
+                    const errData = await response.json();
+                    mostrarAlerta(errData.detail || "Erro ao salvar", "erro");
+                }
+            } catch(e) {
+                mostrarAlerta("Erro de rede", "erro");
+            }
+        };
 
-            renderCharts();
-        }
-
-        function abrirDashboard() {
-            abaAtiva.value = 'dashboard';
-            setTimeout(renderCharts, 100);
-        }
-        
-        function carregarEditalVerticalizado(id) {
-            carregarDashboardData(id);
-            mostrarAlerta("Relatório verticalizado atualizado!");
-        }
-
-        const verticalizadoAberto = ref({});
-        function toggleVerticalizado(id) {
-            verticalizadoAberto.value[id] = !verticalizadoAberto.value[id];
-        }
-
-        // Timer actions
-        function toggleTimer() {
+// toggleTimer
+const toggleTimer = () => {
             if (timerRodando.value) {
                 clearInterval(timerInterval);
                 timerRodando.value = false;
@@ -221,20 +541,59 @@ createApp({
                 timerInterval = setInterval(() => { timerSegundos.value++; }, 1000);
             }
         }
-        function resetTimer() {
+
+// resetTimer
+const resetTimer = () => {
             if (timerInterval) clearInterval(timerInterval);
             timerRodando.value = false;
             timerSegundos.value = 0;
         }
 
-        // Wizard Flow
-        function preencherExemploWizard() {
-            wizardDados.value.nome = "TSE Unificado 2024 - Analista TI";
-            wizardDados.value.texto_basicos = "LÍNGUA PORTUGUESA: 1 Compreensão de texto. 2 Ortografia.\\nDIREITO CONSTITUCIONAL: 1 Organização dos poderes.";
-            wizardDados.value.texto_especificos = "TECNOLOGIA DA INFORMAÇÃO: 1 Banco de Dados Relacional. 2 Engenharia de Software.\\nRACIOCÍNIO LÓGICO: 1 Probabilidade.";
+// formatarTempoTimer
+const formatarTempoTimer = (s) => {
+            const hrs = Math.floor(s / 3600);
+            const mins = Math.floor((s % 3600) / 60);
+            const secs = s % 60;
+            return `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
         }
 
-        async function processarEditalWizard() {
+// formatarData
+const formatarData = (isoStr) => {
+            if (!isoStr) return '';
+            const p = isoStr.split('-');
+            if (p.length >= 3) return `${p[2].substring(0,2)}/${p[1]}`;
+            return isoStr;
+        }
+
+// badgeTaxaAcertoBg
+const badgeTaxaAcertoBg = (perc) => {
+            if (perc >= 80) return 'bg-emerald-100 text-emerald-800';
+            if (perc >= 60) return 'bg-amber-100 text-amber-800';
+            return 'bg-rose-100 text-rose-800';
+        }
+
+// badgeTextTaxa
+const badgeTextTaxa = (perc) => {
+            if (perc >= 80) return 'text-emerald-600';
+            if (perc >= 60) return 'text-amber-500';
+            return 'text-rose-500';
+        }
+
+// getNomeDisciplina
+const getNomeDisciplina = (id) => {
+            const d = todasDisciplinas.value.find(x => x.id === id);
+            return d ? d.nome : `ID: ${id}`;
+        }
+
+// preencherExemploWizard
+const preencherExemploWizard = () => {
+            wizardDados.value.nome = "TSE Unificado 2024 - Analista TI";
+            wizardDados.value.texto_basicos = "LÍNGUA PORTUGUESA: 1 Compreensão de texto. 2 Ortografia.\nDIREITO CONSTITUCIONAL: 1 Organização dos poderes.";
+            wizardDados.value.texto_especificos = "TECNOLOGIA DA INFORMAÇÃO: 1 Banco de Dados Relacional. 2 Engenharia de Software.\nRACIOCÍNIO LÓGICO: 1 Probabilidade.";
+        }
+
+// processarEditalWizard
+const processarEditalWizard = async () => {
             processandoEdital.value = true;
             try {
                 const res = await fetch('/api/editais/texto', {
@@ -250,17 +609,17 @@ createApp({
                         wizardPasso.value = 3;
                     }
                 } else {
-                    const err = await res.json();
-                    mostrarAlerta(err.detail || "Falha ao processar edital", "erro");
+                    mostrarAlerta("Falha ao processar edital", "erro");
                 }
             } catch(e) {
-                mostrarAlerta("Erro de rede: " + e.message, "erro");
+                mostrarAlerta("Erro de rede", "erro");
             } finally {
                 processandoEdital.value = false;
             }
         }
 
-        async function salvarPesoDisciplina(disc) {
+// salvarPesoDisciplina
+const salvarPesoDisciplina = async (disc) => {
             try {
                 await fetch(`/api/editais/disciplinas/${disc.id}`, {
                     method: 'PUT',
@@ -268,15 +627,14 @@ createApp({
                     body: JSON.stringify({
                         peso_prova: disc.peso_prova,
                         relevancia_dificuldade: disc.relevancia_dificuldade,
-                        categoria: disc.categoria,
-                        incluir_no_ciclo: disc.incluir_no_ciclo,
-                        qtd_questoes_prova: disc.qtd_questoes_prova
+                        categoria: disc.categoria
                     })
                 });
             } catch(e) {}
         }
 
-        async function finalizarWizard() {
+// finalizarWizard
+const finalizarWizard = async () => {
             try {
                 const res = await fetch('/api/ciclos/gerar', {
                     method: 'POST',
@@ -300,6 +658,346 @@ createApp({
             }
         }
 
+// abrirDashboard
+const abrirDashboard = () => {
+            abaAtiva.value = 'dashboard';
+            setTimeout(renderCharts, 100);
+        }
+
+// carregarEditalVerticalizado
+const carregarEditalVerticalizado = (id) => {
+            carregarDashboardData(id);
+            mostrarAlerta("Relatório verticalizado atualizado!");
+        }
+
+// prepararFormEncerramento
+const prepararFormEncerramento = () => {
+            const editalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+            if (!editalId) return;
+
+            const edital = editais.value.find(e => e.id === editalId);
+            if (!edital || !edital.disciplinas) return;
+
+            const discValidas = edital.disciplinas.filter(d => d.categoria !== 'REVISAO_ANKI');
+
+            disciplinasEncerramento.value = discValidas.map(d => ({
+                disciplina_id: d.id,
+                nome: d.nome,
+                grupo: d.grupo_conhecimento || (d.categoria === 'ESPECIFICAS' ? 'ESPECIFICOS' : 'BASICOS'),
+                acertos: 0,
+                erros: 0
+            }));
+
+            if (cicloAtivo.value) {
+                formResultado.value.nome_prova = cicloAtivo.value.nome;
+            } else if (edital) {
+                formResultado.value.nome_prova = edital.nome;
+            }
+        };
+
+// encerrarCicloOficial
+const encerrarCicloOficial = async () => {
+            const editalId = editandoCiclo.value
+                ? (formResultado.value?.edital_id || resultadoAtual.value?.edital_id || cicloAtivo.value?.edital_id)
+                : (cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null));
+                
+            if (!editalId) {
+                alert("Nenhum edital selecionado ou ativo.");
+                return;
+            }
+            
+            const totais = totaisEncerramento.value;
+            
+            const payload = {
+                nota_final: Number(formResultado.value.nota_final) || 0,
+                nota_corte: Number(formResultado.value.nota_corte) || 0,
+                total_pontos_prova: formResultado.value.total_pontos_prova ? Number(formResultado.value.total_pontos_prova) : null,
+                nota_minima_aprovados: Number(formResultado.value.nota_minima_aprovados) || 0,
+                nota_maxima_aprovados: Number(formResultado.value.nota_maxima_aprovados) || 0,
+                posicao: Number(formResultado.value.posicao) || 0,
+                total_vagas: Number(formResultado.value.total_vagas) || 0,
+                resultado_final: formResultado.value.resultado_final || 'Aprovado',
+                acertos_basicos: totais.acertosBasicos,
+                erros_basicos: totais.errosBasicos,
+                nota_basicos: totais.acertosBasicos,
+                acertos_especificos: totais.acertosEspec,
+                erros_especificos: totais.errosEspec,
+                nota_especificos: totais.acertosEspec,
+                nota_discursiva: Number(formResultado.value.nota_discursiva) || 0,
+                disciplinas: disciplinasEncerramento.value.map(d => ({
+                    disciplina_id: d.disciplina_id,
+                    acertos: Number(d.acertos) || 0,
+                    erros: Number(d.erros) || 0
+                }))
+            };
+            
+            try {
+                const url = editandoCiclo.value
+                    ? `/api/resultados/${editalId}`
+                    : `/api/resultados/${editalId}/encerrar`;
+                const method = editandoCiclo.value ? 'PUT' : 'POST';
+                
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    resultadoAtual.value = await response.json();
+                    alert(editandoCiclo.value ? "Ciclo atualizado com sucesso!" : "Preparação encerrada com sucesso!");
+                    editandoCiclo.value = false;
+                    abaRaizResultados.value = 'historico';
+                    abaHistorico.value = 'encerrados';
+                    await carregarResultadosEncerrados();
+                    await visualizarDashboardEncerrado(editalId);
+                } else {
+                    const data = await response.json();
+                    alert(data.detail || "Erro ao encerrar preparação.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Erro de conexão ao salvar encerramento.");
+            }
+        };
+
+
+        const carregarResultadosEncerrados = async () => {
+            try {
+                const res = await fetch('/api/resultados/encerrados');
+                if (res.ok) {
+                    resultadosEncerrados.value = await res.json();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        const deletarCicloEncerrado = async (edital_id) => {
+            if(!confirm('Tem certeza que deseja excluir o encerramento deste ciclo? Ele voltar a ficar ativo.')) return;
+            try {
+                const res = await fetch(`/api/resultados/${edital_id}`, { method: 'DELETE' });
+                if (res.ok) {
+                    await carregarEditais();
+                    if (resultadoAtual.value && resultadoAtual.value.edital_id === edital_id) {
+                        window.location.reload();
+                    } else {
+                        await carregarResultadosEncerrados();
+                    }
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        };
+
+        const editarCicloEncerrado = async (res) => {
+            await visualizarDashboardEncerrado(res.edital_id);
+            
+            editandoCiclo.value = true;
+            abaAtiva.value = 'resultados';
+            abaRaizResultados.value = 'registrar';
+            abaRegistrar.value = 'encerramento';
+            
+            const edital = editais.value.find(e => e.id === res.edital_id);
+            if (edital && edital.disciplinas) {
+                const discValidas = edital.disciplinas.filter(d => d.categoria !== 'REVISAO_ANKI');
+                const salvas = (resultadoAtual.value?.disciplinas_resultado) || [];
+                
+                disciplinasEncerramento.value = discValidas.map(d => {
+                    const encontrada = salvas.find(s => s.disciplina_id === d.id);
+                    return {
+                        disciplina_id: d.id,
+                        nome: d.nome,
+                        grupo: d.grupo_conhecimento || (d.categoria === 'ESPECIFICAS' ? 'ESPECIFICOS' : 'BASICOS'),
+                        acertos: encontrada ? encontrada.acertos : 0,
+                        erros: encontrada ? encontrada.erros : 0
+                    };
+                });
+            }
+            
+            formResultado.value = {
+                edital_id: res.edital_id,
+                nome_prova: res.nome_edital || (edital ? edital.nome : ''),
+                data_prova: res.data_encerramento ? res.data_encerramento.split('T')[0] : '',
+                nota_final: res.nota_final || '',
+                total_pontos_prova: (res.total_pontos_prova !== null && res.total_pontos_prova !== undefined) ? res.total_pontos_prova : (resultadoAtual.value?.total_pontos_prova || ''),
+                nota_corte: res.nota_corte || '',
+                nota_minima_aprovados: res.nota_minima_aprovados || '',
+                nota_maxima_aprovados: res.nota_maxima_aprovados || '',
+                posicao: res.posicao || '',
+                total_vagas: res.total_vagas || '',
+                resultado_final: res.resultado_final || 'Aprovado'
+            };
+            
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        const renderizarGraficosResultados = () => {
+            if (!resultadoAtual.value) return;
+            
+            // Gerar Insights do Raio-X
+            gerarInsightsRaioX();
+
+            const ctxScatter = document.getElementById('scatterRaioX');
+            const ctxRadar = document.getElementById('radarChartNotas');
+            if (!ctxScatter && !ctxRadar) {
+                setTimeout(renderizarGraficosResultados, 100);
+                return;
+            }
+            if (ctxRadar) {
+                if (window.radarChartInstance) window.radarChartInstance.destroy();
+                
+                window.radarChartInstance = new Chart(ctxRadar, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Sua Nota', 'Nota Corte', 'Mín. Aprovado', 'Máx. Aprovado'],
+                        datasets: [{
+                            label: 'Pontuação',
+                            data: [
+                                Number(resultadoAtual.value.nota_final) || 0,
+                                Number(resultadoAtual.value.nota_corte) || 0,
+                                Number(resultadoAtual.value.nota_minima_aprovados) || 0,
+                                Number(resultadoAtual.value.nota_maxima_aprovados) || 0
+                            ],
+                            backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                            borderColor: 'rgba(99, 102, 241, 1)',
+                            pointBackgroundColor: 'rgba(99, 102, 241, 1)',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { r: { beginAtZero: true } }
+                    }
+                });
+            }
+
+            // BAR
+            const ctxBar = document.getElementById('barChartDisciplinas');
+            if (ctxBar && resultadoAtual.value.desempenho_disciplinas) {
+                if (window.barChartInstance) window.barChartInstance.destroy();
+                
+                const labels = resultadoAtual.value.desempenho_disciplinas.map(d => d.nome);
+                const dataAcerto = resultadoAtual.value.desempenho_disciplinas.map(d => d.percentual_acerto);
+                const dataVisto = resultadoAtual.value.desempenho_disciplinas.map(d => d.percentual_visto);
+                
+                window.barChartInstance = new Chart(ctxBar, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '% Acerto',
+                                data: dataAcerto,
+                                backgroundColor: 'rgba(16, 185, 129, 0.7)'
+                            },
+                            {
+                                label: '% Visto',
+                                data: dataVisto,
+                                backgroundColor: 'rgba(99, 102, 241, 0.7)'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        indexAxis: 'y',
+                        scales: { x: { max: 100 } }
+                    }
+                });
+            }
+
+            // SCATTER RAIO-X: Tempo x Acerto na Prova
+            if (ctxScatter && resultadoAtual.value.desempenho_disciplinas) {
+                if (window.scatterRaioXInstance) {
+                    window.scatterRaioXInstance.destroy();
+                    window.scatterRaioXInstance = null;
+                }
+                
+                const quad = quadrantesRaioX.value;
+                const getPontoCor = (d) => {
+                    if (quad.dominado.some(x => x.disciplina_id === d.disciplina_id)) return '#10b981'; // verde
+                    if (quad.eficienciaAlta.some(x => x.disciplina_id === d.disciplina_id)) return '#3b82f6'; // azul
+                    if (quad.eficienciaBaixa.some(x => x.disciplina_id === d.disciplina_id)) return '#f59e0b'; // laranja/âmbar
+                    return '#f43f5e'; // rosa/vermelho
+                };
+
+                const dadosScatter = resultadoAtual.value.desempenho_disciplinas.map(d => {
+                    const acerto = (d.acertos_prova_perc !== undefined && d.acertos_prova_perc !== null && d.acertos_prova_perc > 0)
+                        ? d.acertos_prova_perc 
+                        : (d.percentual_acerto || 0);
+                    return {
+                        x: Number((d.horas_dedicadas || 0).toFixed(1)),
+                        y: Number((acerto || 0).toFixed(1)),
+                        nome: d.nome,
+                        revisoes: d.revisoes || 0,
+                        cor: getPontoCor(d)
+                    };
+                });
+
+                window.scatterRaioXInstance = new Chart(ctxScatter, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Disciplinas',
+                            data: dadosScatter,
+                            backgroundColor: dadosScatter.map(d => d.cor),
+                            borderColor: dadosScatter.map(d => d.cor),
+                            pointRadius: 8,
+                            pointHoverRadius: 11
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const p = context.raw;
+                                        return `${p.nome}: ${p.x}h estudadas | ${p.y}% acerto na prova`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Tempo Estudado (horas)',
+                                    color: '#64748b',
+                                    font: { weight: 'bold', size: 11 }
+                                },
+                                beginAtZero: true
+                            },
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'Acerto na Prova (%)',
+                                    color: '#64748b',
+                                    font: { weight: 'bold', size: 11 }
+                                },
+                                beginAtZero: true,
+                                max: 100
+                            }
+                        }
+                    }
+                });
+            }
+        };
+const exportarPDF = () => {
+            const element = document.getElementById('pdf-content');
+            const opt = {
+                margin: 10,
+                filename: 'resultado_concurso_' + cicloAtivo.value.nome + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2 },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().set(opt).from(element).save();
+        };
+
         function voltarAoWizard() {
             estadoAplicacao.value = 'wizard';
             wizardPasso.value = 0;
@@ -307,6 +1005,12 @@ createApp({
 
         function iniciarApp() {
             estadoAplicacao.value = 'app';
+            if (abaAtiva.value === 'ciclo') {
+                nextTick(() => {
+                    renderDonut();
+                    scrollToCurrentBlock();
+                });
+            }
         }
 
         // Interação do Ciclo
@@ -322,7 +1026,7 @@ createApp({
         }
 
         async function avancarBloco() {
-            if (!cicloAtivo.value) return;
+            if (!cicloAtivo.value && !editandoCiclo.value) return;
             try {
                 const oldVoltas = cicloAtivo.value.voltas_completas;
                 const res = await fetch(`/api/ciclos/${cicloAtivo.value.id}/avancar`, { method: 'POST' });
@@ -338,7 +1042,7 @@ createApp({
         }
 
         async function selecionarBlocoManual(idx) {
-            if (!cicloAtivo.value) return;
+            if (!cicloAtivo.value && !editandoCiclo.value) return;
             const currentIdx = cicloAtivo.value.bloco_atual_index;
             const blocoClicado = cicloAtivo.value.blocos[idx];
             
@@ -371,7 +1075,7 @@ createApp({
             if(!confirm("Gerar um novo ciclo com estes pesos? O ciclo anterior será desativado.")) return;
             try {
                 const res = await fetch('/api/ciclos/gerar', {
-                    method: 'POST',
+                    method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ edital_id, carga_horaria_semanal: 20, duracao_bloco_minutos: 60 })
                 });
@@ -385,7 +1089,8 @@ createApp({
 
         // Helper para Estatísticas na listagem
         function getEstatisticasDisciplina(id) {
-            const stats = dashboardData.value.rendimento_disciplinas || [];
+            if (!dashboardData.value) return { qtd: 0, perc: 0, perc_vistos: 0 };
+        const stats = dashboardData.value.rendimento_disciplinas || [];
             const d = stats.find(x => x.disciplina_id === id);
             
             // Calcula % Visto localmente
@@ -403,9 +1108,12 @@ createApp({
             }
 
             if (d && d.total_questoes > 0) {
-                return { qtd: d.total_questoes, perc: d.percentual_acerto, perc_vistos };
+                
+        return {
+qtd: d.total_questoes, perc: d.percentual_acerto, perc_vistos };
             }
-            return { qtd: 0, perc: 0, perc_vistos };
+            return {
+qtd: 0, perc: 0, perc_vistos };
         }
 
         function getEstatisticasEdital(ed) {
@@ -430,7 +1138,8 @@ createApp({
             });
             
             const perc_visto = topicos_total > 0 ? (topicosVistos.size / topicos_total) * 100 : 0;
-            return { horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos_total, perc_visto };
+            return {
+horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos_total, perc_visto };
         }
 
         async function excluirEdital(id) {
@@ -608,6 +1317,8 @@ createApp({
             return formatarHorasDecimais(totalMins / 60);
         }
 
+        let chartEvolucaoInstance = null; let chartDiscInstance = null; let barChartInstance = null; let radarChartInstance = null;
+        let chartCicloDonutInstance = null;
         function renderDonut() {
             nextTick(() => {
                 const ctxD = document.getElementById('chartCicloDonut');
@@ -685,7 +1396,7 @@ createApp({
                     plugins: [{
                         id: 'activeSlicePointer',
                         afterDraw(chart) {
-                            if (!cicloAtivo.value) return;
+                            if (!cicloAtivo.value && !editandoCiclo.value) return;
                             const ctx = chart.ctx;
                             const activeIdx = cicloAtivo.value.bloco_atual_index;
                             
@@ -911,6 +1622,7 @@ createApp({
             const ctxE = document.getElementById('chartEvolucao');
             if(!ctxD || !ctxES || !ctxE) return;
 
+            if (!dashboardData.value) return;
             const discData = dashboardData.value.rendimento_disciplinas || [];
             if (chartDiscInstance) chartDiscInstance.destroy();
             chartDiscInstance = new Chart(ctxD, {
@@ -966,10 +1678,31 @@ createApp({
             });
         }
 
+        
+        Vue.watch(abaRaizResultados, (newVal) => {
+            if (newVal === 'historico') {
+                setTimeout(() => {
+                    if (abaHistorico.value === 'avulsos') renderGraficosAvulsos();
+                    if (abaHistorico.value === 'encerrados') renderizarGraficosResultados();
+                }, 100);
+            }
+        });
+
+        Vue.watch(abaHistorico, (newVal) => {
+            if (newVal === 'avulsos') {
+                renderGraficosAvulsos();
+            }
+        });
+
         Vue.watch(abaAtiva, (newVal) => {
+            if (newVal === 'resultados' && abaRaizResultados.value === 'historico' && abaHistorico.value === 'avulsos') {
+                renderGraficosAvulsos();
+            }
             if (newVal === 'ciclo') {
                 renderDonut();
                 scrollToCurrentBlock();
+            } else if (newVal === 'dashboard') {
+                setTimeout(renderCharts, 100);
             } else if (newVal === 'heatmap') {
                 setTimeout(renderCalendarioAnalytics, 100);
                 setTimeout(scrollToHojeHeatmap, 300);
@@ -990,7 +1723,7 @@ createApp({
 
         function scrollToCurrentBlock() {
             nextTick(() => {
-                if (!cicloAtivo.value) return;
+                if (!cicloAtivo.value && !editandoCiclo.value) return;
                 const idx = cicloAtivo.value.bloco_atual_index;
                 const container = document.getElementById('esteira-container');
                 const card = document.getElementById('bloco-' + idx);
@@ -1004,13 +1737,23 @@ createApp({
         Vue.watch(() => cicloAtivo.value?.bloco_atual_index, () => {
             if (abaAtiva.value === 'ciclo') {
                 scrollToCurrentBlock();
+                renderDonut();
             }
         });
 
-        onMounted(() => {
-            loadAllData().then(() => {
-                if (abaAtiva.value === 'ciclo') scrollToCurrentBlock();
-            });
+        Vue.watch(cicloAtivo, (newCiclo) => {
+            if (newCiclo && abaAtiva.value === 'ciclo') {
+                renderDonut();
+                scrollToCurrentBlock();
+            }
+        });
+
+        onMounted(async () => {
+            await loadAllData();
+            if (abaAtiva.value === 'ciclo') {
+                renderDonut();
+                scrollToCurrentBlock();
+            }
         });
 
         function getTotaisMatrizSemanal() {
@@ -1040,12 +1783,15 @@ createApp({
 
             const semanasProcessadas = totaisSemanas.map(t => {
                 const perc = t.resolvidas > 0 ? ((t.certas / t.resolvidas) * 100).toFixed(1) : 0;
-                return { ...t, percentual: perc };
+                return {
+...t, percentual: perc };
             });
 
             const percGeral = totalGeralResolvidas > 0 ? ((totalGeralCertas / totalGeralResolvidas) * 100).toFixed(1) : 0;
 
             return {
+                                    renderGraficosAvulsos,
+            calcularPercentualTotal, abrirModalDetalhesAvulso, fecharModalDetalhesAvulso, mudarAbaHistorico, avulsoSelecionado,
                 semanas: semanasProcessadas,
                 totalGeral: { certas: totalGeralCertas, resolvidas: totalGeralResolvidas, percentual: percGeral }
             };
@@ -1053,7 +1799,8 @@ createApp({
 
         function getRankingDisciplinas() {
             if (!dashboardData.value || !dashboardData.value.rendimento_disciplinas) {
-                return { melhores: [], piores: [] };
+                return {
+melhores: [], piores: [] };
             }
             
             const arr = [...dashboardData.value.rendimento_disciplinas];
@@ -1072,19 +1819,219 @@ createApp({
                 return b.total_questoes - a.total_questoes; 
             }).slice(0, 3);
             
-            return { piores, melhores };
+            return {
+piores, melhores };
         }
 
-        return {
+        
+        const visualizarDashboardEncerrado = async (edital_id) => {
+            carregandoResultados.value = true;
+            try {
+                const response = await fetch('/api/resultados/' + edital_id);
+                if (response.ok) {
+                    resultadoAtual.value = await response.json();
+                    abaRaizResultados.value = 'historico';
+                    abaHistorico.value = 'encerrados';
+                    nextTick(() => {
+                        setTimeout(() => { renderizarGraficosResultados(); }, 150);
+                    });
+                } else {
+                    alert("Erro ao carregar o dashboard deste ciclo.");
+                }
+            } catch (error) {
+                console.error(error);
+                alert("Erro de conexão.");
+            } finally {
+                carregandoResultados.value = false;
+            }
+        };
+
+        
+        const carregarEditais = async () => {
+            try {
+                const res = await fetch('/api/editais');
+                if (res.ok) {
+                    editais.value = await res.json();
+                }
+            } catch (e) { console.error(e); }
+        };
+
+        const abaVerticalizado = ref({});
+
+
+async function carregarDashboardData(edital_id) {
+            const rDash = await fetch('/api/dashboard');
+            if (rDash.ok) dashboardData.value = await rDash.json();
+
+            const rMat = await fetch(`/api/dashboard/matriz-semanal?edital_id=${edital_id}`);
+            if (rMat.ok) matrizSemanalData.value = await rMat.json();
+
+            const rCal = await fetch(`/api/dashboard/calendario-estudos?edital_id=${edital_id}&dias=30`);
+            if (rCal.ok) calendarioData.value = await rCal.json();
+
+            const rVert = await fetch(`/api/dashboard/edital-verticalizado?edital_id=${edital_id}`);
+            if (rVert.ok) editalVerticalizadoData.value = await rVert.json();
+
+            renderCharts();
+        }
+
+const ordenarPorDataDesc = (lista) => {
+    if (!Array.isArray(lista)) return [];
+    return [...lista].sort((a, b) => {
+        const dataA = a.data_prova ? String(a.data_prova).trim() : '';
+        const dataB = b.data_prova ? String(b.data_prova).trim() : '';
+        if (!dataA && !dataB) return (b.id || 0) - (a.id || 0);
+        if (!dataA) return 1;
+        if (!dataB) return -1;
+        if (dataB !== dataA) return dataB.localeCompare(dataA);
+        return (b.id || 0) - (a.id || 0);
+    });
+};
+
+const carregarResultadosAvulsos = async () => {
+    try {
+        const response = await fetch('/api/resultados_avulsos');
+        if (response.ok) {
+            const dados = await response.json();
+            resultadosAvulsos.value = ordenarPorDataDesc(dados);
+        }
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+const deletarResultadoAvulso = async (id) => {
+            if (!confirm("Tem certeza que deseja excluir este resultado?")) return;
+            try {
+                const response = await fetch('/api/resultados_avulsos/' + id, { method: 'DELETE' });
+                if (response.ok) {
+                    mostrarAlerta("Resultado excluído", "sucesso");
+                    await carregarResultadosAvulsos();
+                }
+            } catch (e) {}
+        }
+
+async function loadAllData() {
+            try {
+                const rEd = await fetch('/api/editais');
+                if (rEd.ok) {
+                    editais.value = await rEd.json();
+                    if (editais.value.length === 0) {
+                        estadoAplicacao.value = 'wizard';
+                        wizardPasso.value = 0;
+                        return;
+                    } else {
+                        estadoAplicacao.value = 'app';
+                    }
+                }
+
+                const rCiclo = await fetch('/api/ciclos/ativo');
+                if (rCiclo.ok) cicloAtivo.value = await rCiclo.json();
+
+                const rSess = await fetch('/api/sessoes?limite=100');
+                if (rSess.ok) sessoes.value = await rSess.json();
+
+                await carregarResultadosAvulsos();
+                await carregarResultadosEncerrados();
+
+                if (cicloAtivo.value) {
+                    await carregarDashboardData(cicloAtivo.value.edital_id);
+                } else if (editais.value.length > 0) {
+                    await carregarDashboardData(editais.value[0].id);
+                }
+
+                if (abaAtiva.value === 'ciclo') {
+                    renderDonut();
+                    scrollToCurrentBlock();
+                }
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+const mensagemAlerta = ref('');
+        
+
+function mostrarAlerta(msg, tipo = 'sucesso') {
+            mensagemAlerta.value = msg;
+            tipoAlerta.value = tipo;
+            setTimeout(() => { if (mensagemAlerta.value === msg) mensagemAlerta.value = ''; }, 4000);
+        }
+
+const tipoAlerta = ref('sucesso');
+        
+        
+
+const totaisEncerramento = computed(() => {
+            let acertosBasicos = 0, errosBasicos = 0, acertosEspec = 0, errosEspec = 0;
+            disciplinasEncerramento.value.forEach(d => {
+                const a = Number(d.acertos) || 0;
+                const e = Number(d.erros) || 0;
+                if (d.grupo === 'BASICOS') { acertosBasicos += a; errosBasicos += e; }
+                else { acertosEspec += a; errosEspec += e; }
+            });
+            return { acertosBasicos, errosBasicos, acertosEspec, errosEspec };
+        });
+        
+        const blocoAtual = computed(() => {
+            if (!cicloAtivo.value || !cicloAtivo.value.blocos || cicloAtivo.value.blocos.length === 0) return null;
+            return cicloAtivo.value.blocos[cicloAtivo.value.bloco_atual_index || 0];
+        });
+
+        const todasDisciplinas = computed(() => {
+            const list = [];
+            const editalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+            if (editalId) {
+                const ed = editais.value.find(e => e.id === editalId);
+                if (ed && ed.disciplinas) {
+                    ed.disciplinas.forEach(d => {
+                        if (d.categoria !== 'REVISAO_ANKI') list.push(d);
+                    });
+                }
+            }
+            return list;
+        });
+
+        
+        const percentualGlobalEdital = computed(() => {
+            if (!cicloAtivo.value || !editais.value) return 0;
+            const ed = editais.value.find(e => e.id === cicloAtivo.value.edital_id);
+            if (!ed) return 0;
+            return getEstatisticasEdital(ed).perc_visto.toFixed(0);
+        });
+
+        return { 
+            visualizarDashboardEncerrado,
+            formatarPercentualBR,
+            calcularPercentualRendimento,
+            calcularPercentualCorte,
+            calcularRendimentoRaioX,
+            calcularCorteRaioX,
+            calcularComparativoInfo,
+            calcularPercentualTotal, 
+            abrirModalDetalhesAvulso, 
+            fecharModalDetalhesAvulso, 
+            avulsoSelecionado, 
+            renderGraficosAvulsos, 
+            mudarAbaHistorico,
+            resultadoAtual, carregandoResultados, formResultado, abrirResultados, carregarResultados, salvarResultado, renderizarGraficosResultados, exportarPDF, resultadosAvulsos, formAvulso, salvarResultadoAvulso, encerrarPreparacaoAvulsa, deletarResultadoAvulso,
             estadoAplicacao, abaAtiva, abaVerticalizado, mensagemAlerta, tipoAlerta, editais, cicloAtivo, sessoes,
             dashboardData, matrizSemanalData, calendarioData, editalVerticalizadoData,
             wizardPasso, wizardDados, wizardEditalGerado, processandoEdital, cicloForm,
             timerSegundos, timerRodando, modalCheckinAberto, formSessao, blocoAtual, todasDisciplinas, topicosDaDisciplina, percentualGlobalEdital,
             verticalizadoAberto, toggleVerticalizado, modalResumoAberto, resumoSessaoAtual,
-            toggleTimer, resetTimer, formatarTempoTimer, formatarHorasDecimais, formatarData, badgeTaxaAcertoBg, badgeTextTaxa, getAproveitamentoClasses, getNomeDisciplina, getEstatisticasDisciplina, getEstatisticasEdital, excluirEdital, getTempoEstudadoCicloAtual, getTempoTotalCicloAtual, getTotaisMatrizSemanal, getRankingDisciplinas,
+            toggleTimer, resetTimer, formatarTempoTimer, formatarHorasDecimais, formatarData, formatarDataCurta, badgeTaxaAcertoBg, badgeTextTaxa, getAproveitamentoClasses, getNomeDisciplina, getEstatisticasDisciplina, getEstatisticasEdital, excluirEdital, getTempoEstudadoCicloAtual, getTempoTotalCicloAtual, getTotaisMatrizSemanal, getRankingDisciplinas,
             preencherExemploWizard, processarEditalWizard, salvarPesoDisciplina, finalizarWizard,
             avancarBloco, selecionarBlocoManual, gerarCicloNovoComEdital, abrirModalCheckin, abrirModalCheckinComBloco,
-            salvarSessaoEstudo, editarSessao, excluirSessao, excluirTodasSessoes, voltarAoWizard, iniciarApp, abrirDashboard, carregarEditalVerticalizado
+            salvarSessaoEstudo, editarSessao, excluirSessao, excluirTodasSessoes, voltarAoWizard, iniciarApp, abrirDashboard, carregarEditalVerticalizado, abaRaizResultados, abaRegistrar, abaHistorico, rankingRevisoes, quadrantesRaioX, disciplinasEncerramento, totaisEncerramento, insightsRaioX, prepararFormEncerramento, encerrarCicloOficial, resultadosEncerrados, carregarResultadosEncerrados, deletarCicloEncerrado, editarCicloEncerrado, editandoCiclo,
+            idEmEdicaoAvulso, editarResultadoAvulso, cancelarEdicaoAvulso
         };
     }
-}).mount('#app');
+});
+app.config.errorHandler = (err, instance, info) => {
+    console.error(err);
+    alert('VUE ERROR:\n' + err.message + '\nInfo: ' + info);
+};
+
+app.mount('#app');
+
