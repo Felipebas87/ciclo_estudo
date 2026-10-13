@@ -28,13 +28,33 @@ const app = createApp({
         const cicloForm = ref({ carga_horaria_semanal: 20, duracao_bloco_minutos: 60 });
         const timerSegundos = ref(0);
         const timerRodando = ref(false);
+        const getDataHojeLocal = () => {
+            const d = new Date();
+            const ano = d.getFullYear();
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        };
         const modalCheckinAberto = ref(false);
         const formSessao = ref({
-            disciplina_id: '', topico_id: '', duracao_minutos: 0, acertos: 0, erros: 0, questoes_totais: 0,
-            nivel_concentracao: 3, desempenho_subjetivo: 3, material_utilizado: '',
-            is_revisao_anki: false, notas_observacoes: ''
+            id: null,
+            disciplina_id: '',
+            topico_id: '',
+            data: getDataHojeLocal(),
+            tempo_estudado_minutos: 60,
+            duracao_minutos: 60,
+            qtd_questoes_total: 0,
+            qtd_acertos: 0,
+            qtd_erros: 0,
+            acertos: 0,
+            erros: 0,
+            questoes_totais: 0,
+            nivel_concentracao: 3,
+            desempenho_subjetivo: 3,
+            material_utilizado: '',
+            is_revisao_anki: false,
+            notas_observacoes: ''
         });
-        const topicosDaDisciplina = ref([]);
         const verticalizadoAberto = ref({});
         const modalResumoAberto = ref(false);
         const resumoSessaoAtual = ref(null);
@@ -1159,33 +1179,41 @@ horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos
 
         // Sessão Manual
         function abrirModalCheckin() {
-            formSessao.value.disciplina_id = (blocoAtual.value && blocoAtual.value.disciplina_id) ? blocoAtual.value.disciplina_id : todasDisciplinas.value[0]?.id;
-            formSessao.value.bloco_ciclo_id = null;
-            formSessao.value.topico_id = null;
-            formSessao.value.tempo_estudado_minutos = 60;
-            formSessao.value.qtd_questoes_total = 0;
-            formSessao.value.qtd_acertos = 0;
-            formSessao.value.qtd_erros = 0;
-            formSessao.value.is_revisao_anki = false;
+            formSessao.value = {
+                id: null,
+                disciplina_id: (blocoAtual.value && blocoAtual.value.disciplina_id) ? blocoAtual.value.disciplina_id : (todasDisciplinas.value[0]?.id || ''),
+                bloco_ciclo_id: null,
+                topico_id: '',
+                tempo_estudado_minutos: 60,
+                qtd_questoes_total: 0,
+                qtd_acertos: 0,
+                qtd_erros: 0,
+                is_revisao_anki: false,
+                data: getDataHojeLocal()
+            };
             modalCheckinAberto.value = true;
         }
 
         function abrirModalCheckinComBloco(b) {
-            const isRevisao = b.disciplina.categoria === 'REVISAO_ANKI';
-            formSessao.value.is_revisao_anki = isRevisao;
-            formSessao.value.disciplina_id = isRevisao ? todasDisciplinas.value[0]?.id : b.disciplina_id;
-            formSessao.value.bloco_ciclo_id = b.id;
-            formSessao.value.topico_id = "";
-            formSessao.value.tempo_estudado_minutos = timerSegundos.value > 0 ? Math.max(1, Math.round(timerSegundos.value / 60)) : 60;
-            formSessao.value.qtd_questoes_total = 0;
-            formSessao.value.qtd_acertos = 0;
-            formSessao.value.qtd_erros = 0;
+            const isRevisao = b && b.disciplina && b.disciplina.categoria === 'REVISAO_ANKI';
+            formSessao.value = {
+                id: null,
+                is_revisao_anki: isRevisao,
+                disciplina_id: isRevisao ? (todasDisciplinas.value[0]?.id || '') : (b ? b.disciplina_id : (todasDisciplinas.value[0]?.id || '')),
+                bloco_ciclo_id: b ? b.id : null,
+                topico_id: '',
+                tempo_estudado_minutos: timerSegundos.value > 0 ? Math.max(1, Math.round(timerSegundos.value / 60)) : (b?.duracao_minutos || 60),
+                qtd_questoes_total: 0,
+                qtd_acertos: 0,
+                qtd_erros: 0,
+                data: getDataHojeLocal()
+            };
             modalCheckinAberto.value = true;
         }
 
         async function salvarSessaoEstudo() {
             try {
-                if (!formSessao.value.is_revisao_anki && !formSessao.value.topico_id && topicosDaDisciplina.value.length > 0) {
+                if (!formSessao.value.is_revisao_anki && topicosDaDisciplina.value.length > 0 && !formSessao.value.topico_id) {
                     mostrarAlerta('Você precisa selecionar o Tópico Estudado para contabilizar o rendimento do edital.', 'erro');
                     return;
                 }
@@ -1195,7 +1223,11 @@ horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos
                     return;
                 }
 
-                const hoje = new Date().toISOString().split('T')[0];
+                if (!formSessao.value.data) {
+                    formSessao.value.data = getDataHojeLocal();
+                }
+
+                const hoje = getDataHojeLocal();
                 if (formSessao.value.data > hoje) {
                     mostrarAlerta('Não é possível registrar uma sessão em uma data futura.', 'erro');
                     return;
@@ -1216,10 +1248,17 @@ horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos
                 const method = formSessao.value.id ? 'PUT' : 'POST';
                 const url = formSessao.value.id ? `/api/sessoes/${formSessao.value.id}` : '/api/sessoes';
 
+                const payload = { ...formSessao.value };
+                if (payload.topico_id === "" || payload.topico_id === null || payload.topico_id === undefined) {
+                    payload.topico_id = null;
+                } else {
+                    payload.topico_id = parseInt(payload.topico_id, 10);
+                }
+
                 const res = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(formSessao.value)
+                    body: JSON.stringify(payload)
                 });
                 if(res.ok) {
                     modalCheckinAberto.value = false;
@@ -1245,9 +1284,12 @@ horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos
                         mostrarAlerta("Sessão registrada!");
                     }
                 } else {
-                    mostrarAlerta("Erro", "erro");
+                    const errJson = await res.json().catch(() => ({}));
+                    mostrarAlerta(errJson.detail || "Erro ao salvar sessão", "erro");
                 }
-            } catch(e){}
+            } catch(e){
+                mostrarAlerta("Erro de rede ao salvar sessão", "erro");
+            }
         }
 
         function editarSessao(s) {
@@ -1992,6 +2034,34 @@ const totaisEncerramento = computed(() => {
             return list;
         });
 
+        const topicosDaDisciplina = computed(() => {
+            const discId = formSessao.value?.disciplina_id;
+            if (!discId) return [];
+
+            let disc = todasDisciplinas.value ? todasDisciplinas.value.find(d => d.id === discId) : null;
+
+            if (!disc && editais.value) {
+                for (const ed of editais.value) {
+                    if (ed.disciplinas) {
+                        const encontrada = ed.disciplinas.find(d => d.id === discId);
+                        if (encontrada) {
+                            disc = encontrada;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!disc && blocoAtual.value && blocoAtual.value.disciplina_id === discId) {
+                disc = blocoAtual.value.disciplina;
+            }
+
+            if (disc && disc.topicos && Array.isArray(disc.topicos)) {
+                return disc.topicos;
+            }
+            return [];
+        });
+
         
         const percentualGlobalEdital = computed(() => {
             if (!cicloAtivo.value || !editais.value) return 0;
@@ -2024,7 +2094,7 @@ const totaisEncerramento = computed(() => {
             preencherExemploWizard, processarEditalWizard, salvarPesoDisciplina, finalizarWizard,
             avancarBloco, selecionarBlocoManual, gerarCicloNovoComEdital, abrirModalCheckin, abrirModalCheckinComBloco,
             salvarSessaoEstudo, editarSessao, excluirSessao, excluirTodasSessoes, voltarAoWizard, iniciarApp, abrirDashboard, carregarEditalVerticalizado, abaRaizResultados, abaRegistrar, abaHistorico, rankingRevisoes, quadrantesRaioX, disciplinasEncerramento, totaisEncerramento, insightsRaioX, prepararFormEncerramento, encerrarCicloOficial, resultadosEncerrados, carregarResultadosEncerrados, deletarCicloEncerrado, editarCicloEncerrado, editandoCiclo,
-            idEmEdicaoAvulso, editarResultadoAvulso, cancelarEdicaoAvulso
+            idEmEdicaoAvulso, editarResultadoAvulso, cancelarEdicaoAvulso, getDataHojeLocal
         };
     }
 });

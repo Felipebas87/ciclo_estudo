@@ -1717,16 +1717,16 @@ window.addEventListener('error', function(e) {
         </div>
 
         <!-- MODAL DE CHECK-IN -->
-        <div v-if="modalCheckinAberto" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl animate-in zoom-in-95">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-slate-900">Registrar Sessão Estudo</h3>
-                    <button @click="modalCheckinAberto = false" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark text-xl"></i></button>
+        <div v-if="modalCheckinAberto" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+            <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 my-auto max-h-[92vh] overflow-y-auto">
+                <div class="flex justify-between items-center mb-5 sm:mb-6">
+                    <h3 class="text-lg sm:text-xl font-bold text-slate-900">Registrar Sessão de Estudo</h3>
+                    <button @click="modalCheckinAberto = false" class="text-slate-400 hover:text-slate-600 p-1"><i class="fa-solid fa-xmark text-xl"></i></button>
                 </div>
-                <form @submit.prevent="salvarSessaoEstudo" class="space-y-5">
+                <form @submit.prevent="salvarSessaoEstudo" class="space-y-4 sm:space-y-5">
                     
                     <div v-if="formSessao.is_revisao_anki" class="bg-purple-100 border border-purple-200 text-purple-800 px-4 py-3 rounded-xl flex items-center space-x-3 mb-2">
-                        <i class="fa-solid fa-layer-group text-lg"></i>
+                        <i class="fa-solid fa-layer-group text-lg flex-shrink-0"></i>
                         <div>
                             <p class="font-bold text-sm">Modo de Revisão (Anki)</p>
                             <p class="text-[11px] opacity-80 leading-tight">Indique qual matéria você acabou de revisar. Questões não são contabilizadas neste modo.</p>
@@ -1734,34 +1734,42 @@ window.addEventListener('error', function(e) {
                     </div>
 
                     <div>
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Disciplina</label>
-                        <select v-model="formSessao.disciplina_id" @change="formSessao.topico_id = ''" class="w-full border border-slate-300 rounded-xl px-4 py-3 bg-slate-50 outline-none text-sm font-semibold text-slate-800" required>
+                        <label class="block text-xs sm:text-sm font-bold text-slate-700 mb-1">Disciplina</label>
+                        <select v-model="formSessao.disciplina_id" @change="formSessao.topico_id = ''" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 sm:py-3 bg-slate-50 outline-none text-sm font-semibold text-slate-800" required>
                             <option v-for="d in todasDisciplinas" :key="d.id" :value="d.id">{{ d.nome }}</option>
                         </select>
                     </div>
-                    <div v-if="topicosDaDisciplina.length > 0">
-                        <label class="block text-sm font-bold text-slate-700 mb-1">Tópico Estudado <span class="text-rose-500">*</span></label>
-                        <select v-model="formSessao.topico_id" class="w-full border border-slate-300 rounded-xl px-4 py-3 bg-slate-50 outline-none text-sm font-medium text-slate-700" :required="!formSessao.is_revisao_anki">
+                    
+                    <div v-if="!formSessao.is_revisao_anki">
+                        <label class="block text-xs sm:text-sm font-bold text-slate-700 mb-1">
+                            Tópico Estudado <span class="text-rose-500">*</span>
+                        </label>
+                        <select v-if="topicosDaDisciplina.length > 0" v-model="formSessao.topico_id" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 sm:py-3 bg-slate-50 outline-none text-sm font-medium text-slate-700 transition" required>
                             <option value="">-- Selecione o Tópico --</option>
                             <option v-for="t in topicosDaDisciplina" :key="t.id" :value="t.id" :title="t.titulo">
-                                {{ t.titulo.length > 65 ? t.titulo.substring(0, 65) + '...' : t.titulo }}
+                                {{ t.ordem ? t.ordem + '. ' : '' }}{{ t.titulo }}
                             </option>
                         </select>
+                        <div v-else class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center space-x-2">
+                            <i class="fa-solid fa-circle-info text-amber-500 flex-shrink-0"></i>
+                            <span>Nenhum tópico cadastrado no edital para esta disciplina. O estudo será registrado como geral.</span>
+                        </div>
                     </div>
-                    <div class="grid grid-cols-2 gap-4">
+
+                    <div class="grid grid-cols-2 gap-3 sm:gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Tempo (min)</label>
                             <input type="number" v-model.number="formSessao.tempo_estudado_minutos" required min="1" class="w-full border border-slate-300 rounded-xl px-4 py-2 outline-none font-bold text-center">
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-600 mb-1">Data</label>
-                            <input type="date" v-model="formSessao.data" required :max="new Date().toISOString().split('T')[0]" class="w-full border border-slate-300 rounded-xl px-4 py-2 outline-none text-sm font-bold">
+                            <input type="date" v-model="formSessao.data" required :max="getDataHojeLocal()" class="w-full border border-slate-300 rounded-xl px-3 sm:px-4 py-2 outline-none text-sm font-bold bg-white">
                         </div>
                     </div>
                     
-                    <div v-if="!formSessao.is_revisao_anki" class="border-t border-slate-100 pt-5">
-                        <label class="block text-sm font-bold text-slate-900 mb-3"><i class="fa-solid fa-list-check text-blue-600 mr-2"></i> Questões Resolvidas</label>
-                        <div class="grid grid-cols-2 gap-4">
+                    <div v-if="!formSessao.is_revisao_anki" class="border-t border-slate-100 pt-4 sm:pt-5">
+                        <label class="block text-xs sm:text-sm font-bold text-slate-900 mb-2 sm:mb-3"><i class="fa-solid fa-list-check text-blue-600 mr-2"></i> Questões Resolvidas</label>
+                        <div class="grid grid-cols-2 gap-3 sm:gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-500 mb-1">Acertos</label>
                                 <input type="number" min="0" required v-model.number="formSessao.qtd_acertos" class="w-full border border-emerald-300 bg-emerald-50 text-emerald-700 rounded-xl px-4 py-2 outline-none font-black text-center text-lg">
@@ -1772,9 +1780,9 @@ window.addEventListener('error', function(e) {
                             </div>
                         </div>
                     </div>
-                    <div class="pt-4 flex justify-end space-x-3">
-                        <button type="button" @click="modalCheckinAberto = false" class="px-5 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100">Cancelar</button>
-                        <button type="submit" class="px-6 py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md">Salvar Estudo</button>
+                    <div class="pt-3 sm:pt-4 flex justify-end space-x-3">
+                        <button type="button" @click="modalCheckinAberto = false" class="px-4 sm:px-5 py-2.5 sm:py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 text-sm">Cancelar</button>
+                        <button type="submit" class="px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-md text-sm">Salvar Estudo</button>
                     </div>
                 </form>
             </div>
@@ -1935,6 +1943,6 @@ window.addEventListener('error', function(e) {
     
 </div>
     
-<script src="/static/js/app.js?v=raiox45"></script>
+<script src="/static/js/app.js?v=raiox46"></script>
 </body>
 </html>

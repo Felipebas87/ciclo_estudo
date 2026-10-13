@@ -1,6 +1,6 @@
 from typing import Optional
 from datetime import date, datetime
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class SessaoEstudoCreate(BaseModel):
     disciplina_id: int
@@ -14,6 +14,13 @@ class SessaoEstudoCreate(BaseModel):
     observacoes: Optional[str] = None
     avancar_ciclo: bool = True
     is_revisao_anki: bool = False
+
+    @field_validator('topico_id', 'bloco_ciclo_id', 'data', mode='before')
+    @classmethod
+    def empty_str_to_none(cls, v):
+        if v == "" or v is None:
+            return None
+        return v
 
 class SessaoEstudoResponse(BaseModel):
     id: int
