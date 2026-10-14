@@ -28,6 +28,7 @@ const app = createApp({
         const cicloForm = ref({ carga_horaria_semanal: 20, duracao_bloco_minutos: 60 });
         const timerSegundos = ref(0);
         const timerRodando = ref(false);
+        let timerInterval = null;
         const getDataHojeLocal = () => {
             const d = new Date();
             const ano = d.getFullYear();
@@ -554,20 +555,27 @@ const salvarResultadoAvulso = async () => {
 // toggleTimer
 const toggleTimer = () => {
             if (timerRodando.value) {
-                clearInterval(timerInterval);
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
                 timerRodando.value = false;
             } else {
                 timerRodando.value = true;
+                if (timerInterval) clearInterval(timerInterval);
                 timerInterval = setInterval(() => { timerSegundos.value++; }, 1000);
             }
-        }
+        };
 
 // resetTimer
 const resetTimer = () => {
-            if (timerInterval) clearInterval(timerInterval);
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
             timerRodando.value = false;
             timerSegundos.value = 0;
-        }
+        };
 
 // formatarTempoTimer
 const formatarTempoTimer = (s) => {
