@@ -47,13 +47,15 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
 
     perc_acerto = round((acertos / total_q * 100), 2) if total_q > 0 else 0.0
 
-    # Inferir o ciclo ativo
+    # Inferir o ciclo ativo e bloco associado
     ciclo_id_val = None
     volta_ciclo_val = 0
+    bloco_alvo = None
+
     if dados.bloco_ciclo_id:
-        bloco = db.query(BlocoCiclo).filter(BlocoCiclo.id == dados.bloco_ciclo_id).first()
-        if bloco:
-            ciclo_id_val = bloco.ciclo_id
+        bloco_alvo = db.query(BlocoCiclo).filter(BlocoCiclo.id == dados.bloco_ciclo_id).first()
+        if bloco_alvo:
+            ciclo_id_val = bloco_alvo.ciclo_id
             ciclo_ativo = db.query(CicloEstudos).filter(CicloEstudos.id == ciclo_id_val).first()
             if ciclo_ativo:
                 volta_ciclo_val = ciclo_ativo.voltas_completas
@@ -63,11 +65,16 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
         if ciclo_ativo:
             ciclo_id_val = ciclo_ativo.id
             volta_ciclo_val = ciclo_ativo.voltas_completas
+            if ciclo_ativo.blocos and len(ciclo_ativo.blocos) > 0:
+                idx_atual = ciclo_ativo.bloco_atual_index % len(ciclo_ativo.blocos)
+                bloco_alvo = ciclo_ativo.blocos[idx_atual]
+
+    bloco_id_final = bloco_alvo.id if bloco_alvo else dados.bloco_ciclo_id
 
     sessao = SessaoEstudo(
         disciplina_id=dados.disciplina_id,
         ciclo_id=ciclo_id_val,
-        bloco_ciclo_id=dados.bloco_ciclo_id,
+        bloco_ciclo_id=bloco_id_final,
         topico_id=dados.topico_id,
         data=dados.data or date.today(),
         tempo_estudado_minutos=dados.tempo_estudado_minutos,
@@ -81,19 +88,21 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
     )
     db.add(sessao)
 
-    # Marca bloco como concluído se informado e avança ciclo
-    if dados.bloco_ciclo_id:
-        bloco = db.query(BlocoCiclo).filter(BlocoCiclo.id == dados.bloco_ciclo_id).first()
-        if bloco:
-            bloco.concluido = True
-            if dados.avancar_ciclo and bloco.ciclo:
-                ciclo = bloco.ciclo
-                total_blocos = len(ciclo.blocos)
-                if total_blocos > 0:
-                    next_index = (ciclo.bloco_atual_index + 1) % total_blocos
-                    if next_index == 0:
-                        ciclo.voltas_completas += 1
-                    ciclo.bloco_atual_index = next_index
+    # Marca bloco como concluído e avança o ciclo da esteira
+    if dados.avancar_ciclo:
+        ciclo_para_avancar = None
+        if bloco_alvo:
+            bloco_alvo.concluido = True
+            ciclo_para_avancar = db.query(CicloEstudos).filter(CicloEstudos.id == bloco_alvo.ciclo_id).first()
+        elif ciclo_id_val:
+            ciclo_para_avancar = db.query(CicloEstudos).filter(CicloEstudos.id == ciclo_id_val).first()
+
+        if ciclo_para_avancar and ciclo_para_avancar.blocos and len(ciclo_para_avancar.blocos) > 0:
+            total_blocos = len(ciclo_para_avancar.blocos)
+            next_index = (ciclo_para_avancar.bloco_atual_index + 1) % total_blocos
+            if next_index == 0:
+                ciclo_para_avancar.voltas_completas += 1
+            ciclo_para_avancar.bloco_atual_index = next_index
 
     db.commit()
     db.refresh(sessao)

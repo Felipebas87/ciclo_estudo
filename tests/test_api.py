@@ -114,3 +114,58 @@ def test_sessao_estudo_e_dashboard():
     assert dash_data["metricas_gerais"]["percentual_acerto_geral"] == 80.0
     assert len(dash_data["rendimento_disciplinas"]) == 1
     assert dash_data["rendimento_disciplinas"][0]["disciplina_nome"] == "Direito Penal"
+
+def test_sessao_avanca_ciclo():
+    res_edital = client.post("/api/editais", json={
+        "nome": "Edital Ciclo Teste",
+        "disciplinas": [
+            {"nome": "Português", "categoria": "TEORICA_DIREITO", "peso_prova": 1.0, "relevancia_dificuldade": 3},
+            {"nome": "RLM", "categoria": "EXATAS_LOGICA", "peso_prova": 2.0, "relevancia_dificuldade": 3}
+        ]
+    })
+    edital = res_edital.json()
+    edital_id = edital["id"]
+
+    res_ciclo = client.post("/api/ciclos/gerar", json={
+        "edital_id": edital_id,
+        "carga_horaria_semanal": 10,
+        "duracao_bloco_minutos": 60
+    })
+    ciclo = res_ciclo.json()
+    assert ciclo["bloco_atual_index"] == 0
+    bloco_0 = ciclo["blocos"][0]
+
+    # Registra sessão passando o bloco_ciclo_id
+    res_sessao = client.post("/api/sessoes", json={
+        "disciplina_id": bloco_0["disciplina_id"],
+        "bloco_ciclo_id": bloco_0["id"],
+        "tempo_estudado_minutos": 60,
+        "qtd_questoes_total": 5,
+        "qtd_acertos": 4,
+        "qtd_erros": 1,
+        "avancar_ciclo": True
+    })
+    assert res_sessao.status_code == 200
+
+    # Verifica se o ciclo avançou para o bloco 1
+    res_ciclo_atual = client.get("/api/ciclos/ativo")
+    assert res_ciclo_atual.status_code == 200
+    assert res_ciclo_atual.json()["bloco_atual_index"] == 1
+
+    # Registra outra sessão sem bloco_ciclo_id, apenas com avancar_ciclo = True
+    bloco_1 = ciclo["blocos"][1]
+    res_sessao2 = client.post("/api/sessoes", json={
+        "disciplina_id": bloco_1["disciplina_id"],
+        "tempo_estudado_minutos": 60,
+        "qtd_questoes_total": 5,
+        "qtd_acertos": 5,
+        "qtd_erros": 0,
+        "avancar_ciclo": True
+    })
+    assert res_sessao2.status_code == 200
+
+    # Verifica se avançou para o bloco 2
+    res_ciclo_atual2 = client.get("/api/ciclos/ativo")
+    assert res_ciclo_atual2.status_code == 200
+    assert res_ciclo_atual2.json()["bloco_atual_index"] == 2
+

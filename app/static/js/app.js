@@ -1137,29 +1137,34 @@ qtd: 0, perc: 0, perc_vistos };
         }
 
         function getEstatisticasEdital(ed) {
+            if (!ed) return { horas: "0h", topicos_vistos: 0, topicos_total: 0, perc_visto: 0 };
             let horas = 0;
             let topicos_total = 0;
             const topicosVistos = new Set();
             
             // Horas estudadas: soma do tempo de todas as sessoes desse edital
-            const discIds = ed.disciplinas.map(d => d.id);
-            const sessoesEdital = sessoes.value.filter(s => discIds.includes(s.disciplina_id));
-            horas = sessoesEdital.reduce((acc, s) => acc + s.tempo_estudado_minutos, 0) / 60;
+            const discIds = (ed.disciplinas || []).map(d => d.id);
+            const sessoesEdital = (sessoes.value || []).filter(s => discIds.includes(s.disciplina_id));
+            horas = sessoesEdital.reduce((acc, s) => acc + (s.tempo_estudado_minutos || 0), 0) / 60;
             
             // Topicos vistos vs totais
-            ed.disciplinas.forEach(d => {
+            (ed.disciplinas || []).forEach(d => {
                 if (d.categoria !== 'REVISAO_ANKI' && d.topicos) {
                     topicos_total += d.topicos.length;
                 }
             });
             
             sessoesEdital.forEach(s => {
-                if (s.topico_id !== null) topicosVistos.add(s.topico_id);
+                if (s.topico_id !== null && s.topico_id !== undefined) topicosVistos.add(s.topico_id);
             });
             
             const perc_visto = topicos_total > 0 ? (topicosVistos.size / topicos_total) * 100 : 0;
             return {
-horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos_total, perc_visto };
+                horas: formatarHorasDecimais(horas),
+                topicos_vistos: topicosVistos.size,
+                topicos_total,
+                perc_visto
+            };
         }
 
         async function excluirEdital(id) {
@@ -1182,113 +1187,146 @@ horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos
             formSessao.value = {
                 id: null,
                 disciplina_id: (blocoAtual.value && blocoAtual.value.disciplina_id) ? blocoAtual.value.disciplina_id : (todasDisciplinas.value[0]?.id || ''),
-                bloco_ciclo_id: null,
+                bloco_ciclo_id: blocoAtual.value ? blocoAtual.value.id : null,
                 topico_id: '',
                 tempo_estudado_minutos: 60,
                 qtd_questoes_total: 0,
                 qtd_acertos: 0,
                 qtd_erros: 0,
                 is_revisao_anki: false,
+                avancar_ciclo: true,
                 data: getDataHojeLocal()
             };
             modalCheckinAberto.value = true;
         }
 
         function abrirModalCheckinComBloco(b) {
-            const isRevisao = b && b.disciplina && b.disciplina.categoria === 'REVISAO_ANKI';
+            const bloco = b || blocoAtual.value;
+            const isRevisao = bloco && bloco.disciplina && bloco.disciplina.categoria === 'REVISAO_ANKI';
             formSessao.value = {
                 id: null,
                 is_revisao_anki: isRevisao,
-                disciplina_id: isRevisao ? (todasDisciplinas.value[0]?.id || '') : (b ? b.disciplina_id : (todasDisciplinas.value[0]?.id || '')),
-                bloco_ciclo_id: b ? b.id : null,
+                disciplina_id: isRevisao ? (todasDisciplinas.value[0]?.id || '') : (bloco ? bloco.disciplina_id : (todasDisciplinas.value[0]?.id || '')),
+                bloco_ciclo_id: bloco ? bloco.id : (blocoAtual.value ? blocoAtual.value.id : null),
                 topico_id: '',
-                tempo_estudado_minutos: timerSegundos.value > 0 ? Math.max(1, Math.round(timerSegundos.value / 60)) : (b?.duracao_minutos || 60),
+                tempo_estudado_minutos: timerSegundos.value > 0 ? Math.max(1, Math.round(timerSegundos.value / 60)) : (bloco?.duracao_minutos || 60),
                 qtd_questoes_total: 0,
                 qtd_acertos: 0,
                 qtd_erros: 0,
+                avancar_ciclo: true,
                 data: getDataHojeLocal()
             };
             modalCheckinAberto.value = true;
         }
 
         async function salvarSessaoEstudo() {
+            if (!formSessao.value.is_revisao_anki && topicosDaDisciplina.value.length > 0 && !formSessao.value.topico_id) {
+                mostrarAlerta('Você precisa selecionar o Tópico Estudado para contabilizar o rendimento do edital.', 'erro');
+                return;
+            }
+
+            if (!formSessao.value.is_revisao_anki && formSessao.value.qtd_acertos === 0 && formSessao.value.qtd_erros === 0) {
+                mostrarAlerta('Você deve registrar pelo menos 1 acerto ou erro nas questões.', 'erro');
+                return;
+            }
+
+            if (!formSessao.value.data) {
+                formSessao.value.data = getDataHojeLocal();
+            }
+
+            const hoje = getDataHojeLocal();
+            if (formSessao.value.data > hoje) {
+                mostrarAlerta('Não é possível registrar uma sessão em uma data futura.', 'erro');
+                return;
+            }
+
+            let total_q = formSessao.value.qtd_questoes_total;
+            let a = formSessao.value.qtd_acertos;
+            let e = formSessao.value.qtd_erros;
+            if(total_q === 0 && (a > 0 || e > 0)) formSessao.value.qtd_questoes_total = a + e;
+            
+            const oldVoltas = cicloAtivo.value ? (cicloAtivo.value.voltas_completas || 0) : 0;
+            let oldPerc = 0;
             try {
-                if (!formSessao.value.is_revisao_anki && topicosDaDisciplina.value.length > 0 && !formSessao.value.topico_id) {
-                    mostrarAlerta('Você precisa selecionar o Tópico Estudado para contabilizar o rendimento do edital.', 'erro');
-                    return;
-                }
-
-                if (!formSessao.value.is_revisao_anki && formSessao.value.qtd_acertos === 0 && formSessao.value.qtd_erros === 0) {
-                    mostrarAlerta('Você deve registrar pelo menos 1 acerto ou erro nas questões.', 'erro');
-                    return;
-                }
-
-                if (!formSessao.value.data) {
-                    formSessao.value.data = getDataHojeLocal();
-                }
-
-                const hoje = getDataHojeLocal();
-                if (formSessao.value.data > hoje) {
-                    mostrarAlerta('Não é possível registrar uma sessão em uma data futura.', 'erro');
-                    return;
-                }
-
-                let total_q = formSessao.value.qtd_questoes_total;
-                let a = formSessao.value.qtd_acertos;
-                let e = formSessao.value.qtd_erros;
-                if(total_q === 0 && (a > 0 || e > 0)) formSessao.value.qtd_questoes_total = a + e;
-                
-                const oldVoltas = cicloAtivo.value ? cicloAtivo.value.voltas_completas : 0;
-                let oldPerc = 0;
-                if (cicloAtivo.value) {
-                    const ed = editais.value.find(e => e.id === cicloAtivo.value.edital_id);
+                if (cicloAtivo.value && editais.value) {
+                    const ed = editais.value.find(item => item.id === cicloAtivo.value.edital_id);
                     if (ed) oldPerc = getEstatisticasEdital(ed).perc_visto;
                 }
-                
-                const method = formSessao.value.id ? 'PUT' : 'POST';
-                const url = formSessao.value.id ? `/api/sessoes/${formSessao.value.id}` : '/api/sessoes';
+            } catch(e) {
+                console.warn(e);
+            }
+            
+            const method = formSessao.value.id ? 'PUT' : 'POST';
+            const url = formSessao.value.id ? `/api/sessoes/${formSessao.value.id}` : '/api/sessoes';
 
-                const payload = { ...formSessao.value };
-                if (payload.topico_id === "" || payload.topico_id === null || payload.topico_id === undefined) {
-                    payload.topico_id = null;
-                } else {
-                    payload.topico_id = parseInt(payload.topico_id, 10);
-                }
+            const payload = { ...formSessao.value };
+            if (payload.topico_id === "" || payload.topico_id === null || payload.topico_id === undefined) {
+                payload.topico_id = null;
+            } else {
+                payload.topico_id = parseInt(payload.topico_id, 10);
+            }
+            if (payload.bloco_ciclo_id === "" || payload.bloco_ciclo_id === undefined) {
+                payload.bloco_ciclo_id = null;
+            } else if (payload.bloco_ciclo_id !== null) {
+                payload.bloco_ciclo_id = parseInt(payload.bloco_ciclo_id, 10);
+            }
+            if (!payload.id && !payload.bloco_ciclo_id && blocoAtual.value) {
+                payload.bloco_ciclo_id = blocoAtual.value.id;
+            }
+            if (payload.avancar_ciclo === undefined) {
+                payload.avancar_ciclo = true;
+            }
 
-                const res = await fetch(url, {
+            let res;
+            try {
+                res = await fetch(url, {
                     method: method,
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(payload)
                 });
-                if(res.ok) {
-                    modalCheckinAberto.value = false;
-                    resetTimer();
-                    await loadAllData();
-                    
-                    let newPerc = 0;
-                    if (cicloAtivo.value) {
-                        const ed = editais.value.find(e => e.id === cicloAtivo.value.edital_id);
-                        if (ed) newPerc = getEstatisticasEdital(ed).perc_visto;
-                    }
-                    
-                    const oldDecile = Math.floor(oldPerc / 10);
-                    const newDecile = Math.floor(newPerc / 10);
-                    
-                    if (newDecile > oldDecile && newDecile > 0) {
-                        triggerConfetti();
-                        mostrarAlerta(`Parabéns! Você já bateu ${newDecile * 10}% do edital!`);
-                    } else if (cicloAtivo.value && cicloAtivo.value.voltas_completas > oldVoltas) {
-                        triggerConfetti();
-                        mostrarAlerta("Sessão registrada! Parabéns, você completou uma volta do ciclo!");
-                    } else {
-                        mostrarAlerta("Sessão registrada!");
-                    }
-                } else {
-                    const errJson = await res.json().catch(() => ({}));
-                    mostrarAlerta(errJson.detail || "Erro ao salvar sessão", "erro");
-                }
-            } catch(e){
+            } catch(netErr) {
+                console.error("Erro de rede no fetch:", netErr);
                 mostrarAlerta("Erro de rede ao salvar sessão", "erro");
+                return;
+            }
+
+            if (!res.ok) {
+                const errJson = await res.json().catch(() => ({}));
+                mostrarAlerta(errJson.detail || "Erro ao salvar sessão", "erro");
+                return;
+            }
+
+            // Sessão gravada com sucesso! Fechar modal e resetar timer
+            modalCheckinAberto.value = false;
+            resetTimer();
+
+            try {
+                await loadAllData();
+                
+                let newPerc = 0;
+                if (cicloAtivo.value && editais.value) {
+                    const ed = editais.value.find(item => item.id === cicloAtivo.value.edital_id);
+                    if (ed) newPerc = getEstatisticasEdital(ed).perc_visto;
+                }
+                
+                const oldDecile = Math.floor(oldPerc / 10);
+                const newDecile = Math.floor(newPerc / 10);
+                
+                if (newDecile > oldDecile && newDecile > 0) {
+                    triggerConfetti();
+                    mostrarAlerta(`Parabéns! Você já bateu ${newDecile * 10}% do edital!`);
+                } else if (cicloAtivo.value && cicloAtivo.value.voltas_completas > oldVoltas) {
+                    triggerConfetti();
+                    mostrarAlerta("Sessão registrada! Parabéns, você completou uma volta do ciclo!");
+                } else {
+                    mostrarAlerta("Sessão registrada com sucesso!");
+                }
+
+                renderDonut();
+                scrollToCurrentBlock();
+            } catch(uiErr) {
+                console.error("Erro pós-salvamento na interface:", uiErr);
+                mostrarAlerta("Sessão registrada com sucesso!");
             }
         }
 
@@ -1383,7 +1421,7 @@ horas: formatarHorasDecimais(horas), topicos_vistos: topicosVistos.size, topicos
                 const currentIndex = cicloAtivo.value.bloco_atual_index;
                 
                 cicloAtivo.value.blocos.forEach((b, idx) => {
-                    const nome = b.disciplina.nome;
+                    const nome = b.disciplina ? b.disciplina.nome : (getNomeDisciplina(b.disciplina_id) || `Fase ${idx + 1}`);
                     if (!discColors[nome]) {
                         discColors[nome] = palette[cIdx % palette.length];
                         cIdx++;
