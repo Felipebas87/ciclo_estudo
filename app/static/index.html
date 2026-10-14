@@ -1746,8 +1746,8 @@ window.addEventListener('error', function(e) {
                         </label>
                         <select v-if="topicosDaDisciplina.length > 0" v-model="formSessao.topico_id" class="w-full border border-slate-300 rounded-xl px-4 py-2.5 sm:py-3 bg-slate-50 outline-none text-sm font-medium text-slate-700 transition" required>
                             <option value="">-- Selecione o Tópico --</option>
-                            <option v-for="t in topicosDaDisciplina" :key="t.id" :value="t.id" :title="t.titulo">
-                                {{ t.ordem ? t.ordem + '. ' : '' }}{{ t.titulo }}
+                            <option v-for="t in topicosDaDisciplina" :key="t.id" :value="t.id" :title="formatarTituloTopico(t)">
+                                {{ formatarTituloTopico(t) }}
                             </option>
                         </select>
                         <div v-else class="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2.5 flex items-center space-x-2">
@@ -1943,6 +1943,6 @@ window.addEventListener('error', function(e) {
     
 </div>
     
-<script src="/static/js/app.js?v=raiox48"></script>
+<script src="/static/js/app.js?v=raiox49"></script>
 </body>
 </html>

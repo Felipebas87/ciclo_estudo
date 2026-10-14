@@ -593,6 +593,20 @@ const formatarData = (isoStr) => {
             return isoStr;
         }
 
+// formatarTituloTopico
+const formatarTituloTopico = (t) => {
+            if (!t) return '';
+            const tit = (t.titulo || '').trim();
+            if (/^\d+(\.\d+)*\.\s+/.test(tit)) {
+                return tit;
+            }
+            const m = tit.match(/^(\d+(\.\d+)*)\s+(.*)$/);
+            if (m) {
+                return `${m[1]}. ${m[3]}`;
+            }
+            return tit;
+        };
+
 // badgeTaxaAcertoBg
 const badgeTaxaAcertoBg = (perc) => {
             if (perc >= 80) return 'bg-emerald-100 text-emerald-800';
@@ -1217,7 +1231,7 @@ qtd: 0, perc: 0, perc_vistos };
                 disciplina_id: isRevisao ? (todasDisciplinas.value[0]?.id || '') : (bloco ? bloco.disciplina_id : (todasDisciplinas.value[0]?.id || '')),
                 bloco_ciclo_id: bloco ? bloco.id : (blocoAtual.value ? blocoAtual.value.id : null),
                 topico_id: '',
-                tempo_estudado_minutos: timerSegundos.value > 0 ? Math.max(1, Math.round(timerSegundos.value / 60)) : (bloco?.duracao_minutos || 60),
+                tempo_estudado_minutos: 60,
                 qtd_questoes_total: 0,
                 qtd_acertos: 0,
                 qtd_erros: 0,
@@ -2140,7 +2154,7 @@ const totaisEncerramento = computed(() => {
             preencherExemploWizard, processarEditalWizard, salvarPesoDisciplina, finalizarWizard,
             avancarBloco, selecionarBlocoManual, gerarCicloNovoComEdital, abrirModalCheckin, abrirModalCheckinComBloco,
             salvarSessaoEstudo, editarSessao, excluirSessao, excluirTodasSessoes, voltarAoWizard, iniciarApp, abrirDashboard, carregarEditalVerticalizado, abaRaizResultados, abaRegistrar, abaHistorico, rankingRevisoes, quadrantesRaioX, disciplinasEncerramento, totaisEncerramento, insightsRaioX, prepararFormEncerramento, encerrarCicloOficial, resultadosEncerrados, carregarResultadosEncerrados, deletarCicloEncerrado, editarCicloEncerrado, editandoCiclo,
-            idEmEdicaoAvulso, editarResultadoAvulso, cancelarEdicaoAvulso, getDataHojeLocal
+            idEmEdicaoAvulso, editarResultadoAvulso, cancelarEdicaoAvulso, getDataHojeLocal, formatarTituloTopico
         };
     }
 });
