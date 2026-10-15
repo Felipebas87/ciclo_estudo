@@ -1,31 +1,120 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
+
+:root {
+    --bg-app: #f8fafc;
+    --bg-surface: #ffffff;
+    --bg-surface-elevated: #f1f5f9;
+    --border-subtle: #e2e8f0;
+    --border-highlight: #cbd5e1;
+    --rail-bg: #e2e8f0;
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+    --text-muted: #64748b;
+    --brand-primary: #2563eb;
+    --brand-cyan: #0284c7;
+    --status-success: #059669;
+    --status-warning: #d97706;
+    --status-danger: #dc2626;
+    --status-info: #0284c7;
+    --status-anki: #7c3aed;
+    --card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+}
+
+/* ============================================================
+   TEMA ESCURO ALTO CONTRASTE (UX/UI & WCAG AA CONFORME)
+   Tokens e Especificação Estrita:
+   1. Fundo da Página: #111827 (Fundo geral da aplicação)
+   2. Superfície dos Cards: #1B2638 (Cards, tabelas e navegação)
+   3. Superfície Elevada: #243247 (Hover, campos e componentes destacados)
+   4. Bordas: #2D3D54 (Hover/Destaque: #3B4F6D)
+   5. Trilho de Progresso e Donut: #111827 (ou #1F2C3F)
+   6. Texto Principal: #F3F4F6 (Títulos, valores e informações essenciais)
+   7. Texto Secundário: #B8C4D6 (Legendas, datas e descrições - Contraste ≥ 8:1)
+   8. Cores Semânticas Estáveis:
+      - Azul de Ação:    #60A5FA (Links, foco e botões)
+      - Ciano de Dados:  #22D3EE (Cronômetro e métricas em destaque)
+      - Verde Sucesso:   #34D399 (Conclusões e resultados positivos)
+      - Âmbar Atenção:   #FBBF24 (Alertas e pendências)
+      - Vermelho Erro:   #F87171 (Erros e reprovações)
+      - Violeta Análise: #C4B5FD (Séries de dados e Anki)
+   9. Anel de Foco Visível: 2px #22D3EE (com offset de 2px)
+   ============================================================ */
+html.dark {
+    color-scheme: dark;
+    --bg-app: #111827;
+    --bg-surface: #1B2638;
+    --bg-surface-elevated: #243247;
+    --border-subtle: #2D3D54;
+    --border-highlight: #3B4F6D;
+    --rail-bg: #111827;
+    --text-primary: #F3F4F6;
+    --text-secondary: #B8C4D6;
+    --text-muted: #8292A6;
+    --brand-primary: #2563EB;
+    --brand-action: #60A5FA;
+    --brand-cyan: #22D3EE;
+    --status-success: #34D399;
+    --status-warning: #FBBF24;
+    --status-danger: #F87171;
+    --status-info: #60A5FA;
+    --status-anki: #C4B5FD;
+    --card-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.75);
+}
 
 body {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-app);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Scrollbars elegantes */
+.font-mono-timer {
+    font-family: 'JetBrains Mono', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+/* Scrollbars refinadas */
 ::-webkit-scrollbar {
     width: 6px;
     height: 6px;
 }
+
 ::-webkit-scrollbar-track {
-    background: #f1f5f9;
+    background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
     background: #cbd5e1;
     border-radius: 9999px;
 }
+
+html.dark ::-webkit-scrollbar-thumb {
+    background: #2D3D54;
+}
+
 ::-webkit-scrollbar-thumb:hover {
     background: #94a3b8;
 }
 
-/* Animações suaves */
+html.dark ::-webkit-scrollbar-thumb:hover {
+    background: #3B4F6D;
+}
+
+/* Transições e Elevação de Cards */
 .transition-card {
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
 .transition-card:hover {
     transform: translateY(-2px);
+    box-shadow: 0 12px 28px -5px rgba(15, 23, 42, 0.12), 0 8px 10px -6px rgba(15, 23, 42, 0.06);
+}
+
+html.dark .transition-card:hover {
+    transform: translateY(-2px);
+    border-color: #2E3E5C !important;
+    box-shadow: 0 14px 30px -5px rgba(0, 0, 0, 0.8), 0 0 15px rgba(34, 211, 238, 0.12);
 }
 
 .esteira-scroll {
@@ -34,19 +123,712 @@ body {
     scrollbar-width: thin;
 }
 
+/* Animação do bloco ativo (Glow Ciano SaaS) */
 .pulse-active {
-    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
-    animation: pulse-ring 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.6);
+    animation: pulse-ring-cyan 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
 }
 
-@keyframes pulse-ring {
+@keyframes pulse-ring-cyan {
     0% {
-        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.6);
+        box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.6);
     }
     70% {
-        box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+        box-shadow: 0 0 0 10px rgba(34, 211, 238, 0);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+        box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
     }
+}
+
+/* Proteção contra FOUC / Tela branca antes do Vue montar */
+[v-cloak] {
+    display: none !important;
+}
+
+/* ============================================================
+   1. CAMADAS DE SUPERFÍCIE E ELEVAÇÃO
+   Camada 1: Fundo #111827 (Fundo geral)
+   Camada 2: Superfície dos Cards #1B2638 (Cards, tabelas, navegação)
+   Camada 3: Superfície Elevada #243247 (Subcards, cabeçalhos, hover)
+   ============================================================ */
+
+/* Fundo da Página (Camada 1: #0B1220) */
+html.dark body,
+html.dark body.bg-slate-50,
+html.dark #app,
+html.dark main,
+html.dark .dark\:bg-\[\#111827\],
+html.dark .dark\:bg-\[\#0B1220\] {
+    background-color: #0B1220 !important;
+    color: #F8FAFC !important;
+}
+
+/* Sidebar no modo escuro */
+html.dark aside,
+html.dark aside.sidebar-saas {
+    background-color: #10192A !important;
+    color: #F8FAFC !important;
+    border-color: #24324A !important;
+}
+
+/* Superfície dos Cards Principais (Camada 2: Azul-Ardósia com Borda Luminosa) */
+html.dark main .bg-white:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(.modal-dialog-saas),
+html.dark main .dark\:bg-\[\#1B2638\]:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(tr):not(td),
+html.dark main .dark\:bg-\[\#141D2E\]:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(tr):not(td),
+html.dark .card-saas-container {
+    background: linear-gradient(135deg, #253956 0%, #2b4162 50%, #344f77 100%) !important;
+    color: #F8FAFC !important;
+    border: 1px solid #4C6F9F !important;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.45),
+                0 0 0 1px rgba(96, 165, 250, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+}
+
+/* Superfície dos Quadros Menores / Subcards (Camada 3: Tema Mais Escuro #162335) */
+html.dark .card-subcard,
+html.dark .hero-subcard,
+html.dark .modal-subcard,
+html.dark main .bg-slate-50:not(body):not(main),
+html.dark main .bg-slate-50\/60,
+html.dark main .bg-slate-50\/70,
+html.dark main .bg-slate-50\/80,
+html.dark main .bg-slate-100,
+html.dark main .bg-slate-100\/70,
+html.dark main .bg-slate-100\/80,
+html.dark main .bg-indigo-50,
+html.dark main .bg-blue-50,
+html.dark main .bg-blue-50\/60,
+html.dark main .bg-blue-50\/70,
+html.dark main .bg-amber-50,
+html.dark main .bg-purple-50,
+html.dark main .dark\:bg-\[\#243247\],
+html.dark main .dark\:bg-\[\#1A2438\],
+html.dark main .card-saas-container .dark\:bg-\[\#1B2638\],
+html.dark main .bg-white .dark\:bg-\[\#1B2638\] {
+    background-color: rgba(22, 35, 53, 0.94) !important;
+    border-color: #3D5A82 !important;
+    color: #F8FAFC !important;
+}
+
+/* Bordas Sutis e Nítidas (#2D3D54 / #3B4F6D) */
+html.dark .border-slate-100,
+html.dark .border-slate-200,
+html.dark .border-slate-200\/60,
+html.dark .border-slate-200\/70,
+html.dark .border-slate-200\/80,
+html.dark .border-slate-200\/90,
+html.dark .border-slate-300,
+html.dark .border-slate-700,
+html.dark .border-slate-800,
+html.dark .border-slate-800\/60,
+html.dark .border-slate-800\/80,
+html.dark .dark\:border-\[\#24324A\],
+html.dark .dark\:border-\[\#2D3D54\],
+html.dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]),
+html.dark .divide-slate-800 > :not([hidden]) ~ :not([hidden]) {
+    border-color: #2D3D54 !important;
+}
+
+/* ============================================================
+   2. PADRONIZAÇÃO DE BADGES E PILLS (WCAG AA - RGBA 15% + TOM CLARO)
+   - Sucesso: #34D399 (Verde)
+   - Alerta:  #FBBF24 (Âmbar)
+   - Crítico: #F87171 (Vermelho suave)
+   - Ação/Info: #60A5FA (Azul) / #22D3EE (Ciano)
+   - Anki:    #C4B5FD (Violeta)
+   ============================================================ */
+
+/* Sucesso (#34D399) */
+html.dark .badge-success,
+html.dark .bg-emerald-50,
+html.dark .bg-emerald-100,
+html.dark .bg-emerald-500\/10,
+html.dark .bg-emerald-950\/70,
+html.dark [class*="dark:bg-emerald-"],
+html.dark [class*="dark:bg-[#34D399]"],
+html.dark [class*="dark:bg-[#6EE7B7]"] {
+    background-color: rgba(52, 211, 153, 0.15) !important;
+    color: #34D399 !important;
+    border: 1px solid rgba(52, 211, 153, 0.3) !important;
+}
+
+html.dark .text-emerald-400,
+html.dark .text-emerald-500,
+html.dark .text-emerald-600,
+html.dark .text-green-400,
+html.dark .text-green-500,
+html.dark .text-green-600,
+html.dark .dark\:text-\[\#34D399\],
+html.dark .dark\:text-\[\#6EE7B7\] {
+    color: #34D399 !important;
+}
+
+/* Alerta / Atenção (#FBBF24) */
+html.dark .badge-warning,
+html.dark .bg-amber-50,
+html.dark .bg-amber-100,
+html.dark .bg-amber-500\/10,
+html.dark .bg-amber-950\/70,
+html.dark [class*="dark:bg-amber-"],
+html.dark [class*="dark:bg-[#FBBF24]"],
+html.dark [class*="dark:bg-[#FCD34D]"] {
+    background-color: rgba(251, 191, 36, 0.15) !important;
+    color: #FBBF24 !important;
+    border: 1px solid rgba(251, 191, 36, 0.3) !important;
+}
+
+html.dark .text-amber-400,
+html.dark .text-amber-500,
+html.dark .text-amber-600,
+html.dark .text-amber-700,
+html.dark .text-yellow-400,
+html.dark .text-yellow-500,
+html.dark .dark\:text-\[\#FBBF24\],
+html.dark .dark\:text-\[\#FCD34D\] {
+    color: #FBBF24 !important;
+}
+
+/* Crítico / Erro / Reprovado (#F87171) */
+html.dark .badge-danger,
+html.dark .bg-rose-50,
+html.dark .bg-rose-100,
+html.dark .bg-rose-500\/10,
+html.dark .bg-rose-950\/70,
+html.dark .bg-red-50,
+html.dark .bg-red-100,
+html.dark [class*="dark:bg-rose-"],
+html.dark [class*="dark:bg-red-"],
+html.dark [class*="dark:bg-[#F87171]"],
+html.dark [class*="dark:bg-[#FCA5A5]"] {
+    background-color: rgba(248, 113, 113, 0.15) !important;
+    color: #F87171 !important;
+    border: 1px solid rgba(248, 113, 113, 0.3) !important;
+}
+
+html.dark .text-rose-400,
+html.dark .text-rose-500,
+html.dark .text-rose-600,
+html.dark .text-red-400,
+html.dark .text-red-500,
+html.dark .text-red-600,
+html.dark .dark\:text-\[\#F87171\],
+html.dark .dark\:text-\[\#FCA5A5\] {
+    color: #F87171 !important;
+}
+
+/* Ação / Info (#60A5FA) & Ciano (#22D3EE) */
+html.dark .badge-info,
+html.dark .bg-blue-50,
+html.dark .bg-blue-100,
+html.dark .bg-cyan-50,
+html.dark .bg-cyan-100,
+html.dark [class*="dark:bg-blue-500/"],
+html.dark [class*="dark:bg-blue-900/"],
+html.dark [class*="dark:bg-blue-950/"],
+html.dark [class*="dark:bg-cyan-"],
+html.dark [class*="dark:bg-[#60A5FA]"],
+html.dark [class*="dark:bg-[#7DD3FC]"] {
+    background-color: rgba(96, 165, 250, 0.15) !important;
+    color: #60A5FA !important;
+    border: 1px solid rgba(96, 165, 250, 0.3) !important;
+}
+
+html.dark .text-cyan-400,
+html.dark .text-cyan-500,
+html.dark .dark\:text-\[\#22D3EE\] {
+    color: #22D3EE !important;
+}
+
+html.dark .text-sky-400,
+html.dark .text-sky-500,
+html.dark .text-blue-400,
+html.dark .text-blue-500,
+html.dark .dark\:text-\[\#60A5FA\],
+html.dark .dark\:text-\[\#7DD3FC\] {
+    color: #60A5FA !important;
+}
+
+/* Anki / Violeta (#C4B5FD) */
+html.dark .badge-anki,
+html.dark .bg-purple-50,
+html.dark .bg-purple-100,
+html.dark .bg-indigo-50,
+html.dark .bg-indigo-100,
+html.dark [class*="dark:bg-purple-"],
+html.dark [class*="dark:bg-indigo-"],
+html.dark [class*="dark:bg-[#C4B5FD]"] {
+    background-color: rgba(196, 181, 253, 0.15) !important;
+    color: #C4B5FD !important;
+    border: 1px solid rgba(196, 181, 253, 0.3) !important;
+}
+
+html.dark .text-purple-400,
+html.dark .text-purple-500,
+html.dark .text-indigo-400,
+html.dark .text-indigo-500,
+html.dark .dark\:text-\[\#C4B5FD\] {
+    color: #C4B5FD !important;
+}
+
+/* ============================================================
+   3. ESTADOS DE BLOCO (ESTEIRA SEQUENCIAL)
+   Sem opacidade; com barra lateral, checkmark e texto #B8C4D6
+   ============================================================ */
+html.dark .bloco-concluido {
+    background-color: #1B2638 !important;
+    border-color: #2D3D54 !important;
+    border-left: 4px solid #34D399 !important;
+    opacity: 1 !important;
+}
+
+html.dark .bloco-concluido h4,
+html.dark .bloco-concluido span,
+html.dark .bloco-concluido p {
+    color: #B8C4D6 !important;
+}
+
+html.dark .bloco-ativo {
+    background-color: #243247 !important;
+    border-color: #2D3D54 !important;
+    border-left: 4px solid #22D3EE !important;
+    box-shadow: 0 0 16px rgba(34, 211, 238, 0.2) !important;
+    opacity: 1 !important;
+}
+
+/* ============================================================
+   4. BARRAS DE PROGRESSO E TRILHOS (#111827 / #1F2C3F)
+   ============================================================ */
+html.dark .progress-track,
+html.dark .bg-progress-track,
+html.dark .bg-slate-200.h-1,
+html.dark .bg-slate-200.h-1\.5,
+html.dark .bg-slate-200.h-2,
+html.dark .bg-slate-200.h-2\.5,
+html.dark .bg-slate-200.h-3,
+html.dark .dark\:bg-\[\#111827\],
+html.dark .dark\:bg-\[\#1E293B\] {
+    background-color: #111827 !important;
+}
+
+/* ============================================================
+   5. TIPOGRAFIA & TAMANHO MÍNIMO 12-14PX (UX/UI & WCAG AA)
+   ============================================================ */
+/* Texto Principal (#F3F4F6) */
+html.dark h1,
+html.dark h2,
+html.dark h3,
+html.dark h4,
+html.dark h5,
+html.dark h6,
+html.dark strong,
+html.dark .text-slate-900,
+html.dark .text-slate-800,
+html.dark .text-slate-700,
+html.dark .text-indigo-900,
+html.dark .text-emerald-900,
+html.dark .text-blue-900,
+html.dark .dark\:text-\[\#F3F4F6\],
+html.dark .dark\:text-\[\#F1F5F9\] {
+    color: #F3F4F6 !important;
+}
+
+/* Texto Secundário (#B8C4D6 - Contraste alto contra fundos escuros) */
+html.dark p,
+html.dark .text-slate-600,
+html.dark .text-slate-500,
+html.dark .text-slate-400,
+html.dark .dark\:text-\[\#B8C4D6\],
+html.dark .dark\:text-\[\#94A3B8\] {
+    color: #B8C4D6 !important;
+}
+
+/* Labels de formulários: Alta nitidez */
+html.dark label {
+    color: #F3F4F6 !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.02em;
+}
+
+/* Tamanho mínimo para dados e legendas importantes */
+html.dark [class*="text-[8px]"],
+html.dark [class*="text-[9px]"],
+html.dark [class*="text-[10px]"],
+html.dark [class*="text-[11px]"] {
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+}
+
+/* ============================================================
+   6. CONTROLES INTERATIVOS E FOCO VISÍVEL (2px #22D3EE)
+   ============================================================ */
+html.dark input,
+html.dark select,
+html.dark textarea {
+    background-color: #243247 !important;
+    border: 1.5px solid #2D3D54 !important;
+    color: #F3F4F6 !important;
+    font-weight: 500 !important;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+    color: #8292A6 !important;
+}
+
+html.dark input:hover,
+html.dark select:hover,
+html.dark textarea:hover {
+    border-color: #3B4F6D !important;
+}
+
+/* Anel de foco visível de 2px #22D3EE em todos os controles */
+html.dark input:focus,
+html.dark select:focus,
+html.dark textarea:focus,
+html.dark button:focus-visible,
+html.dark a:focus-visible,
+html.dark [tabindex]:focus-visible {
+    border-color: #22D3EE !important;
+    box-shadow: 0 0 0 2px #111827, 0 0 0 4px #22D3EE !important;
+    outline: none !important;
+}
+
+/* Botões Primários e Ações */
+html.dark .bg-blue-600,
+html.dark .bg-blue-700 {
+    background-color: #2563EB !important;
+    color: #FFFFFF !important;
+}
+
+html.dark .bg-blue-600:hover,
+html.dark .bg-blue-700:hover {
+    background-color: #1D4ED8 !important;
+    color: #FFFFFF !important;
+}
+
+html.dark .bg-emerald-500,
+html.dark .bg-emerald-600 {
+    background-color: #10B981 !important;
+    color: #FFFFFF !important;
+}
+
+html.dark .bg-emerald-500:hover,
+html.dark .bg-emerald-600:hover {
+    background-color: #059669 !important;
+}
+
+/* Botões de Ação em Tabelas: Área clicável de 40px */
+html.dark .btn-table-action {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 10px;
+    transition: all 0.15s ease-in-out;
+}
+
+/* ============================================================
+   7. TABELAS: CABEÇALHOS, LISTRAS SUTIS E HOVER
+   ============================================================ */
+html.dark table {
+    border-color: #2D3D54 !important;
+}
+
+html.dark th {
+    background-color: #243247 !important;
+    color: #F3F4F6 !important;
+    border-color: #2D3D54 !important;
+    font-weight: 700 !important;
+    font-size: 13px !important;
+}
+
+html.dark td {
+    border-color: #2D3D54 !important;
+    color: #B8C4D6 !important;
+    font-size: 14px !important;
+}
+
+html.dark td.font-bold,
+html.dark td .font-bold,
+html.dark td:first-child {
+    color: #F3F4F6 !important;
+}
+
+/* Zebra striping sutil em tabelas no modo escuro */
+html.dark tbody tr:nth-child(even) {
+    background-color: rgba(36, 50, 71, 0.35) !important;
+}
+
+html.dark tbody tr:hover td,
+html.dark tr:hover td {
+    background-color: #243247 !important;
+}
+
+/* Modais */
+html.dark .backdrop-blur-xs,
+html.dark .backdrop-blur-sm,
+html.dark .backdrop-blur-md {
+    background-color: rgba(17, 24, 39, 0.88) !important;
+}
+
+/* ============================================================
+   8. CARD HERO DO CICLO ATUAL: ESPECIFICAÇÃO AZUL-ARDÓSIA (TEMAS CLARO E ESCURO)
+   ============================================================ */
+.card-hero-ciclo {
+    background: linear-gradient(135deg, #253956 0%, #2b4162 50%, #344f77 100%) !important;
+    border-color: #4c6f9f !important;
+    box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.45),
+                0 0 0 1px rgba(96, 165, 250, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    color: #ffffff !important;
+    transition: all 0.25s ease-in-out;
+}
+
+.card-hero-ciclo .hero-subcard {
+    background-color: rgba(22, 35, 53, 0.92) !important;
+    border-color: #3d5a82 !important;
+}
+
+.card-hero-ciclo .hero-pill {
+    background-color: rgba(22, 35, 53, 0.88) !important;
+    border-color: #3d5a82 !important;
+    color: #E2E8F0 !important;
+}
+
+/* ============================================================
+   9. MENU LATERAL (SIDEBAR) NO TEMA CLARO: ESPECIFICAÇÃO AZUL-ARDÓSIA
+   ============================================================ */
+html:not(.dark) aside.sidebar-saas {
+    background: linear-gradient(180deg, #253956 0%, #2b4162 50%, #344f77 100%) !important;
+    border-right: 1px solid #4C6F9F !important;
+    box-shadow: 4px 0 24px -2px rgba(0, 0, 0, 0.3),
+                0 0 0 1px rgba(96, 165, 250, 0.25),
+                inset -1px 0 0 rgba(255, 255, 255, 0.1) !important;
+}
+
+html:not(.dark) aside.sidebar-saas .sidebar-header {
+    border-bottom: 1px solid rgba(76, 111, 159, 0.45) !important;
+}
+
+html:not(.dark) aside.sidebar-saas h1 {
+    color: #F8FAFC !important;
+}
+
+html:not(.dark) aside.sidebar-saas .logo-subtitle {
+    color: #CBD5E1 !important;
+}
+
+html:not(.dark) aside.sidebar-saas .btn-close-mobile {
+    color: #CBD5E1 !important;
+}
+
+html:not(.dark) aside.sidebar-saas .sidebar-section-title {
+    color: #94A3B8 !important;
+}
+
+/* Botões inativos de navegação na sidebar do tema claro */
+html:not(.dark) aside.sidebar-saas nav button:not(.bg-blue-600):not(.bg-indigo-600) {
+    color: #D1D9E6 !important;
+}
+
+html:not(.dark) aside.sidebar-saas nav button:not(.bg-blue-600):not(.bg-indigo-600):hover {
+    color: #FFFFFF !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Badge de contagem de editais */
+html:not(.dark) aside.sidebar-saas .sidebar-badge-count {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+    color: #F8FAFC !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Rodapé da sidebar: divisória, card de edital ativo e botão de tema */
+html:not(.dark) aside.sidebar-saas .sidebar-footer {
+    border-top: 1px solid rgba(76, 111, 159, 0.45) !important;
+}
+
+html:not(.dark) aside.sidebar-saas .sidebar-edital-card {
+    background-color: rgba(22, 35, 53, 0.9) !important;
+    border: 1px solid #3D5A82 !important;
+}
+
+html:not(.dark) aside.sidebar-saas .sidebar-edital-card span {
+    color: #CBD5E1 !important;
+}
+
+html:not(.dark) aside.sidebar-saas .sidebar-edital-card p {
+    color: #F8FAFC !important;
+}
+
+html:not(.dark) aside.sidebar-saas .sidebar-edital-card .edital-progress-track {
+    background-color: rgba(11, 18, 32, 0.7) !important;
+}
+
+html:not(.dark) aside.sidebar-saas .btn-theme-toggle {
+    background-color: rgba(22, 35, 53, 0.9) !important;
+    border: 1px solid #3D5A82 !important;
+    color: #F8FAFC !important;
+}
+
+html:not(.dark) aside.sidebar-saas .btn-theme-toggle:hover {
+    background-color: rgba(22, 35, 53, 1) !important;
+    border-color: #4C6F9F !important;
+}
+
+html:not(.dark) aside.sidebar-saas .btn-theme-toggle .theme-toggle-pill {
+    background-color: rgba(96, 165, 250, 0.2) !important;
+    color: #93C5FD !important;
+    border: 1px solid rgba(96, 165, 250, 0.35) !important;
+}
+
+/* ============================================================
+   10. MODAIS NO TEMA ESCURO: ESPECIFICAÇÃO AZUL-ARDÓSIA
+   Fundo do modal em gradiente Azul-Ardósia (#253956 -> #344F77),
+   borda luminosa #4C6F9F, anel translúcido e sombra de profundidade.
+   Quadros menores internos no tema mais escuro (rgba(22, 35, 53, 0.94) / #162335)
+   ============================================================ */
+html.dark .modal-dialog-saas,
+html.dark div.modal-dialog-saas {
+    background: linear-gradient(135deg, #253956 0%, #2b4162 50%, #344f77 100%) !important;
+    border-color: #4C6F9F !important;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8),
+                0 0 0 1px rgba(96, 165, 250, 0.25),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15) !important;
+    color: #F8FAFC !important;
+}
+
+/* Cabeçalhos e rodapés sticky de modais */
+html.dark .modal-dialog-saas .modal-header-saas,
+html.dark .modal-dialog-saas .modal-footer-saas {
+    background-color: rgba(22, 35, 53, 0.96) !important;
+    border-color: #3D5A82 !important;
+}
+
+/* Quadros menores no tema mais escuro (estilo .hero-subcard) */
+html.dark .modal-dialog-saas .modal-subcard,
+html.dark div.modal-dialog-saas div.modal-subcard {
+    background-color: rgba(22, 35, 53, 0.94) !important;
+    border: 1px solid #3D5A82 !important;
+}
+
+/* Campos de formulário (inputs, selects, textareas) dentro de modais escuros */
+html.dark .modal-dialog-saas input,
+html.dark .modal-dialog-saas select,
+html.dark .modal-dialog-saas textarea {
+    background-color: #0E1622 !important;
+    border: 1.5px solid #3D5A82 !important;
+    color: #F8FAFC !important;
+}
+
+html.dark .modal-dialog-saas input:focus,
+html.dark .modal-dialog-saas select:focus,
+html.dark .modal-dialog-saas textarea:focus {
+    border-color: #22D3EE !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.35) !important;
+    outline: none !important;
+}
+
+/* Tipografia de alto contraste nos modais */
+html.dark .modal-dialog-saas h1,
+html.dark .modal-dialog-saas h2,
+html.dark .modal-dialog-saas h3,
+html.dark .modal-dialog-saas h4 {
+    color: #F8FAFC !important;
+}
+
+html.dark .modal-dialog-saas label,
+html.dark .modal-dialog-saas .text-slate-600,
+html.dark .modal-dialog-saas .text-slate-500,
+html.dark .modal-dialog-saas .text-slate-400 {
+    color: #CBD5E1 !important;
+}
+
+/* Linhas divisórias internas do modal */
+html.dark .modal-dialog-saas .border-t,
+html.dark .modal-dialog-saas .border-b {
+    border-color: rgba(61, 90, 130, 0.5) !important;
+}
+
+/* ============================================================
+   11. SISTEMA SAAS AZUL-ARDÓSIA GLOBAL (TODAS AS FUNCIONALIDADES NO TEMA ESCURO)
+   Container Principal: Gradiente Azul-Ardósia (#253956 -> #344F77), borda #4C6F9F,
+   anel translúcido rgba(96, 165, 250, 0.25) e sombra com profundidade.
+   Quadros menores / subcards: Fundo escuro rgba(22, 35, 53, 0.94) / #162335, borda #3D5A82.
+   ============================================================ */
+
+/* Blocos da Esteira Sequencial (#esteira-container) */
+html.dark #esteira-container > div,
+html.dark #esteira-container .card-subcard {
+    background-color: rgba(22, 35, 53, 0.94) !important;
+    border: 1px solid #3D5A82 !important;
+}
+
+html.dark #esteira-container .bloco-ativo {
+    background-color: rgba(28, 44, 68, 0.98) !important;
+    border-color: #3D5A82 !important;
+    border-left: 4px solid #22D3EE !important;
+    box-shadow: 0 0 16px rgba(34, 211, 238, 0.3) !important;
+}
+
+html.dark #esteira-container .bloco-concluido {
+    background-color: rgba(22, 35, 53, 0.94) !important;
+    border-color: #3D5A82 !important;
+    border-left: 4px solid #34D399 !important;
+}
+
+html.dark #esteira-container .bloco-pendente {
+    background-color: rgba(22, 35, 53, 0.88) !important;
+    border-color: #3D5A82 !important;
+    border-left: 4px solid #3D5A82 !important;
+}
+
+/* Tabelas dentro dos cards no tema escuro */
+html.dark table thead tr,
+html.dark table thead th {
+    background-color: rgba(18, 28, 43, 0.98) !important;
+    border-color: #3D5A82 !important;
+    color: #CBD5E1 !important;
+}
+
+html.dark table tbody tr {
+    background-color: rgba(22, 35, 53, 0.94) !important;
+    border-color: rgba(61, 90, 130, 0.45) !important;
+    color: #F8FAFC !important;
+}
+
+html.dark table tbody tr:hover td {
+    background-color: rgba(33, 49, 73, 0.8) !important;
+}
+
+html.dark table tfoot tr {
+    background-color: rgba(18, 28, 43, 0.98) !important;
+    border-color: #3D5A82 !important;
+}
+
+/* Campos de entrada e seleção dentro dos cards escuros */
+html.dark main input:not([type="checkbox"]),
+html.dark main select,
+html.dark main textarea {
+    background-color: #0E1622 !important;
+    border: 1.5px solid #3D5A82 !important;
+    color: #F8FAFC !important;
+}
+
+html.dark main input:focus,
+html.dark main select:focus,
+html.dark main textarea:focus {
+    border-color: #22D3EE !important;
+    box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.35) !important;
+    outline: none !important;
+}
+
+/* Trilhos de progresso */
+html.dark .card-saas-container .bg-slate-200,
+html.dark main .bg-slate-200.h-2,
+html.dark main .bg-slate-200.h-1\.5 {
+    background-color: #0B1220 !important;
 }
