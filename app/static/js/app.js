@@ -54,7 +54,7 @@ const app = createApp({
             if (abaAtiva.value === 'dashboard') {
                 setTimeout(renderCharts, 100);
             } else if (abaAtiva.value === 'heatmap') {
-                setTimeout(renderizarHeatmapAnalytics, 100);
+                setTimeout(renderCalendarioAnalytics, 100);
             } else if (abaAtiva.value === 'ciclo') {
                 setTimeout(renderDonut, 100);
             }
@@ -215,6 +215,142 @@ const app = createApp({
             resultado_final: 'Aprovado'
         });
 
+        // ==========================================
+        // 2.1 INFORMAÇÕES DA PROVA / TESTE LOCAL
+        // ==========================================
+        const dadosProvaPadrao = {
+            concurso: 'SEFAZ ALAGOAS',
+            cargo: 'Auditor Fiscal da Receita Estadual',
+            especialidade: 'Tecnologia da Informação',
+            banca: 'Cebraspe',
+            estilo_banca: 'Certo / Errado (1 anula 1)',
+            data_prova: '2026-11-29',
+            nota_corte: 78.5,
+            total_vagas: '35 vagas (28 AC | 7 Cotas)',
+            local_prova: 'Maceió - AL',
+            formato_prova: '160 itens + Discursiva',
+            status_edital: 'Pós-Edital (Edital Publicado)'
+        };
+
+        const carregarDadosProva = () => {
+            try {
+                const salvo = localStorage.getItem('orbis_painel_prova');
+                if (salvo) {
+                    return { ...dadosProvaPadrao, ...JSON.parse(salvo) };
+                }
+            } catch (e) {
+                console.warn('Erro ao carregar dadosProva do localStorage:', e);
+            }
+            return { ...dadosProvaPadrao };
+        };
+
+        const dadosProva = ref(carregarDadosProva());
+        const modalConfigProvaAberto = ref(false);
+        const modalAlertaMarcoAberto = ref(false);
+        const formConfigProva = ref({ ...dadosProva.value });
+
+        const getMarcosAlertados = () => {
+            try {
+                const salvo = localStorage.getItem('orbis_marcos_alertados');
+                return salvo ? JSON.parse(salvo) : {};
+            } catch (e) {
+                return {};
+            }
+        };
+
+        const registrarMarcoAlertado = (marco, dataProva) => {
+            try {
+                const chave = dataProva || dadosProva.value?.data_prova || 'padrao';
+                const dados = getMarcosAlertados();
+                if (!dados[chave]) dados[chave] = {};
+                dados[chave][marco] = true;
+                // Ao alertar marco menor (ex: 60d), marcar também marcos maiores para não alertar retroativamente
+                if (marco <= 60) dados[chave][90] = true;
+                if (marco <= 30) dados[chave][60] = true;
+                localStorage.setItem('orbis_marcos_alertados', JSON.stringify(dados));
+            } catch (e) {
+                console.warn(e);
+            }
+        };
+
+        const marcoJaAlertado = (marco, dataProva) => {
+            try {
+                const chave = dataProva || dadosProva.value?.data_prova || 'padrao';
+                const dados = getMarcosAlertados();
+                return !!(dados[chave] && dados[chave][marco]);
+            } catch (e) {
+                return false;
+            }
+        };
+
+        const resetarMarcosAlertados = () => {
+            try {
+                localStorage.removeItem('orbis_marcos_alertados');
+                mostrarAlerta('Histórico de avisos de marcos resetado com sucesso!', 'info');
+            } catch (e) {}
+        };
+
+        const abrirModalConfigProva = () => {
+            formConfigProva.value = { ...dadosProva.value };
+            modalConfigProvaAberto.value = true;
+        };
+
+        const abrirAlertaMarco = () => {
+            modalAlertaMarcoAberto.value = true;
+        };
+
+        const fecharAlertaMarco = () => {
+            if (marcoAlerta.value) {
+                registrarMarcoAlertado(marcoAlerta.value.diasMarco, dadosProva.value?.data_prova);
+            }
+            modalAlertaMarcoAberto.value = false;
+        };
+
+        const definirDataProvaAtalho = (dias) => {
+            const d = new Date();
+            d.setDate(d.getDate() + dias);
+            const ano = d.getFullYear();
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            formConfigProva.value.data_prova = `${ano}-${mes}-${dia}`;
+        };
+
+        const salvarDadosProva = () => {
+            const dataAntiga = dadosProva.value.data_prova;
+            dadosProva.value = { ...formConfigProva.value };
+            try {
+                localStorage.setItem('orbis_painel_prova', JSON.stringify(dadosProva.value));
+            } catch (e) {
+                console.warn(e);
+            }
+            modalConfigProvaAberto.value = false;
+            mostrarAlerta('Dados da prova atualizados localmente com sucesso!', 'sucesso');
+
+            // Se estiver em um dos marcos (<= 90 dias):
+            if (marcoAlerta.value) {
+                const marco = marcoAlerta.value.diasMarco;
+                const dataNova = dadosProva.value.data_prova;
+                // Se a data mudou ou se o marco ainda não foi alertado
+                if (dataNova !== dataAntiga || !marcoJaAlertado(marco, dataNova)) {
+                    registrarMarcoAlertado(marco, dataNova);
+                    setTimeout(() => {
+                        modalAlertaMarcoAberto.value = true;
+                    }, 350);
+                }
+            }
+        };
+
+        const restaurarDadosProvaPadrao = () => {
+            dadosProva.value = { ...dadosProvaPadrao };
+            formConfigProva.value = { ...dadosProvaPadrao };
+            try {
+                localStorage.removeItem('orbis_painel_prova');
+                localStorage.removeItem('orbis_marcos_alertados');
+            } catch (e) {}
+            modalConfigProvaAberto.value = false;
+            mostrarAlerta('Dados da prova restaurados para o padrão!', 'info');
+        };
+
         // Instâncias de Gráficos (Chart.js)
         let chartCicloDonutInstance = null;
         let chartEvolucaoInstance = null;
@@ -230,6 +366,173 @@ const app = createApp({
         // ==========================================
         // 3. PROPRIEDADES COMPUTADAS (COMPUTED)
         // ==========================================
+        const diasAteProva = computed(() => {
+            if (!dadosProva.value?.data_prova) return null;
+            const hoje = new Date();
+            hoje.setHours(0, 0, 0, 0);
+            const dataP = new Date(dadosProva.value.data_prova + 'T00:00:00');
+            if (isNaN(dataP.getTime())) return null;
+            const diffMs = dataP.getTime() - hoje.getTime();
+            return Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        });
+
+        const dataProvaFormatada = computed(() => {
+            if (!dadosProva.value?.data_prova) return 'Data a definir';
+            try {
+                const partes = String(dadosProva.value.data_prova).split('-');
+                if (partes.length === 3) {
+                    return `${partes[2]}/${partes[1]}/${partes[0]}`;
+                }
+            } catch (e) {}
+            return dadosProva.value.data_prova;
+        });
+
+        const comparativoCorte = computed(() => {
+            const corte = Number(dadosProva.value?.nota_corte) || 0;
+            const acerto = Number(dashboardData.value?.metricas_gerais?.percentual_acerto_geral) || 79.9;
+            const diff = acerto - corte;
+            return {
+                corte,
+                acerto,
+                diff: Number(diff.toFixed(1)),
+                acima: diff >= 0
+            };
+        });
+
+        const zonaProva = computed(() => {
+            const dias = diasAteProva.value;
+            if (dias === null || dias === undefined) return null;
+
+            if (dias >= 90) {
+                return {
+                    zona: 'cadencia',
+                    tag: 'Cadência & Constância',
+                    icone: 'fa-solid fa-shield-halved',
+                    corBadge: 'bg-blue-500/15 text-blue-600 dark:text-[#60A5FA] border-blue-500/30',
+                    corAlerta: 'from-blue-500/10 to-indigo-500/10 border-blue-400/30 text-blue-900 dark:text-blue-100',
+                    iconeAlerta: 'fa-regular fa-compass text-blue-500 dark:text-[#60A5FA]',
+                    mensagemMotivacional: 'Construa sua base com firmeza e ritmo sustentável. A constância diária nos ciclos é o que constrói os primeiros lugares!',
+                    orientacoes: [
+                        'Mantenha a regularidade semanal sem pular matérias da esteira.',
+                        'Avance pela teoria e resumos estruturados dos tópicos mais densos.',
+                        'Alimente diariamente seus cards no Anki para retenção a longo prazo.'
+                    ]
+                };
+            } else if (dias >= 31 && dias <= 89) { // 89 até 31
+                return {
+                    zona: 'consolidacao',
+                    tag: 'Consolidação & Aceleração',
+                    icone: 'fa-solid fa-bolt',
+                    corBadge: 'bg-indigo-500/15 text-indigo-600 dark:text-[#C4B5FD] border-indigo-500/30',
+                    corAlerta: 'from-indigo-500/10 to-purple-500/10 border-indigo-400/30 text-indigo-900 dark:text-indigo-100',
+                    iconeAlerta: 'fa-solid fa-gauge-high text-indigo-500 dark:text-[#C4B5FD]',
+                    mensagemMotivacional: 'Acelere o ritmo e feche as lacunas! Intensifique as questões da banca e transforme horas líquidas em velocidade e retenção máxima.',
+                    orientacoes: [
+                        'Aumente o volume de questões comentadas e simulados da banca.',
+                        'Ataque diretamente os tópicos com menor percentual de acerto no Raio-X.',
+                        'Calibre o tempo de resposta por questão visando a dinâmica da prova.'
+                    ]
+                };
+            } else if (dias > 0 && dias <= 30) { // ultimos 30 dias
+                return {
+                    zona: 'reta_final',
+                    tag: 'Ajuste Fino & Reta Final',
+                    icone: 'fa-solid fa-fire',
+                    corBadge: 'bg-amber-500/15 text-amber-600 dark:text-[#FBBF24] border-amber-500/30 animate-pulse',
+                    corAlerta: 'from-amber-500/15 to-rose-500/10 border-amber-400/40 text-amber-950 dark:text-amber-100',
+                    iconeAlerta: 'fa-solid fa-triangle-exclamation text-amber-500 dark:text-[#FBBF24]',
+                    mensagemMotivacional: 'Reta final decisiva! Foco cirúrgico em revisões ativas no Anki, simulados cronometrados e blindagem emocional. A sua vaga está próxima!',
+                    orientacoes: [
+                        'Revisão intensiva de lei seca, fórmulas e decorebas essenciais.',
+                        'Simulados nos horários exatos da aplicação para controle de tempo e ritmo.',
+                        'Priorize o sono e a saúde mental para chegar com energia máxima no domingo.'
+                    ]
+                };
+            } else if (dias === 0) {
+                return {
+                    zona: 'dia_prova',
+                    tag: '🌟 Dia da Prova!',
+                    icone: 'fa-solid fa-star',
+                    corBadge: 'bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border-emerald-500/30 animate-bounce',
+                    corAlerta: 'from-emerald-500/15 to-teal-500/10 border-emerald-400/40 text-emerald-950 dark:text-emerald-100',
+                    iconeAlerta: 'fa-solid fa-trophy text-emerald-500 dark:text-[#34D399]',
+                    mensagemMotivacional: 'Chegou o grande momento! Confie no seu preparo e em cada bloco cumprido. Dê o seu melhor e conquiste a sua vaga!',
+                    orientacoes: [
+                        'Leia atentamente cada enunciado e controle o tempo por questão.',
+                        'Em itens de dúvida extrema, confie na estratégia treinada da banca.',
+                        'Você está preparado. Boa prova!'
+                    ]
+                };
+            } else {
+                return {
+                    zona: 'realizada',
+                    tag: '✓ Prova Realizada',
+                    icone: 'fa-solid fa-check',
+                    corBadge: 'bg-slate-500/15 text-slate-600 dark:text-[#94A3B8] border-slate-500/30',
+                    corAlerta: 'from-slate-500/10 to-slate-600/10 border-slate-400/30 text-slate-800 dark:text-slate-200',
+                    iconeAlerta: 'fa-solid fa-flag-checkered text-slate-500',
+                    mensagemMotivacional: 'Etapa cumprida! Acesse a aba Resultados & Raio-X para registrar o desempenho oficial e conferir os dados.',
+                    orientacoes: [
+                        'Registre seus acertos oficiais por disciplina na aba Resultados.',
+                        'Gere o diagnóstico do Raio-X para consolidar seus aprendizados.'
+                    ]
+                };
+            }
+        });
+
+        const marcoAlerta = computed(() => {
+            const dias = diasAteProva.value;
+            if (dias === null || dias === undefined || dias < 0) return null;
+
+            if (dias <= 30 && dias > 0) {
+                const exato = dias === 30;
+                return {
+                    diasMarco: 30,
+                    diasRestantes: dias,
+                    exato,
+                    titulo: exato
+                        ? '🔥 Alerta Reta Final: Faltam 30 Dias para a Prova!'
+                        : `🔥 Alerta Reta Final: Faltam menos de 30 dias para a prova (${dias} ${dias === 1 ? 'dia restante' : 'dias restantes'})!`,
+                    subtitulo: exato
+                        ? 'Entramos na reta final decisiva! Hora do ajuste fino, revisões ativas e controle de tempo.'
+                        : `Entramos na reta finalíssima! Faltam menos de 30 dias para a prova (restam ${dias} ${dias === 1 ? 'dia' : 'dias'}): foco cirúrgico em revisões ativas no Anki e simulados cronometrados!`,
+                    badgeTexto: exato ? 'Alerta dos 30 Dias (Reta Final)' : `Alerta: Menos de 30 Dias (${dias}d)`,
+                    badgeClasse: 'bg-rose-500/20 text-rose-600 dark:text-[#F87171] border-rose-500/40'
+                };
+            } else if (dias <= 60 && dias > 30) {
+                const exato = dias === 60;
+                return {
+                    diasMarco: 60,
+                    diasRestantes: dias,
+                    exato,
+                    titulo: exato
+                        ? '⚡ Alerta de Aceleração: Faltam 60 Dias para a Prova!'
+                        : `⚡ Alerta de Aceleração: Faltam menos de 60 dias para a prova (${dias} dias restantes)!`,
+                    subtitulo: exato
+                        ? 'Dois meses para o grande dia: aumente o ritmo nas questões e consolide o edital!'
+                        : `Faltam menos de 60 dias para a prova! Restam exatamente ${dias} dias: intensifique baterias de questões da banca e ataque as lacunas!`,
+                    badgeTexto: exato ? 'Alerta dos 60 Dias' : `Alerta: Menos de 60 Dias (${dias}d)`,
+                    badgeClasse: 'bg-indigo-500/20 text-indigo-600 dark:text-[#C4B5FD] border-indigo-500/40'
+                };
+            } else if (dias <= 90 && dias > 60) {
+                const exato = dias === 90;
+                return {
+                    diasMarco: 90,
+                    diasRestantes: dias,
+                    exato,
+                    titulo: exato
+                        ? '🔔 Alerta de Transição: Faltam 90 Dias para a Prova!'
+                        : `🔔 Alerta de Transição: Faltam menos de 90 dias para a prova (${dias} dias restantes)!`,
+                    subtitulo: exato
+                        ? 'Início do trimestre da prova: consolidação teórica e foco massivo em questões da banca!'
+                        : `Faltam menos de 90 dias para a prova! Restam exatamente ${dias} dias: momento decisivo para consolidar a base teórica e manter ritmo constante nos ciclos!`,
+                    badgeTexto: exato ? 'Alerta dos 90 Dias' : `Alerta: Menos de 90 Dias (${dias}d)`,
+                    badgeClasse: 'bg-blue-500/20 text-blue-600 dark:text-[#60A5FA] border-blue-500/40'
+                };
+            }
+            return null;
+        });
+
         const blocoAtual = computed(() => {
             if (!cicloAtivo.value || !cicloAtivo.value.blocos || cicloAtivo.value.blocos.length === 0) return null;
             return cicloAtivo.value.blocos[cicloAtivo.value.bloco_atual_index || 0];
@@ -807,6 +1110,10 @@ const app = createApp({
         const gerarInsightsRaioX = () => {
             insightsRaioX.value = [];
             const q = quadrantesRaioX.value;
+
+            if (resultadoAtual.value?.total_dias_estudados > 0) {
+                insightsRaioX.value.push(`<b>Constância da Preparação:</b> Você dedicou <b>${resultadoAtual.value.total_dias_estudados} dias</b> com estudo registrado para este concurso, totalizando <b>${(resultadoAtual.value.total_horas || 0).toFixed(1)} horas líquidas</b>.`);
+            }
 
             if (q.eficienciaBaixa.length > 0) {
                 const nomes = q.eficienciaBaixa.map(d => d.nome).join(', ');
@@ -1949,17 +2256,17 @@ const app = createApp({
             nextTick(() => {
                 if (!calendarioData.value || !calendarioData.value.analytics) return;
                 const analytics = calendarioData.value.analytics;
+                const isDark = document.documentElement.classList.contains('dark') || (typeof tema !== 'undefined' && tema.value === 'dark');
 
                 const ctxAd = document.getElementById('chartAderencia');
                 if (ctxAd) {
                     if (chartAderenciaInstance) chartAderenciaInstance.destroy();
-                    const isDark = document.documentElement.classList.contains('dark');
                     chartAderenciaInstance = new Chart(ctxAd, {
                         type: 'doughnut',
                         data: {
                             labels: ['Estudados', 'Não Estudados'],
                             datasets: [{
-                                data: [analytics.taxa_aderencia, 100 - analytics.taxa_aderencia],
+                                data: [analytics.taxa_aderencia, Math.max(0, 100 - analytics.taxa_aderencia)],
                                 backgroundColor: ['#38BDF8', isDark ? '#1E293B' : '#e2e8f0'],
                                 borderWidth: 0
                             }]
@@ -1990,14 +2297,15 @@ const app = createApp({
                 const ctxDS = document.getElementById('chartDiaSemana');
                 if (ctxDS) {
                     if (chartDiaSemanaInstance) chartDiaSemanaInstance.destroy();
+                    const dsMap = analytics.media_horas_dsemana || {};
                     const dsValues = [
-                        analytics.media_horas_dsemana[0],
-                        analytics.media_horas_dsemana[1],
-                        analytics.media_horas_dsemana[2],
-                        analytics.media_horas_dsemana[3],
-                        analytics.media_horas_dsemana[4],
-                        analytics.media_horas_dsemana[5],
-                        analytics.media_horas_dsemana[6]
+                        Number(dsMap[0] !== undefined ? dsMap[0] : (dsMap['0'] || 0)),
+                        Number(dsMap[1] !== undefined ? dsMap[1] : (dsMap['1'] || 0)),
+                        Number(dsMap[2] !== undefined ? dsMap[2] : (dsMap['2'] || 0)),
+                        Number(dsMap[3] !== undefined ? dsMap[3] : (dsMap['3'] || 0)),
+                        Number(dsMap[4] !== undefined ? dsMap[4] : (dsMap['4'] || 0)),
+                        Number(dsMap[5] !== undefined ? dsMap[5] : (dsMap['5'] || 0)),
+                        Number(dsMap[6] !== undefined ? dsMap[6] : (dsMap['6'] || 0))
                     ];
                     chartDiaSemanaInstance = new Chart(ctxDS, {
                         type: 'bar',
@@ -2006,14 +2314,23 @@ const app = createApp({
                             datasets: [{
                                 label: 'Média de Horas',
                                 data: dsValues,
-                                backgroundColor: dsValues.map(v => v < 2 ? '#f43f5e' : '#3b82f6'),
+                                backgroundColor: dsValues.map(v => v < 2 ? '#f43f5e' : (isDark ? '#60A5FA' : '#2563EB')),
                                 borderRadius: 5
                             }]
                         },
                         options: {
                             maintainAspectRatio: false,
                             indexAxis: 'y',
-                            plugins: { legend: { display: false } },
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: isDark ? '#111827' : '#ffffff',
+                                    titleColor: isDark ? '#F3F4F6' : '#0f172a',
+                                    bodyColor: isDark ? '#B8C4D6' : '#334155',
+                                    borderColor: isDark ? '#2D3D54' : '#cbd5e1',
+                                    borderWidth: 1
+                                }
+                            },
                             scales: {
                                 x: {
                                     beginAtZero: true,
@@ -2021,7 +2338,7 @@ const app = createApp({
                                     grid: { color: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }
                                 },
                                 y: {
-                                    ticks: { color: isDark ? '#cbd5e1' : '#64748b', font: { weight: 'bold' } },
+                                    ticks: { color: isDark ? '#cbd5e1' : '#334155', font: { weight: 'bold' } },
                                     grid: { display: false }
                                 }
                             }
@@ -2048,7 +2365,7 @@ const app = createApp({
                             datasets: [{
                                 label: 'Dias',
                                 data: Object.values(bins),
-                                backgroundColor: '#6366f1',
+                                backgroundColor: isDark ? '#818CF8' : '#6366f1',
                                 borderRadius: 6,
                                 categoryPercentage: 0.85,
                                 barPercentage: 0.9
@@ -2056,8 +2373,27 @@ const app = createApp({
                         },
                         options: {
                             maintainAspectRatio: false,
-                            plugins: { legend: { display: false } },
-                            scales: { y: { beginAtZero: true } }
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: isDark ? '#111827' : '#ffffff',
+                                    titleColor: isDark ? '#F3F4F6' : '#0f172a',
+                                    bodyColor: isDark ? '#B8C4D6' : '#334155',
+                                    borderColor: isDark ? '#2D3D54' : '#cbd5e1',
+                                    borderWidth: 1
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { color: isDark ? '#cbd5e1' : '#64748b' },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { color: isDark ? '#cbd5e1' : '#64748b' },
+                                    grid: { color: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }
+                                }
+                            }
                         }
                     });
                 }
@@ -2082,15 +2418,41 @@ const app = createApp({
                         data: {
                             labels: evolucao.map(e => e.data.substring(5, 10).replace('-', '/')),
                             datasets: [
-                                { type: 'bar', label: 'Horas no Dia', data: evolucao.map(e => e.horas), backgroundColor: '#cbd5e1', borderRadius: 4, order: 3 },
-                                { type: 'line', label: 'Média Móvel 7d', data: ma7, borderColor: '#2563eb', borderWidth: 2.5, tension: 0.3, pointRadius: 0, order: 2 },
-                                { type: 'line', label: 'Média Móvel 30d', data: ma30, borderColor: '#f59e0b', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0, order: 1 }
+                                { type: 'bar', label: 'Horas no Dia', data: evolucao.map(e => e.horas), backgroundColor: isDark ? '#334155' : '#cbd5e1', borderRadius: 4, order: 3 },
+                                { type: 'line', label: 'Média Móvel 7d', data: ma7, borderColor: isDark ? '#60A5FA' : '#2563eb', borderWidth: 2.5, tension: 0.3, pointRadius: 0, order: 2 },
+                                { type: 'line', label: 'Média Móvel 30d', data: ma30, borderColor: isDark ? '#FBBF24' : '#f59e0b', borderWidth: 2, borderDash: [5, 5], tension: 0.3, pointRadius: 0, order: 1 }
                             ]
                         },
                         options: {
                             maintainAspectRatio: false,
-                            scales: { y: { beginAtZero: true, suggestedMax: 7 } },
-                            plugins: { legend: { position: 'bottom' } }
+                            scales: {
+                                x: {
+                                    ticks: { color: isDark ? '#cbd5e1' : '#64748b' },
+                                    grid: { display: false }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    suggestedMax: 7,
+                                    ticks: { color: isDark ? '#cbd5e1' : '#64748b' },
+                                    grid: { color: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)' }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        color: isDark ? '#F1F5F9' : '#1E293B',
+                                        font: { weight: '600', size: 11 }
+                                    }
+                                },
+                                tooltip: {
+                                    backgroundColor: isDark ? '#111827' : '#ffffff',
+                                    titleColor: isDark ? '#F3F4F6' : '#0f172a',
+                                    bodyColor: isDark ? '#B8C4D6' : '#334155',
+                                    borderColor: isDark ? '#2D3D54' : '#cbd5e1',
+                                    borderWidth: 1
+                                }
+                            }
                         },
                         plugins: [{
                             id: 'burnoutZone',
@@ -2101,9 +2463,9 @@ const app = createApp({
                                     const yTop = yAxis.getPixelForValue(yAxis.max);
                                     const yBottom = yAxis.getPixelForValue(6);
                                     ctx.save();
-                                    ctx.fillStyle = 'rgba(244, 63, 94, 0.08)';
+                                    ctx.fillStyle = isDark ? 'rgba(244, 63, 94, 0.15)' : 'rgba(244, 63, 94, 0.08)';
                                     ctx.fillRect(chart.chartArea.left, yTop, chart.chartArea.right - chart.chartArea.left, yBottom - yTop);
-                                    ctx.fillStyle = 'rgba(225, 29, 72, 0.75)';
+                                    ctx.fillStyle = isDark ? '#F87171' : 'rgba(225, 29, 72, 0.75)';
                                     ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
                                     ctx.fillText('ZONA DE FADIGA / BURNOUT (>6h)', chart.chartArea.left + 10, yBottom - 6);
                                     ctx.restore();
@@ -2549,6 +2911,30 @@ const app = createApp({
                 renderDonut();
                 scrollToCurrentBlock();
             }
+            if (newCiclo && newCiclo.nome && !localStorage.getItem('orbis_painel_prova')) {
+                const nomeLower = newCiclo.nome.toLowerCase();
+                if (nomeLower.includes('inss')) {
+                    dadosProva.value.concurso = 'INSS';
+                    dadosProva.value.cargo = 'Técnico do Seguro Social';
+                    dadosProva.value.especialidade = 'Geral / Previdenciário';
+                    dadosProva.value.banca = 'Cebraspe';
+                    dadosProva.value.estilo_banca = 'Certo / Errado (1 anula 1)';
+                    dadosProva.value.nota_corte = 82.0;
+                    dadosProva.value.total_vagas = '1.000 vagas';
+                    dadosProva.value.local_prova = 'Nacional';
+                } else if (nomeLower.includes('sefaz')) {
+                    dadosProva.value.concurso = 'SEFAZ ALAGOAS';
+                    dadosProva.value.cargo = 'Auditor Fiscal da Receita Estadual';
+                    dadosProva.value.especialidade = 'Tecnologia da Informação';
+                    dadosProva.value.banca = 'Cebraspe';
+                    dadosProva.value.estilo_banca = 'Certo / Errado (1 anula 1)';
+                    dadosProva.value.nota_corte = 78.5;
+                    dadosProva.value.total_vagas = '35 vagas';
+                    dadosProva.value.local_prova = 'Maceió - AL';
+                } else {
+                    dadosProva.value.concurso = newCiclo.nome;
+                }
+            }
         });
 
         onMounted(async () => {
@@ -2558,6 +2944,8 @@ const app = createApp({
                     if (modalCheckinAberto.value) modalCheckinAberto.value = false;
                     if (modalResumoAberto.value) modalResumoAberto.value = false;
                     if (avulsoSelecionado.value) avulsoSelecionado.value = null;
+                    if (modalConfigProvaAberto.value) modalConfigProvaAberto.value = false;
+                    if (modalAlertaMarcoAberto.value) modalAlertaMarcoAberto.value = false;
                 }
             });
 
@@ -2565,6 +2953,22 @@ const app = createApp({
             if (abaAtiva.value === 'ciclo') {
                 renderDonut();
                 scrollToCurrentBlock();
+            }
+
+            // Exibir alerta do marco (90d, 60d, 30d) automaticamente APENAS UMA VEZ por marco para a data da prova
+            try {
+                if (marcoAlerta.value) {
+                    const marco = marcoAlerta.value.diasMarco;
+                    const dataProva = dadosProva.value?.data_prova;
+                    if (!marcoJaAlertado(marco, dataProva)) {
+                        registrarMarcoAlertado(marco, dataProva);
+                        setTimeout(() => {
+                            modalAlertaMarcoAberto.value = true;
+                        }, 700);
+                    }
+                }
+            } catch (e) {
+                console.warn('Erro ao verificar alerta de marco:', e);
             }
         });
 
@@ -2709,7 +3113,25 @@ const app = createApp({
             tema,
             alternarTema,
             sidebarMobileAberta,
-            navegarPara
+            navegarPara,
+
+            // Painel da Prova Alvo (Teste Local)
+            dadosProva,
+            modalConfigProvaAberto,
+            modalAlertaMarcoAberto,
+            formConfigProva,
+            abrirModalConfigProva,
+            salvarDadosProva,
+            restaurarDadosProvaPadrao,
+            abrirAlertaMarco,
+            fecharAlertaMarco,
+            definirDataProvaAtalho,
+            resetarMarcosAlertados,
+            diasAteProva,
+            dataProvaFormatada,
+            comparativoCorte,
+            zonaProva,
+            marcoAlerta
         };
     }
 });

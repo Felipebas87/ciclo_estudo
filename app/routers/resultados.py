@@ -28,6 +28,10 @@ def calcular_estatisticas_edital(db: Session, edital_id: int):
     acerto_geral_perc = (total_questoes_certas / total_questoes * 100) if total_questoes > 0 else 0.0
     data_inicio = min([s.data for s in sessoes]) if sessoes else None
     
+    # Total de dias distintos estudados pelo candidato
+    datas_estudo = set(s.data for s in sessoes if s.data)
+    total_dias_estudados = len(datas_estudo)
+    
     # Desempenho por Disciplina
     disciplinas = db.query(Disciplina).filter(Disciplina.edital_id == edital_id).all()
     desempenho_disciplinas = []
@@ -74,6 +78,7 @@ def calcular_estatisticas_edital(db: Session, edital_id: int):
     
     return {
         "total_horas": total_horas,
+        "total_dias_estudados": total_dias_estudados,
         "total_topicos": topicos_totais_edital,
         "cobertura_edital_perc": round(cobertura_perc, 2),
         "total_questoes": total_questoes,
@@ -91,6 +96,7 @@ def listar_resultados_encerrados(db: Session = Depends(get_db)):
     for edital in editais_encerrados:
         if edital.resultado:
             res = edital.resultado
+            stats = calcular_estatisticas_edital(db, edital.id)
             resultados.append({
                 "id": res.id,
                 "edital_id": edital.id,
@@ -106,6 +112,7 @@ def listar_resultados_encerrados(db: Session = Depends(get_db)):
                 "resultado_final": res.resultado_final,
                 "data_encerramento": res.data_encerramento,
                 "total_horas": res.total_horas,
+                "total_dias_estudados": stats["total_dias_estudados"],
                 "acerto_geral_perc": res.acerto_geral_perc,
                 "cobertura_edital_perc": res.cobertura_edital_perc,
                 "total_questoes": res.total_questoes,
@@ -154,6 +161,7 @@ def obter_resultado(edital_id: int, db: Session = Depends(get_db)):
             total_vagas=res.total_vagas,
             resultado_final=res.resultado_final,
             total_horas=res.total_horas,
+            total_dias_estudados=stats["total_dias_estudados"],
             total_topicos=res.total_topicos or stats["total_topicos"],
             cobertura_edital_perc=cob_edital,
             total_questoes=res.total_questoes,
@@ -185,6 +193,7 @@ def obter_resultado(edital_id: int, db: Session = Depends(get_db)):
             total_vagas=0,
             resultado_final="Pendente",
             total_horas=stats["total_horas"],
+            total_dias_estudados=stats["total_dias_estudados"],
             total_topicos=stats["total_topicos"],
             cobertura_edital_perc=stats["cobertura_edital_perc"],
             total_questoes=stats["total_questoes"],

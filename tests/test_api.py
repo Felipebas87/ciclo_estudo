@@ -169,3 +169,90 @@ def test_sessao_avanca_ciclo():
     assert res_ciclo_atual2.status_code == 200
     assert res_ciclo_atual2.json()["bloco_atual_index"] == 2
 
+def test_encerrar_ciclo_e_total_dias_estudados():
+    from datetime import date, timedelta
+
+    # 1. Cria edital
+    res_edital = client.post("/api/editais", json={
+        "nome": "Concurso Auditor Fiscal",
+        "orgao": "SEFAZ",
+        "cargo": "Auditor",
+        "disciplinas": [
+            {"nome": "Contabilidade", "categoria": "ESPECIFICAS", "peso_prova": 3.0, "relevancia_dificuldade": 4},
+            {"nome": "Direito Tributário", "categoria": "TEORICA_DIREITO", "peso_prova": 2.0, "relevancia_dificuldade": 3}
+        ]
+    })
+    assert res_edital.status_code == 200
+    edital = res_edital.json()
+    edital_id = edital["id"]
+    disc1_id = edital["disciplinas"][0]["id"]
+    disc2_id = edital["disciplinas"][1]["id"]
+
+    # 2. Registra 3 sessões: 2 no mesmo dia (hoje) e 1 em outro dia (ontem)
+    hoje = date.today().isoformat()
+    ontem = (date.today() - timedelta(days=1)).isoformat()
+
+    client.post("/api/sessoes", json={
+        "disciplina_id": disc1_id,
+        "data": hoje,
+        "tempo_estudado_minutos": 60,
+        "qtd_questoes_total": 10,
+        "qtd_acertos": 8,
+        "qtd_erros": 2
+    })
+    client.post("/api/sessoes", json={
+        "disciplina_id": disc2_id,
+        "data": hoje,
+        "tempo_estudado_minutos": 45,
+        "qtd_questoes_total": 5,
+        "qtd_acertos": 4,
+        "qtd_erros": 1
+    })
+    client.post("/api/sessoes", json={
+        "disciplina_id": disc1_id,
+        "data": ontem,
+        "tempo_estudado_minutos": 90,
+        "qtd_questoes_total": 15,
+        "qtd_acertos": 12,
+        "qtd_erros": 3
+    })
+
+    # 3. Verifica draft de resultado antes de encerrar
+    res_draft = client.get(f"/api/resultados/{edital_id}")
+    assert res_draft.status_code == 200
+    assert res_draft.json()["total_dias_estudados"] == 2
+    assert res_draft.json()["total_horas"] == 3.25
+
+    # 4. Encerra o ciclo oficialmente
+    payload_encerramento = {
+        "nota_final": 82.5,
+        "nota_corte": 78.0,
+        "nota_minima_aprovados": 78.0,
+        "nota_maxima_aprovados": 92.0,
+        "posicao": 15,
+        "total_vagas": 30,
+        "resultado_final": "Aprovado",
+        "acertos_basicos": 16,
+        "erros_basicos": 4,
+        "acertos_especificos": 20,
+        "erros_especificos": 5,
+        "disciplinas": [
+            {"disciplina_id": disc1_id, "acertos": 20, "erros": 5},
+            {"disciplina_id": disc2_id, "acertos": 16, "erros": 4}
+        ]
+    }
+    res_encerrar = client.post(f"/api/resultados/{edital_id}/encerrar", json=payload_encerramento)
+    assert res_encerrar.status_code == 200
+    encerrado_data = res_encerrar.json()
+    assert encerrado_data["total_dias_estudados"] == 2
+    assert encerrado_data["resultado_final"] == "Aprovado"
+
+    # 5. Verifica lista de encerrados
+    res_lista = client.get("/api/resultados/encerrados")
+    assert res_lista.status_code == 200
+    lista = res_lista.json()
+    assert len(lista) == 1
+    assert lista[0]["total_dias_estudados"] == 2
+    assert lista[0]["nome_edital"] == "Concurso Auditor Fiscal"
+
+

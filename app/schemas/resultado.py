@@ -61,5 +61,6 @@ class ResultadoConcursoResponse(ResultadoConcursoBase):
     # Extra fields added dynamically by the API
     desempenho_disciplinas: List[DisciplinaDesempenho] = []
     eficiencia_horaria: float = 0.0
+    total_dias_estudados: int = 0
 
     model_config = ConfigDict(from_attributes=True)

@@ -1,11 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap');
 
 :root {
-    --bg-app: #f8fafc;
+    --bg-app: #f1f5f9;
     --bg-surface: #ffffff;
-    --bg-surface-elevated: #f1f5f9;
-    --border-subtle: #e2e8f0;
-    --border-highlight: #cbd5e1;
+    --bg-surface-elevated: #f8fafc;
+    --border-subtle: #cbd5e1;
+    --border-highlight: #94a3b8;
     --rail-bg: #e2e8f0;
     --text-primary: #0f172a;
     --text-secondary: #475569;
@@ -17,7 +17,7 @@
     --status-danger: #dc2626;
     --status-info: #0284c7;
     --status-anki: #7c3aed;
-    --card-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.05);
+    --card-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 0 2px 6px -1px rgba(15, 23, 42, 0.04);
 }
 
 /* ============================================================
@@ -147,7 +147,239 @@ html.dark .transition-card:hover {
 }
 
 /* ============================================================
-   1. CAMADAS DE SUPERFÍCIE E ELEVAÇÃO
+   TEMA CLARO DE ALTO CONTRASTE (SAAS HIERARCHY / LINEAR STYLE)
+   Camada 1: Fundo da Página #F1F5F9 (Slate-100)
+   Camada 2: Superfície dos Cards #FFFFFF (Branco com Borda #CBD5E1 e Depth Shadow)
+   Camada 3: Subcards e Itens Internos #F8FAFC (com Borda #E2E8F0)
+   ============================================================ */
+
+/* Fundo da Página no Tema Claro (#F1F5F9 - Slate-100 neutro full-bleed) */
+html:not(.dark),
+html:not(.dark) body,
+html:not(.dark) #app,
+html:not(.dark) main,
+html:not(.dark) .flex-1.flex.flex-col.min-w-0.h-screen,
+html:not(.dark) div[class*="min-h-screen"] {
+    background-color: #F1F5F9 !important;
+}
+
+/* Header Topbar no Tema Claro (#FFFFFF com borda #CBD5E1) */
+html:not(.dark) header {
+    background-color: rgba(255, 255, 255, 0.96) !important;
+    border-bottom: 1px solid #CBD5E1 !important;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.05) !important;
+}
+
+/* Cards Principais no Tema Claro (#FFFFFF com borda #CBD5E1 e sombra de profundidade) */
+html:not(.dark) .card-saas-container,
+html:not(.dark) .card-hero-ciclo,
+html:not(.dark) .card-painel-prova,
+html:not(.dark) main .bg-white:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(.modal-dialog-saas):not(#heatmap-container *):not(.heatmap-sticky-col) {
+    background-color: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    box-shadow: 0 4px 16px -2px rgba(15, 23, 42, 0.08), 
+                0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+}
+
+/* Subcards / Quadros Menores no Tema Claro (#F8FAFC com borda #E2E8F0) */
+html:not(.dark) .card-subcard:not(#esteira-container *),
+html:not(.dark) .hero-subcard,
+html:not(.dark) .modal-subcard {
+    background-color: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.03) !important;
+    transform: none !important;
+}
+
+/* Itens da Esteira Sequencial no Tema Claro */
+html:not(.dark) #esteira-container .card-subcard {
+    background-color: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.04) !important;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+}
+
+/* Efeito Hover na Esteira no Tema Claro: Aumentam e Sombreiam (idêntico ao tema escuro) */
+html:not(.dark) #esteira-container .card-subcard:hover {
+    transform: translateY(-4px) scale(1.02) !important;
+    border-color: #94A3B8 !important;
+    box-shadow: 0 16px 32px -4px rgba(15, 23, 42, 0.16),
+                0 6px 14px -2px rgba(15, 23, 42, 0.08) !important;
+    z-index: 10;
+}
+
+html:not(.dark) #esteira-container .bloco-ativo {
+    background-color: #EFF6FF !important;
+    border-color: #3B82F6 !important;
+    border-left-width: 4px !important;
+    border-left-color: #2563EB !important;
+    box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.16) !important;
+}
+
+html:not(.dark) #esteira-container .bloco-ativo:hover {
+    transform: translateY(-4px) scale(1.02) !important;
+    border-color: #2563EB !important;
+    box-shadow: 0 16px 32px -4px rgba(37, 99, 235, 0.25),
+                0 0 16px rgba(37, 99, 235, 0.18) !important;
+    z-index: 10;
+}
+
+html:not(.dark) #esteira-container .bloco-concluido {
+    background-color: #F8FAFC !important;
+    border-color: #CBD5E1 !important;
+    border-left-width: 4px !important;
+    border-left-color: #10B981 !important;
+}
+
+html:not(.dark) #esteira-container .bloco-concluido:hover {
+    border-color: #10B981 !important;
+    box-shadow: 0 16px 32px -4px rgba(16, 185, 129, 0.2),
+                0 6px 14px -2px rgba(15, 23, 42, 0.08) !important;
+}
+
+html:not(.dark) #esteira-container .bloco-pendente {
+    background-color: #FFFFFF !important;
+    border-color: #CBD5E1 !important;
+    border-left-width: 4px !important;
+    border-left-color: #94A3B8 !important;
+}
+
+html:not(.dark) #esteira-container .bloco-pendente:hover {
+    border-color: #64748B !important;
+}
+
+/* Card Hero do Ciclo Atual no Tema Claro (Mesma configuração e superfície branca dos demais cards) */
+html:not(.dark) .card-hero-ciclo {
+    background: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #0F172A !important;
+}
+
+html:not(.dark) .card-hero-ciclo h2 {
+    color: #0F172A !important;
+}
+
+html:not(.dark) .card-hero-ciclo .hero-pill {
+    background-color: #F8FAFC !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #475569 !important;
+}
+
+html:not(.dark) .card-hero-ciclo .bg-blue-500\/20 {
+    background-color: #EFF6FF !important;
+    color: #1D4ED8 !important;
+    border: 1px solid #BFDBFE !important;
+}
+
+html:not(.dark) .card-hero-ciclo .hero-subcard {
+    background-color: #F8FAFC !important;
+    border: 1px solid #E2E8F0 !important;
+    box-shadow: 0 1px 3px 0 rgba(15, 23, 42, 0.04) !important;
+    transform: none !important;
+}
+
+html:not(.dark) .card-hero-ciclo .hero-subcard span.text-slate-400,
+html:not(.dark) .card-hero-ciclo .hero-subcard p.text-slate-400,
+html:not(.dark) .card-hero-ciclo .hero-subcard p.text-xs {
+    color: #64748B !important;
+}
+
+html:not(.dark) .card-hero-ciclo .hero-subcard .bg-slate-800.h-2 {
+    background-color: #E2E8F0 !important;
+}
+
+/* Cores semânticas de alta legibilidade no Card Hero claro */
+html:not(.dark) .card-hero-ciclo .font-mono-timer.text-cyan-400,
+html:not(.dark) .card-hero-ciclo .text-cyan-400 {
+    color: #0284C7 !important;
+}
+
+html:not(.dark) .card-hero-ciclo .text-blue-400 {
+    color: #2563EB !important;
+}
+
+html:not(.dark) .card-hero-ciclo .text-teal-400 {
+    color: #0D9488 !important;
+}
+
+html:not(.dark) .card-hero-ciclo .text-emerald-400 {
+    color: #059669 !important;
+}
+
+html:not(.dark) .card-hero-ciclo .text-amber-400 {
+    color: #D97706 !important;
+}
+
+html:not(.dark) .card-hero-ciclo .text-purple-400 {
+    color: #7C3AED !important;
+}
+
+html:not(.dark) .card-hero-ciclo .text-slate-600 {
+    color: #CBD5E1 !important;
+}
+
+html:not(.dark) .card-hero-ciclo span.text-slate-300 {
+    color: #475569 !important;
+}
+
+/* Botões secundários dentro do Hero claro */
+html:not(.dark) .card-hero-ciclo button.bg-slate-800 {
+    background-color: #FFFFFF !important;
+    border: 1px solid #CBD5E1 !important;
+    color: #334155 !important;
+}
+
+html:not(.dark) .card-hero-ciclo button.bg-slate-800:hover {
+    background-color: #F1F5F9 !important;
+    color: #0F172A !important;
+    border-color: #94A3B8 !important;
+}
+
+/* Badges de status do timer */
+html:not(.dark) .card-hero-ciclo .bg-emerald-500\/15 {
+    background-color: #ECFDF5 !important;
+    color: #047857 !important;
+    border-color: #A7F3D0 !important;
+}
+
+html:not(.dark) .card-hero-ciclo .bg-amber-500\/15 {
+    background-color: #FFFBEB !important;
+    color: #B45309 !important;
+    border-color: #FDE68A !important;
+}
+
+/* Inputs, Selects e Textareas no Tema Claro */
+html:not(.dark) main input:not([type="checkbox"]),
+html:not(.dark) main select,
+html:not(.dark) main textarea {
+    background-color: #FFFFFF !important;
+    border: 1.5px solid #CBD5E1 !important;
+    color: #0F172A !important;
+}
+
+html:not(.dark) main input:focus,
+html:not(.dark) main select:focus,
+html:not(.dark) main textarea:focus {
+    border-color: #2563EB !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2) !important;
+}
+
+/* Tabelas no Tema Claro */
+html:not(.dark) th {
+    background-color: #F1F5F9 !important;
+    color: #334155 !important;
+    border-bottom: 1px solid #CBD5E1 !important;
+}
+
+html:not(.dark) tr:hover td {
+    background-color: #F8FAFC !important;
+}
+
+/* ============================================================
+   1. CAMADAS DE SUPERFÍCIE E ELEVAÇÃO (TEMA ESCURO)
    Camada 1: Fundo #111827 (Fundo geral)
    Camada 2: Superfície dos Cards #1B2638 (Cards, tabelas, navegação)
    Camada 3: Superfície Elevada #243247 (Subcards, cabeçalhos, hover)
@@ -173,9 +405,9 @@ html.dark aside.sidebar-saas {
 }
 
 /* Superfície dos Cards Principais (Camada 2: Azul-Ardósia com Borda Luminosa) */
-html.dark main .bg-white:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(.modal-dialog-saas),
-html.dark main .dark\:bg-\[\#1B2638\]:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(tr):not(td),
-html.dark main .dark\:bg-\[\#141D2E\]:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(tr):not(td),
+html.dark main .bg-white:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(.modal-dialog-saas):not(#heatmap-container *):not(.heatmap-sticky-col),
+html.dark main .dark\:bg-\[\#1B2638\]:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(tr):not(td):not(#heatmap-container *):not(.heatmap-sticky-col),
+html.dark main .dark\:bg-\[\#141D2E\]:not(input):not(select):not(textarea):not(button):not(.card-subcard):not(.hero-subcard):not(.modal-subcard):not(tr):not(td):not(#heatmap-container *):not(.heatmap-sticky-col),
 html.dark .card-saas-container {
     background: linear-gradient(135deg, #253956 0%, #2b4162 50%, #344f77 100%) !important;
     color: #F8FAFC !important;
@@ -575,9 +807,9 @@ html.dark .backdrop-blur-md {
 }
 
 /* ============================================================
-   8. CARD HERO DO CICLO ATUAL: ESPECIFICAÇÃO AZUL-ARDÓSIA (TEMAS CLARO E ESCURO)
+   8. CARD HERO DO CICLO ATUAL NO TEMA ESCURO: ESPECIFICAÇÃO AZUL-ARDÓSIA
    ============================================================ */
-.card-hero-ciclo {
+html.dark .card-hero-ciclo {
     background: linear-gradient(135deg, #253956 0%, #2b4162 50%, #344f77 100%) !important;
     border-color: #4c6f9f !important;
     box-shadow: 0 16px 40px -10px rgba(0, 0, 0, 0.45),
@@ -587,12 +819,12 @@ html.dark .backdrop-blur-md {
     transition: all 0.25s ease-in-out;
 }
 
-.card-hero-ciclo .hero-subcard {
+html.dark .card-hero-ciclo .hero-subcard {
     background-color: rgba(22, 35, 53, 0.92) !important;
     border-color: #3d5a82 !important;
 }
 
-.card-hero-ciclo .hero-pill {
+html.dark .card-hero-ciclo .hero-pill {
     background-color: rgba(22, 35, 53, 0.88) !important;
     border-color: #3d5a82 !important;
     color: #E2E8F0 !important;
@@ -765,6 +997,18 @@ html.dark #esteira-container > div,
 html.dark #esteira-container .card-subcard {
     background-color: rgba(22, 35, 53, 0.94) !important;
     border: 1px solid #3D5A82 !important;
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    position: relative;
+}
+
+html.dark #esteira-container .card-subcard:hover {
+    transform: translateY(-4px) scale(1.02) !important;
+    border-color: #4C6F9F !important;
+    box-shadow: 0 16px 32px -4px rgba(0, 0, 0, 0.7),
+                0 0 18px rgba(34, 211, 238, 0.2) !important;
+    z-index: 10;
 }
 
 html.dark #esteira-container .bloco-ativo {
@@ -831,4 +1075,65 @@ html.dark .card-saas-container .bg-slate-200,
 html.dark main .bg-slate-200.h-2,
 html.dark main .bg-slate-200.h-1\.5 {
     background-color: #0B1220 !important;
+}
+
+/* Container de largura expandida para o painel lateral da prova no ciclo */
+.container-app-max {
+    max-width: 1720px !important;
+}
+
+.card-painel-prova {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ============================================================
+   MAPA DE CONSTÂNCIA (HEATMAP) - DESIGN REFINADO SAAS
+   ============================================================ */
+#heatmap-container {
+    padding-top: 1.25rem !important; /* Espaço amplo vertical para a animação do pino não cortar */
+}
+
+/* Coluna Sticky de Disciplinas - visual limpo, sem bordas pesadas de card */
+.heatmap-sticky-col {
+    background-color: #FFFFFF !important;
+    border: none !important;
+    border-right: 1px solid #E2E8F0 !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    color: #1E293B !important;
+}
+
+html.dark .heatmap-sticky-col {
+    background-color: #253956 !important;
+    border: none !important;
+    border-right: 1px solid rgba(76, 111, 159, 0.5) !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    color: #F1F5F9 !important;
+}
+
+/* Linhas de Disciplina com separador sutil e hover tracking */
+.heatmap-row {
+    border-bottom: 1px solid #F1F5F9;
+    transition: background-color 0.15s ease;
+}
+
+html.dark .heatmap-row {
+    border-bottom: 1px solid rgba(76, 111, 159, 0.25);
+}
+
+.heatmap-row:hover {
+    background-color: rgba(241, 245, 249, 0.7);
+}
+
+html.dark .heatmap-row:hover {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.heatmap-row:hover .heatmap-sticky-col {
+    background-color: #F8FAFC !important;
+}
+
+html.dark .heatmap-row:hover .heatmap-sticky-col {
+    background-color: #2E4668 !important;
 }
