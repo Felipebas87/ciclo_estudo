@@ -255,4 +255,57 @@ def test_encerrar_ciclo_e_total_dias_estudados():
     assert lista[0]["total_dias_estudados"] == 2
     assert lista[0]["nome_edital"] == "Concurso Auditor Fiscal"
 
+def test_configuracao_prova_sincronizacao():
+    # 1. Obter configuração inicial (deve criar id=1 com valores padrão)
+    res_get = client.get("/api/configuracao-prova")
+    assert res_get.status_code == 200
+    data = res_get.json()
+    assert data["id"] == 1
+    assert data["concurso"] == "SEFAZ ALAGOAS"
+
+    # 2. Atualizar data da prova e concurso (simulando alteração feita no PC)
+    novo_payload = {
+        "concurso": "RECEITA FEDERAL",
+        "cargo": "Auditor-Fiscal da Receita Federal",
+        "especialidade": "Geral",
+        "banca": "FGV",
+        "estilo_banca": "Múltipla Escolha (5 alternativas)",
+        "data_prova": "2026-12-15",
+        "nota_corte": 85.0,
+        "total_vagas": "230 vagas",
+        "local_prova": "Brasília - DF",
+        "formato_prova": "140 questões + 2 discursivas",
+        "status_edital": "Edital Iminente"
+    }
+    res_put = client.put("/api/configuracao-prova", json=novo_payload)
+    assert res_put.status_code == 200
+    atualizado = res_put.json()
+    assert atualizado["concurso"] == "RECEITA FEDERAL"
+    assert atualizado["data_prova"] == "2026-12-15"
+    assert atualizado["nota_corte"] == 85.0
+
+    # 3. Dispositivo secundário (ex: celular) busca a configuração e recebe os dados atualizados
+    res_celular = client.get("/api/configuracao-prova")
+    assert res_celular.status_code == 200
+    celular_data = res_celular.json()
+    assert celular_data["concurso"] == "RECEITA FEDERAL"
+    assert celular_data["data_prova"] == "2026-12-15"
+
+    # 4. Marcar marco alertado de 60 dias (deve marcar 60 e retroativamente 90)
+    res_marco = client.post("/api/configuracao-prova/marcar-alerta", json={
+        "marco": 60,
+        "data_prova": "2026-12-15"
+    })
+    assert res_marco.status_code == 200
+    import json
+    marcos = json.loads(res_marco.json()["marcos_alertados"])
+    assert marcos["2026-12-15"]["60"] is True
+    assert marcos["2026-12-15"]["90"] is True
+
+    # 5. Resetar alertas
+    res_reset = client.post("/api/configuracao-prova/resetar-alertas")
+    assert res_reset.status_code == 200
+    assert res_reset.json()["marcos_alertados"] == "{}"
+
+
 

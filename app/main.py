@@ -43,7 +43,7 @@ class ResultadoAvulso(BaseModel):
 
 from app.database import Base, engine
 import app.models  # Garante registro dos modelos no SQLAlchemy
-from app.routers import editais, ciclos, sessoes, dashboard, resultados
+from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova
 
 # MIGRACAO AUTOMATICA E CRIACAO DE TABELAS (POSTGRES / SQLITE)
 from sqlalchemy import inspect, text
@@ -128,6 +128,7 @@ app.include_router(ciclos.router)
 app.include_router(sessoes.router)
 app.include_router(dashboard.router)
 app.include_router(resultados.router)
+app.include_router(configuracao_prova.router)
 
 # Configuração dos Arquivos Estáticos e SPA Frontend
 STATIC_DIR = Path(__file__).resolve().parent / "static"

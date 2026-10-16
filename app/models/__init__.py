@@ -14,5 +14,5 @@ __all__ = [
 ]
 
 from app.models.resultado import ResultadoConcurso
-
 from .resultado_avulso import ResultadoAvulsoDB
+from app.models.configuracao_prova import ConfiguracaoPainelProva

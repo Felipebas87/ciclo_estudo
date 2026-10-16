@@ -249,6 +249,41 @@ const app = createApp({
         const modalAlertaMarcoAberto = ref(false);
         const formConfigProva = ref({ ...dadosProva.value });
 
+        const carregarDadosProvaServidor = async () => {
+            try {
+                const res = await fetch('/api/configuracao-prova');
+                if (res.ok) {
+                    const data = await res.json();
+                    const dadosAtualizados = {
+                        concurso: data.concurso || dadosProvaPadrao.concurso,
+                        cargo: data.cargo || dadosProvaPadrao.cargo,
+                        especialidade: data.especialidade || dadosProvaPadrao.especialidade,
+                        banca: data.banca || dadosProvaPadrao.banca,
+                        estilo_banca: data.estilo_banca || dadosProvaPadrao.estilo_banca,
+                        data_prova: data.data_prova || dadosProvaPadrao.data_prova,
+                        nota_corte: (data.nota_corte !== null && data.nota_corte !== undefined) ? data.nota_corte : dadosProvaPadrao.nota_corte,
+                        total_vagas: data.total_vagas || dadosProvaPadrao.total_vagas,
+                        local_prova: data.local_prova || dadosProvaPadrao.local_prova,
+                        formato_prova: data.formato_prova || dadosProvaPadrao.formato_prova,
+                        status_edital: data.status_edital || dadosProvaPadrao.status_edital
+                    };
+                    dadosProva.value = dadosAtualizados;
+                    try {
+                        localStorage.setItem('orbis_painel_prova', JSON.stringify(dadosAtualizados));
+                    } catch (e) {}
+
+                    if (data.marcos_alertados) {
+                        try {
+                            const marcosObj = typeof data.marcos_alertados === 'string' ? JSON.parse(data.marcos_alertados) : data.marcos_alertados;
+                            localStorage.setItem('orbis_marcos_alertados', JSON.stringify(marcosObj));
+                        } catch (e) {}
+                    }
+                }
+            } catch (e) {
+                console.warn('Erro ao carregar dadosProva do servidor:', e);
+            }
+        };
+
         const getMarcosAlertados = () => {
             try {
                 const salvo = localStorage.getItem('orbis_marcos_alertados');
@@ -268,6 +303,13 @@ const app = createApp({
                 if (marco <= 60) dados[chave][90] = true;
                 if (marco <= 30) dados[chave][60] = true;
                 localStorage.setItem('orbis_marcos_alertados', JSON.stringify(dados));
+
+                // Sincronizar marco alertado com o backend
+                fetch('/api/configuracao-prova/marcar-alerta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ marco, data_prova: chave })
+                }).catch(e => console.warn('Erro ao sincronizar marco alertado:', e));
             } catch (e) {
                 console.warn(e);
             }
@@ -283,9 +325,10 @@ const app = createApp({
             }
         };
 
-        const resetarMarcosAlertados = () => {
+        const resetarMarcosAlertados = async () => {
             try {
                 localStorage.removeItem('orbis_marcos_alertados');
+                await fetch('/api/configuracao-prova/resetar-alertas', { method: 'POST' }).catch(() => {});
                 mostrarAlerta('Histórico de avisos de marcos resetado com sucesso!', 'info');
             } catch (e) {}
         };
@@ -315,7 +358,7 @@ const app = createApp({
             formConfigProva.value.data_prova = `${ano}-${mes}-${dia}`;
         };
 
-        const salvarDadosProva = () => {
+        const salvarDadosProva = async () => {
             const dataAntiga = dadosProva.value.data_prova;
             dadosProva.value = { ...formConfigProva.value };
             try {
@@ -324,7 +367,23 @@ const app = createApp({
                 console.warn(e);
             }
             modalConfigProvaAberto.value = false;
-            mostrarAlerta('Dados da prova atualizados localmente com sucesso!', 'sucesso');
+
+            // Sincronizar com o servidor backend
+            try {
+                const res = await fetch('/api/configuracao-prova', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosProva.value)
+                });
+                if (res.ok) {
+                    mostrarAlerta('Dados da prova sincronizados no servidor!', 'sucesso');
+                } else {
+                    mostrarAlerta('Dados salvos localmente, erro na sincronização.', 'aviso');
+                }
+            } catch (e) {
+                console.warn(e);
+                mostrarAlerta('Dados salvos localmente (offline).', 'aviso');
+            }
 
             // Se estiver em um dos marcos (<= 90 dias):
             if (marcoAlerta.value) {
@@ -340,12 +399,20 @@ const app = createApp({
             }
         };
 
-        const restaurarDadosProvaPadrao = () => {
+        const restaurarDadosProvaPadrao = async () => {
             dadosProva.value = { ...dadosProvaPadrao };
             formConfigProva.value = { ...dadosProvaPadrao };
             try {
                 localStorage.removeItem('orbis_painel_prova');
                 localStorage.removeItem('orbis_marcos_alertados');
+            } catch (e) {}
+            try {
+                await fetch('/api/configuracao-prova', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dadosProvaPadrao)
+                });
+                await fetch('/api/configuracao-prova/resetar-alertas', { method: 'POST' });
             } catch (e) {}
             modalConfigProvaAberto.value = false;
             mostrarAlerta('Dados da prova restaurados para o padrão!', 'info');
@@ -1211,6 +1278,8 @@ const app = createApp({
         async function loadAllData() {
             carregandoDados.value = true;
             try {
+                await carregarDadosProvaServidor();
+
                 const rEd = await fetch('/api/editais');
                 if (rEd.ok) {
                     editais.value = await rEd.json();
