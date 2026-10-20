@@ -41,9 +41,12 @@ class ResultadoAvulso(BaseModel):
 
 
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from app.database import Base, engine
 import app.models  # Garante registro dos modelos no SQLAlchemy
-from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova
+from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova, ia_insights
 
 # MIGRACAO AUTOMATICA E CRIACAO DE TABELAS (POSTGRES / SQLITE)
 from sqlalchemy import inspect, text
@@ -101,6 +104,18 @@ def auto_upgrade_db():
                         print(f"Coluna '{col}' adicionada na tabela resultados_avulsos.")
                     except Exception as col_err:
                         print(f"Nota: coluna {col} em resultados_avulsos: {col_err}")
+
+        # 5. Colunas de IA em 'configuracao_painel_prova'
+        if "configuracao_painel_prova" in existing_tables:
+            col_names = [col["name"] for col in inspector.get_columns("configuracao_painel_prova")]
+            if "ultimo_insight_ia" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN ultimo_insight_ia TEXT;"))
+                print("Coluna 'ultimo_insight_ia' adicionada em configuracao_painel_prova.")
+            if "data_insight_ia" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN data_insight_ia TIMESTAMP;"))
+                print("Coluna 'data_insight_ia' adicionada em configuracao_painel_prova.")
     except Exception as e:
         print(f"Aviso no auto_upgrade_db: {e}")
 
@@ -129,6 +144,7 @@ app.include_router(sessoes.router)
 app.include_router(dashboard.router)
 app.include_router(resultados.router)
 app.include_router(configuracao_prova.router)
+app.include_router(ia_insights.router)
 
 # Configuração dos Arquivos Estáticos e SPA Frontend
 STATIC_DIR = Path(__file__).resolve().parent / "static"

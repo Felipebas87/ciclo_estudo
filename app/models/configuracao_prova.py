@@ -21,4 +21,7 @@ class ConfiguracaoPainelProva(Base):
     formato_prova = Column(String(100), nullable=True, default="160 itens + Discursiva")
     status_edital = Column(String(100), nullable=True, default="Pós-Edital (Edital Publicado)")
     marcos_alertados = Column(Text, nullable=True, default="{}")
+    ultimo_insight_ia = Column(Text, nullable=True)
+    data_insight_ia = Column(DateTime, nullable=True)
     data_atualizacao = Column(DateTime, default=utc_now, onupdate=utc_now)
+

@@ -14,7 +14,10 @@ class ConfiguracaoPainelProvaBase(BaseModel):
     formato_prova: Optional[str] = "160 itens + Discursiva"
     status_edital: Optional[str] = "Pós-Edital (Edital Publicado)"
     marcos_alertados: Optional[str] = "{}"
+    ultimo_insight_ia: Optional[str] = None
+    data_insight_ia: Optional[str] = None
 
 class ConfiguracaoPainelProvaResponse(ConfiguracaoPainelProvaBase):
     id: Optional[int] = 1
     model_config = ConfigDict(from_attributes=True)
+

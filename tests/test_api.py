@@ -307,5 +307,23 @@ def test_configuracao_prova_sincronizacao():
     assert res_reset.status_code == 200
     assert res_reset.json()["marcos_alertados"] == "{}"
 
+def test_ia_insights():
+    # 1. Gera insights a partir do banco de testes
+    res = client.get("/api/ia/insights")
+    assert res.status_code == 200
+    data = res.json()
+    assert data["titulo"] == "INSIGHTS DE IA"
+    assert "resumo_executivo" in data
+    assert len(data["pontos_analise"]) >= 3
+    assert "timestamp" in data
+
+    # 2. Força recarga
+    res_rec = client.post("/api/ia/insights/recarregar")
+    assert res_rec.status_code == 200
+    data_rec = res_rec.json()
+    assert data_rec["titulo"] == "INSIGHTS DE IA"
+    assert len(data_rec["pontos_analise"]) >= 3
+
+
 
 

@@ -418,6 +418,36 @@ const app = createApp({
             mostrarAlerta('Dados da prova restaurados para o padrão!', 'info');
         };
 
+        // ==========================================
+        // 2.2 INSIGHTS DE IA (COACH DE ESTUDOS)
+        // ==========================================
+        const modalInsightsIAAberto = ref(false);
+        const carregandoInsightsIA = ref(false);
+        const insightsIA = ref(null);
+
+        const carregarInsightsIA = async (forcar = false) => {
+            carregandoInsightsIA.value = true;
+            try {
+                const endpoint = forcar ? '/api/ia/insights/recarregar' : '/api/ia/insights';
+                const method = forcar ? 'POST' : 'GET';
+                const res = await fetch(endpoint, { method });
+                if (res.ok) {
+                    insightsIA.value = await res.json();
+                }
+            } catch (e) {
+                console.warn('Erro ao carregar Insights de IA:', e);
+            } finally {
+                carregandoInsightsIA.value = false;
+            }
+        };
+
+        const abrirModalInsightsIA = async () => {
+            modalInsightsIAAberto.value = true;
+            if (!insightsIA.value) {
+                await carregarInsightsIA();
+            }
+        };
+
         // Instâncias de Gráficos (Chart.js)
         let chartCicloDonutInstance = null;
         let chartEvolucaoInstance = null;
@@ -1279,6 +1309,7 @@ const app = createApp({
             carregandoDados.value = true;
             try {
                 await carregarDadosProvaServidor();
+                await carregarInsightsIA();
 
                 const rEd = await fetch('/api/editais');
                 if (rEd.ok) {
@@ -3015,6 +3046,7 @@ const app = createApp({
                     if (avulsoSelecionado.value) avulsoSelecionado.value = null;
                     if (modalConfigProvaAberto.value) modalConfigProvaAberto.value = false;
                     if (modalAlertaMarcoAberto.value) modalAlertaMarcoAberto.value = false;
+                    if (modalInsightsIAAberto.value) modalInsightsIAAberto.value = false;
                 }
             });
 
@@ -3200,7 +3232,14 @@ const app = createApp({
             dataProvaFormatada,
             comparativoCorte,
             zonaProva,
-            marcoAlerta
+            marcoAlerta,
+
+            // Insights de IA (Coach de Concursos)
+            modalInsightsIAAberto,
+            carregandoInsightsIA,
+            insightsIA,
+            abrirModalInsightsIA,
+            carregarInsightsIA
         };
     }
 });
