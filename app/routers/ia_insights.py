@@ -145,8 +145,13 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
 
 async def tentar_gerar_com_gemini(dados: Dict[str, Any], api_key: str) -> Optional[Dict[str, Any]]:
     prompt = f"""Você é o Coach de Estudos e Mentor Estratégico de Elite em Concursos Públicos do app Orbis.
-Analise com rigor técnico, olhar clínico, profundidade e linguagem viva e dinâmica os dados reais do aluno abaixo.
+Analise com rigor técnico, olhar clínico, profundidade e linguagem viva, dinâmica e altamente visual os dados reais do aluno abaixo.
 IMPORTANTE: NUNCA USE RESPOSTAS GENÉRICAS OU CLICHÊS DE MODELO. Traga uma análise inédita e perspicaz, avaliando o comportamento específico da banca examinadora ({dados['banca']}), o tempo restante ({dados['dias_restantes']} dias), os pontos cegos e uma prescrição tática original.
+
+ESTILO VISUAL & ELEMENTOS GRÁFICOS OBRIGATÓRIOS:
+- Use emojis expressivos (🎯, 📊, 🚨, ⏳, 💡, 🛡️, 📈, ⚖️, 🔍, ⚡, 🔥) no início de blocos e para enfatizar mensagens, deixando o texto convidativo e dinâmico.
+- Use formatação Markdown (**negrito**) para destacar métricas críticas, percentuais, nomes de disciplinas e termos-chave.
+- Deixe o texto claro, escaneável e visualmente estimulante, sem parágrafos maçantes.
 
 DADOS REAIS E COMPLETOS DO ALUNO:
 - Concurso Alvo: {dados['concurso']}
@@ -164,79 +169,73 @@ DESEMPENHO DETALHADO POR DISCIPLINA (Horas, Questões e % de Acerto):
 
 RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
 {{
-  "resumo_executivo": "Parágrafo executivo afiado, direto e motivador (3 a 4 linhas), sintetizando a real situação do candidato a {dados['dias_restantes']} dias da prova da {dados['banca']}, confrontando seu aproveitamento ({dados['taxa_global']}%) com a nota de corte ({dados['nota_corte']}%) e apontando a grande batalha tática a ser travada.",
+  "resumo_executivo": "🎯 Parágrafo executivo afiado, direto e motivador (3 a 4 linhas). Comece com um emoji impactante (ex: 🎯 ou 🧭). Destaque em **negrito** métricas-chave, confronto da taxa ({dados['taxa_global']}%) com o corte ({dados['nota_corte']}%), a banca ({dados['banca']}) e a batalha tática a travar nos {dados['dias_restantes']} dias restantes.",
   "pontos_analise": [
-    "Primeiro bullet: Análise de Competitividade & Margem de Segurança frente à banca e corte, citando números reais das matérias em destaque.",
-    "Segundo bullet: Diagnóstico Cirúrgico dos Gargalos Críticos ou Matérias Ocultas, alertando sobre armadilhas da banca {dados['banca']}.",
-    "Terceiro bullet: Gestão de Ritmo e Projeção de Volume até a data da prova ({dados['dias_restantes']} dias).",
-    "Quarto bullet: Prescrição Tática Inédita para a próxima semana (ações concretas: cadernos de erros, Anki, baterias focadas)."
+    "📊 **Competitividade & Margem:** Análise da margem de segurança frente à nota de corte e banca, citando disciplinas de ponta em **negrito** e números reais.",
+    "🚨 **Ponto Cego & Alerta da Banca:** Diagnóstico cirúrgico dos maiores gargalos ou matérias perigosas, alertando sobre armadilhas da {dados['banca']} com emojis de atenção.",
+    "⏳ **Ritmo & Gestão do Tempo ({dados['dias_restantes']} dias):** Projeção prática de horas líquidas e volume de questões até a prova, orientando a energia do candidato.",
+    "💡 **Prescrição Tática Inédita:** Plano de ação direto (técnicas ativas, cadernos de erros, Anki, baterias focadas) para a semana."
   ]
 }}"""
 
-    # Tenta com o novo SDK google-genai
+    agora_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+    prompt_completo = f"{prompt}\n\n[SEED TEMPORAL: {agora_timestamp}]"
+
+    # Lista de modelos do Google Gemini com alta disponibilidade e suporte a resposta JSON
+    modelos_candidatos = [
+        "gemini-flash-lite-latest",
+        "gemini-3.1-flash-lite",
+        "gemini-3.5-flash",
+        "gemini-3.8-flash",
+        "gemini-flash-latest"
+    ]
+
     try:
         from google import genai
         from google.genai import types
 
         client = genai.Client(api_key=api_key)
         config_params = types.GenerateContentConfig(
-            temperature=0.9,
+            temperature=0.95,
             response_mime_type="application/json"
         )
-        response = client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=prompt,
-            config=config_params
-        )
-        texto = response.text.strip()
-        parsed = json.loads(texto)
-        agora = datetime.now()
-        return {
-            "titulo": "INSIGHTS DE IA",
-            "subtitulo": "Leitura dos indicadores a cada hora ou ao atualizar",
-            "resumo_executivo": parsed.get("resumo_executivo"),
-            "pontos_analise": parsed.get("pontos_analise", []),
-            "modelo_origem": "Gemini 2.5 Flash",
-            "timestamp": agora.strftime("%H:%M"),
-            "data_atualizacao": agora.isoformat()
-        }
-    except Exception as e:
-        print(f"Tentativa com google-genai (gemini-2.5-flash) falhou: {e}. Tentando fallback legacypy...")
 
-    # Fallback com google-generativeai
-    try:
-        import google.generativeai as legacy_genai
-        legacy_genai.configure(api_key=api_key)
-        model = legacy_genai.GenerativeModel("gemini-1.5-flash")
-        generation_config = legacy_genai.types.GenerationConfig(
-            temperature=0.9,
-            response_mime_type="application/json"
-        )
-        response = model.generate_content(prompt, generation_config=generation_config)
-        texto = response.text.strip()
-        if texto.startswith("```json"):
-            texto = texto[7:]
-        if texto.endswith("```"):
-            texto = texto[:-3]
-        parsed = json.loads(texto.strip())
-        agora = datetime.now()
-        return {
-            "titulo": "INSIGHTS DE IA",
-            "subtitulo": "Leitura dos indicadores a cada hora ou ao atualizar",
-            "resumo_executivo": parsed.get("resumo_executivo"),
-            "pontos_analise": parsed.get("pontos_analise", []),
-            "modelo_origem": "Gemini 1.5 Flash",
-            "timestamp": agora.strftime("%H:%M"),
-            "data_atualizacao": agora.isoformat()
-        }
-    except Exception as e2:
-        print(f"Fallback Gemini falhou: {e2}")
-        return None
+        for modelo in modelos_candidatos:
+            try:
+                response = client.models.generate_content(
+                    model=modelo,
+                    contents=prompt_completo,
+                    config=config_params
+                )
+                texto = response.text.strip()
+                if texto.startswith("```json"):
+                    texto = texto[7:]
+                if texto.endswith("```"):
+                    texto = texto[:-3]
+                parsed = json.loads(texto.strip())
+                agora = datetime.now()
+                return {
+                    "titulo": "INSIGHTS DE IA",
+                    "subtitulo": "Leitura dos indicadores em tempo real",
+                    "resumo_executivo": parsed.get("resumo_executivo"),
+                    "pontos_analise": parsed.get("pontos_analise", []),
+                    "modelo_origem": f"Google Gemini ({modelo})",
+                    "timestamp": agora.strftime("%H:%M:%S"),
+                    "data_atualizacao": agora.isoformat()
+                }
+            except Exception as mod_err:
+                print(f"Modelo {modelo} indisponível ou em alta demanda: {mod_err}. Tentando próximo...")
+                continue
+    except Exception as e:
+        print(f"Erro ao instanciar cliente genai: {e}")
+
+    return None
 
 def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
     concurso = dados["concurso"]
     banca = dados["banca"]
     dias = dados["dias_restantes"]
+    total_sessoes = dados.get("total_sessoes", 0)
     total_horas = dados["total_horas"]
     total_dias = dados["total_dias_estudados"]
     total_questoes = dados["total_questoes"]
@@ -260,25 +259,25 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
 
     if arq == "estrategista_corte":
         resumo_executivo = (
-            f"Faltam {dias} dias para a prova do {concurso} ({banca}). Sua margem atual está em {taxa}% ({diff_str} projetado de {corte}%). "
-            f"Você consolidou {total_horas}h de estudo e {total_questoes} questões resolvidas. A base está firme em {', '.join(fortalezas_nomes) if fortalezas_nomes else 'matérias-chave'}, "
+            f"🎯 **Contagem Regressiva de {dias} dias** para o **{concurso}** ({banca}). Sua margem atual está em **{taxa}%** ({diff_str} projetado de {corte}%). "
+            f"Você consolidou **{total_horas}h** de estudo e **{total_questoes} questões** resolvidas. A base está firme em {', '.join(fortalezas_nomes) if fortalezas_nomes else 'matérias-chave'}, "
             f"mas para transformar essa margem em vaga garantida, é imperativo blindar a pontuação líquida frente a {', '.join(gargalos_nomes) if gargalos_nomes else 'erros evitáveis'}."
         )
     elif arq == "tatico_reta_final":
         resumo_executivo = (
-            f"Contagem regressiva de {dias} dias: momento decisivo para o {concurso}. Com {total_sessoes} sessões cumpridas e taxa global de {taxa}%, "
-            f"seu índice de competitividade é real. Contudo, no estilo {banca}, a estabilidade emocional e o controle de erros em "
+            f"⚡ **Fase Decisiva ({dias} dias)**: momento crítico para o **{concurso}**. Com **{total_sessoes} sessões** cumpridas e taxa global de **{taxa}%**, "
+            f"seu índice de competitividade é real. Contudo, no estilo **{banca}**, a estabilidade emocional e o controle de erros em "
             f"{', '.join(gargalos_nomes) if gargalos_nomes else 'matérias com gaps'} definirão a aprovação. Hora de trocar estudo passivo por pressão tática."
         )
     elif arq == "auditor_gargalos":
         resumo_executivo = (
-            f"Auditoria de desempenho ({concurso} - {banca}): Restam exatamente {dias} dias. Você acumula {total_horas}h e média de {taxa}% de aproveitamento. "
+            f"🔍 **Auditoria de Desempenho ({concurso} - {banca})**: Restam exatamente **{dias} dias**. Você acumula **{total_horas}h** e média de **{taxa}%** de aproveitamento. "
             f"Embora {', '.join(fortalezas_nomes) if fortalezas_nomes else 'disciplinas fortes'} puxem a nota para cima, "
             f"o calcanhar de Aquiles em {', '.join(gargalos_nomes) if gargalos_nomes else 'disciplinas zeradas'} pode custar pontos preciosos de corte."
         )
     else:
         resumo_executivo = (
-            f"A {dias} dias da batalha no {concurso}, o radar aponta {total_horas}h estudadas em {total_dias} dias ativos e rendimento geral de {taxa}%. "
+            f"🧭 **Radar da Banca ({banca})**: A **{dias} dias** da batalha no **{concurso}**, você acumula **{total_horas}h** estudadas em {total_dias} dias ativos e rendimento geral de **{taxa}%**. "
             f"O ritmo é promissor, mas a banca {banca} pune severamente oscilações. A prioridade agora não é quantidade de horas, "
             f"mas precisão cirúrgica de acertos e proteção de pontos nos tópicos mais críticos."
         )
@@ -287,9 +286,9 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
 
     # Ponto 1: Competitividade
     ponto1_variacoes = [
-        f"Margem de Segurança & Corte: Com aproveitamento de {taxa}% ({diff_str}), você opera em zona de competitividade direta. {dados['fortalezas'][0]['nome'] + ' lidera com ' + str(dados['fortalezas'][0]['taxa_acerto']) + '% em ' + str(dados['fortalezas'][0]['questoes']) + ' questões' if dados['fortalezas'] else 'Mantenha ritmo para romper a barreira do corte'}.",
-        f"Linha de Corte Alvo ({corte}%): Seu rendimento global de {taxa}% está {diff_str}. {dados['fortalezas'][0]['nome'] if dados['fortalezas'] else 'O topo da esteira'} sustenta o índice, mas é preciso replicar esse padrão nas matérias secundárias.",
-        f"Eficiência por Questão: Das {total_questoes} questões registradas, seu índice de acertos é de {taxa}%. A consistência nas disciplinas centrais garante base sólida para a nota de corte ({corte}%)."
+        f"📊 **Competitividade & Margem:** Com aproveitamento de **{taxa}%** ({diff_str}), você opera em zona de competitividade direta. {dados['fortalezas'][0]['nome'] + ' lidera com ' + str(dados['fortalezas'][0]['taxa_acerto']) + '% em ' + str(dados['fortalezas'][0]['questoes']) + ' questões' if dados['fortalezas'] else 'Mantenha ritmo para romper a barreira do corte.'}",
+        f"📊 **Linha de Corte Alvo ({corte}%):** Seu rendimento global de **{taxa}%** está {diff_str}. {dados['fortalezas'][0]['nome'] if dados['fortalezas'] else 'O topo da esteira'} sustenta o índice, mas é preciso replicar esse padrão nas matérias secundárias.",
+        f"📊 **Eficiência por Questão:** Das **{total_questoes} questões** registradas, seu índice de acertos é de **{taxa}%**. A consistência nas disciplinas centrais garante base sólida para a nota de corte (**{corte}%**)."
     ]
     pontos.append(random.choice(ponto1_variacoes))
 
@@ -297,16 +296,16 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
     if dados["gargalos"]:
         crit = dados["gargalos"][0]
         ponto2_variacoes = [
-            f"Gargalo Crítico de Prova: {crit['nome']} acusa {crit['taxa_acerto']}% de acerto em {crit['questoes']} itens resolvidos — risco extremo na banca {banca}, onde cada erro subtrai uma questão certa.",
-            f"Ponto de Vulnerabilidade Tática: {crit['nome']} apresenta aproveitamento perigoso de {crit['taxa_acerto']}%. Numa prova disputada ponto a ponto pela {banca}, este é o maior vazamento de nota do seu ciclo.",
-            f"Alerta de Risco: O rendimento de {crit['taxa_acerto']}% em {crit['nome']} exige contenção urgente de danos. Elimine o chute nessa matéria e mapeie as pegadinhas recorrentes da banca."
+            f"🚨 **Gargalo Crítico de Prova:** **{crit['nome']}** acusa **{crit['taxa_acerto']}%** de acerto em {crit['questoes']} itens resolvidos — risco extremo na banca {banca}, onde cada erro subtrai uma questão certa.",
+            f"🚨 **Ponto de Vulnerabilidade Tática:** **{crit['nome']}** apresenta aproveitamento perigoso de **{crit['taxa_acerto']}%**. Numa prova disputada ponto a ponto pela {banca}, este é o maior vazamento de nota do seu ciclo.",
+            f"⚠️ **Alerta de Risco Cirúrgico:** O rendimento de **{crit['taxa_acerto']}%** em **{crit['nome']}** exige contenção urgente de danos. Elimine o chute nessa matéria e mapeie as pegadinhas recorrentes da banca."
         ]
         pontos.append(random.choice(ponto2_variacoes))
     elif dados["sem_questoes"]:
         sem_q = dados["sem_questoes"][0]
-        pontos.append(f"Disciplina Oculta: {sem_q['nome']} possui teoria acumulada mas zero questões registradas. Concurseiro não passa com teoria sem treino de bateria.")
+        pontos.append(f"⚠️ **Disciplina Oculta:** **{sem_q['nome']}** possui teoria acumulada mas zero questões registradas. Concurseiro não passa com teoria sem treino de bateria.")
     else:
-        pontos.append(f"Mapeamento de Lacunas: Mantenha caderno de erros ativo em todas as disciplinas limítrofes para estancar perda de pontos.")
+        pontos.append(f"🛡️ **Mapeamento de Lacunas:** Mantenha caderno de erros ativo em todas as disciplinas limítrofes para estancar perda de pontos.")
 
     # Ponto 3: Projeção de Volume
     if dias > 0:
@@ -316,27 +315,27 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
         questoes_por_hora = (total_questoes / total_horas) if total_horas > 0 else 8.0
         questoes_proj = int(questoes_por_hora * ritmo_proj * dias)
         ponto3_variacoes = [
-            f"Volume & Cadência na Fase '{zona}': Restam {dias} dias. Em ritmo recomendado de {ritmo_proj}h/dia (~{horas_semana_est}h/semana), a projeção é resolver cerca de {questoes_proj} questões da banca {banca} até o dia da prova.",
-            f"Projeção Tática até o Dia D: Com {dias} dias restantes e mantendo {ritmo_proj}h diárias, você adicionará cerca de {questoes_proj} itens ao seu repertório prático da banca.",
-            f"Gestão de Energia & Tempo: Na fase '{zona}', {ritmo_proj}h líquidas diárias garantem cobertura de mais {questoes_proj} itens da {banca} sem gerar estafa mental antes da prova."
+            f"⏳ **Volume & Cadência na Fase '{zona}':** Restam **{dias} dias**. Em ritmo recomendado de **{ritmo_proj}h/dia** (~{horas_semana_est}h/semana), a projeção é resolver cerca de **{questoes_proj} questões** da banca {banca} até o dia da prova.",
+            f"⏳ **Projeção Tática até o Dia D:** Com **{dias} dias restantes** e mantendo {ritmo_proj}h diárias, você adicionará cerca de **{questoes_proj} itens** ao seu repertório prático da banca.",
+            f"⚡ **Gestão de Energia & Tempo:** Na fase '{zona}', **{ritmo_proj}h líquidas diárias** garantem cobertura de mais **{questoes_proj} itens** da {banca} sem gerar estafa mental antes da prova."
         ]
         pontos.append(random.choice(ponto3_variacoes))
     else:
-        pontos.append("Fase Concluída: Registre seus acertos na aba Resultados & Raio-X.")
+        pontos.append("🏁 **Fase Concluída:** Registre seus acertos na aba Resultados & Raio-X.")
 
     # Ponto 4: Prescrição do Coach
     if dados["gargalos"]:
         foco = dados["gargalos"][0]["nome"]
         ponto4_variacoes = [
-            f"Prescrição Inédita do Coach: Aloque os primeiros 2 blocos da semana para bateria comentada focada em {foco}. Não avance sem entender o motivo de cada gabarito da {banca}.",
-            f"Ajuste de Rota Semanal: Isole os 3 principais subtemas de {foco} e crie 20 cards no Anki com conceitos-chave para revisão diária acelerada.",
-            f"Direcionamento Estratégico: Reduza temporariamente o tempo das disciplinas já dominadas e concentre 60% da carga da semana em exercícios práticos de {foco}."
+            f"💡 **Prescrição Inédita do Coach:** Aloque os primeiros 2 blocos da semana para bateria comentada focada em **{foco}**. Não avance sem entender o motivo de cada gabarito da {banca}.",
+            f"💡 **Ajuste de Rota Semanal:** Isole os 3 principais subtemas de **{foco}** e crie 20 cards no Anki com conceitos-chave para revisão diária acelerada.",
+            f"🎯 **Direcionamento Estratégico:** Reduza temporariamente o tempo das disciplinas já dominadas e concentre **60% da carga da semana** em exercícios práticos de **{foco}**."
         ]
         pontos.append(random.choice(ponto4_variacoes))
     else:
         ponto4_variacoes = [
-            f"Prescrição Inédita do Coach: Implemente simulados parciais cronometrados de 40 questões em blocos mistos para treinar gestão de tempo e resistência mental sob pressão.",
-            f"Direcionamento Estratégico: Intensifique revisões ativas no Anki no primeiro bloco do dia e dedique os demais exclusivamente a baterias inéditas da banca {banca}."
+            f"💡 **Prescrição Inédita do Coach:** Implemente simulados parciais cronometrados de 40 questões em blocos mistos para treinar gestão de tempo e resistência mental sob pressão.",
+            f"🎯 **Direcionamento Estratégico:** Intensifique revisões ativas no Anki no primeiro bloco do dia e dedique os demais exclusivamente a baterias inéditas da banca {banca}."
         ]
         pontos.append(random.choice(ponto4_variacoes))
 
@@ -377,7 +376,7 @@ def status_chave_gemini(db: Session = Depends(get_db)):
         "configurada": configurada,
         "chave_mascarada": mascarada,
         "origem": origem,
-        "modelo": "Gemini 2.5 Flash"
+        "modelo": "Google Gemini (Flash Lite)"
     }
 
 @router.post("/config-chave")
@@ -425,7 +424,7 @@ async def obter_insights_ia(db: Session = Depends(get_db)):
     agora = datetime.now()
     if config.ultimo_insight_ia and config.data_insight_ia:
         delta = (agora - config.data_insight_ia).total_seconds()
-        if delta < 3600:
+        if delta < 30:
             try:
                 dados_cache = json.loads(config.ultimo_insight_ia)
                 return dados_cache

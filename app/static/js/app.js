@@ -482,9 +482,22 @@ const app = createApp({
         const abrirModalInsightsIA = async () => {
             modalInsightsIAAberto.value = true;
             verificarStatusChaveIA();
-            if (!insightsIA.value) {
-                await carregarInsightsIA();
-            }
+            await carregarInsightsIA();
+        };
+
+        const formatarTextoIA = (texto) => {
+            if (!texto) return '';
+            let safe = String(texto)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            // Formata **negrito** com classe destacada
+            safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-slate-900 dark:text-white">$1</strong>');
+            // Formata *itálico*
+            safe = safe.replace(/\*(.*?)\*/g, '<em class="italic text-slate-700 dark:text-slate-300">$1</em>');
+            // Formata `código`
+            safe = safe.replace(/`(.*?)`/g, '<code class="px-1 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 font-mono text-[11px]">$1</code>');
+            return safe;
         };
 
         // Instâncias de Gráficos (Chart.js)
@@ -3285,7 +3298,8 @@ const app = createApp({
             chaveGeminiInput,
             salvandoChaveIA,
             salvarChaveGemini,
-            verificarStatusChaveIA
+            verificarStatusChaveIA,
+            formatarTextoIA
         };
     }
 });
