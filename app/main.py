@@ -116,6 +116,10 @@ def auto_upgrade_db():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN data_insight_ia TIMESTAMP;"))
                 print("Coluna 'data_insight_ia' adicionada em configuracao_painel_prova.")
+            if "gemini_api_key" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN gemini_api_key VARCHAR(255);"))
+                print("Coluna 'gemini_api_key' adicionada em configuracao_painel_prova.")
     except Exception as e:
         print(f"Aviso no auto_upgrade_db: {e}")
 

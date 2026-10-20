@@ -23,5 +23,6 @@ class ConfiguracaoPainelProva(Base):
     marcos_alertados = Column(Text, nullable=True, default="{}")
     ultimo_insight_ia = Column(Text, nullable=True)
     data_insight_ia = Column(DateTime, nullable=True)
+    gemini_api_key = Column(String(255), nullable=True)
     data_atualizacao = Column(DateTime, default=utc_now, onupdate=utc_now)
 

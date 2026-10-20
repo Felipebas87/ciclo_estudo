@@ -324,6 +324,22 @@ def test_ia_insights():
     assert data_rec["titulo"] == "INSIGHTS DE IA"
     assert len(data_rec["pontos_analise"]) >= 3
 
+    # 3. Status de chave
+    res_status = client.get("/api/ia/status-chave")
+    assert res_status.status_code == 200
+    assert "configurada" in res_status.json()
+
+    # 4. Salvar chave Gemini e verificar retorno
+    res_conf = client.post("/api/ia/config-chave", json={"api_key": "AIzaSy_fake_test_key_for_testing"})
+    assert res_conf.status_code == 200
+    assert res_conf.json()["configurada"] is True
+    assert "insight" in res_conf.json()
+
+    # 5. Limpar chave
+    res_limpar = client.post("/api/ia/config-chave", json={"api_key": ""})
+    assert res_limpar.status_code == 200
+    assert res_limpar.json()["configurada"] is False
+
 
 
 

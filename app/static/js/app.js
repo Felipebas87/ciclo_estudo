@@ -424,6 +424,21 @@ const app = createApp({
         const modalInsightsIAAberto = ref(false);
         const carregandoInsightsIA = ref(false);
         const insightsIA = ref(null);
+        const statusChaveGemini = ref({ configurada: false, chave_mascarada: null, origem: 'nenhuma' });
+        const mostrarConfigChaveIA = ref(false);
+        const chaveGeminiInput = ref('');
+        const salvandoChaveIA = ref(false);
+
+        const verificarStatusChaveIA = async () => {
+            try {
+                const res = await fetch('/api/ia/status-chave');
+                if (res.ok) {
+                    statusChaveGemini.value = await res.json();
+                }
+            } catch (e) {
+                console.warn(e);
+            }
+        };
 
         const carregarInsightsIA = async (forcar = false) => {
             carregandoInsightsIA.value = true;
@@ -441,8 +456,32 @@ const app = createApp({
             }
         };
 
+        const salvarChaveGemini = async () => {
+            salvandoChaveIA.value = true;
+            try {
+                const res = await fetch('/api/ia/config-chave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ api_key: chaveGeminiInput.value })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    insightsIA.value = data.insight;
+                    mostrarConfigChaveIA.value = false;
+                    chaveGeminiInput.value = '';
+                    await verificarStatusChaveIA();
+                    mostrarAlerta(data.configurada ? 'Chave Gemini conectada! Análise viva gerada com sucesso.' : 'Chave removida. Modo heurístico ativo.', 'sucesso');
+                }
+            } catch (e) {
+                mostrarAlerta('Erro ao conectar chave do Gemini.', 'erro');
+            } finally {
+                salvandoChaveIA.value = false;
+            }
+        };
+
         const abrirModalInsightsIA = async () => {
             modalInsightsIAAberto.value = true;
+            verificarStatusChaveIA();
             if (!insightsIA.value) {
                 await carregarInsightsIA();
             }
@@ -1310,6 +1349,7 @@ const app = createApp({
             try {
                 await carregarDadosProvaServidor();
                 await carregarInsightsIA();
+                await verificarStatusChaveIA();
 
                 const rEd = await fetch('/api/editais');
                 if (rEd.ok) {
@@ -3239,7 +3279,13 @@ const app = createApp({
             carregandoInsightsIA,
             insightsIA,
             abrirModalInsightsIA,
-            carregarInsightsIA
+            carregarInsightsIA,
+            statusChaveGemini,
+            mostrarConfigChaveIA,
+            chaveGeminiInput,
+            salvandoChaveIA,
+            salvarChaveGemini,
+            verificarStatusChaveIA
         };
     }
 });
