@@ -3357,6 +3357,71 @@
 
                     <!-- Conteúdo Real Gerado -->
                     <div v-else-if="insightsIA" class="space-y-4">
+                        <!-- Painel de Indicadores Rápidos (Edital, Cadência, Heatmap, Rendimento) -->
+                        <div v-if="insightsIA.metricas_rapidas"
+                            class="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-1">
+                            
+                            <!-- 1. Edital Coberto -->
+                            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-[#1A2333] border border-slate-200/80 dark:border-[#28364E] flex flex-col justify-between shadow-2xs">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-book-open text-amber-500 text-[9.5px]"></i> Edital
+                                </span>
+                                <div class="mt-1 flex items-baseline gap-1">
+                                    <span class="text-sm font-black text-slate-800 dark:text-[#F8FAFC]">
+                                        {{ insightsIA.metricas_rapidas.edital_coberto_perc }}%
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 dark:text-slate-400 font-medium">
+                                        ({{ insightsIA.metricas_rapidas.topicos_cobertos }}/{{ insightsIA.metricas_rapidas.total_topicos }})
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 2. Questões por hora -->
+                            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-[#1A2333] border border-slate-200/80 dark:border-[#28364E] flex flex-col justify-between shadow-2xs">
+                                <span class="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 truncate" title="Questões por hora estudada">
+                                    <i class="fa-solid fa-bolt text-indigo-500 text-[9.5px]"></i> Questões por hora
+                                </span>
+                                <div class="mt-1 flex items-baseline gap-1">
+                                    <span class="text-sm font-black text-slate-800 dark:text-[#F8FAFC]">
+                                        {{ insightsIA.metricas_rapidas.cadencia_questoes_hora }}
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 dark:text-slate-400 font-medium">
+                                        q/h (proj: {{ insightsIA.metricas_rapidas.questoes_proj_prova }})
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 3. Dias de estudo (Constância) -->
+                            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-[#1A2333] border border-slate-200/80 dark:border-[#28364E] flex flex-col justify-between shadow-2xs">
+                                <span class="text-[9.5px] sm:text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5 truncate" title="Dias com estudo registrado">
+                                    <i class="fa-solid fa-calendar-check text-emerald-500 text-[9.5px]"></i> Dias de estudo
+                                </span>
+                                <div class="mt-1 flex items-baseline gap-1">
+                                    <span class="text-sm font-black text-slate-800 dark:text-[#F8FAFC]">
+                                        {{ insightsIA.metricas_rapidas.constancia_heatmap_perc }}%
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 dark:text-slate-400 font-medium">
+                                        ({{ insightsIA.metricas_rapidas.dias_estudados }}/{{ insightsIA.metricas_rapidas.dias_corridos }}d)
+                                    </span>
+                                </div>
+                            </div>
+
+                            <!-- 4. Aproveitamento vs Corte -->
+                            <div class="p-2.5 rounded-xl bg-slate-50 dark:bg-[#1A2333] border border-slate-200/80 dark:border-[#28364E] flex flex-col justify-between shadow-2xs">
+                                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-trophy text-amber-500 text-[9.5px]"></i> Rendimento
+                                </span>
+                                <div class="mt-1 flex items-baseline gap-1">
+                                    <span class="text-sm font-black text-emerald-600 dark:text-emerald-400">
+                                        {{ insightsIA.metricas_rapidas.taxa_global }}%
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 dark:text-slate-400 font-medium">
+                                        (corte: {{ insightsIA.metricas_rapidas.nota_corte }}%)
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Card do Resumo Executivo com Emojis & Destaque Visual -->
                         <div class="p-4 rounded-2xl bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-indigo-500/10 dark:from-amber-500/15 dark:via-[#1A2333] dark:to-indigo-500/15 border border-amber-500/30 dark:border-amber-400/30 shadow-xs">
                             <div class="text-[13.5px] sm:text-[14.5px] leading-relaxed text-slate-800 dark:text-[#F1F5F9]"
@@ -3390,7 +3455,7 @@
         </div>
     </div>
 
-    <script src="/static/js/app.js?v=20261020_insights_visual"></script>
+    <script src="/static/js/app.js?v=20261021_instant_load"></script>
 </body>
 
 </html>

@@ -13,6 +13,7 @@ from app.models.sessao import SessaoEstudo
 from app.models.disciplina import Disciplina
 from app.models.ciclo import CicloEstudos, BlocoCiclo
 from app.models.edital import Edital
+from app.models.topico import Topico
 
 router = APIRouter(prefix="/api/ia", tags=["Insights de IA"])
 
@@ -56,7 +57,7 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
         zona_tag = "Pós-Prova"
         zona_fase = "Ciclo Concluído"
 
-    sessoes = db.query(SessaoEstudo).all()
+    sessoes = db.query(SessaoEstudo).order_by(SessaoEstudo.data.asc()).all()
     total_sessoes = len(sessoes)
     total_minutos = sum(s.tempo_estudado_minutos or 0 for s in sessoes)
     total_horas = round(total_minutos / 60.0, 1)
@@ -66,11 +67,82 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
     total_erros = sum(s.qtd_erros or 0 for s in sessoes)
     taxa_global = round((total_acertos / total_questoes * 100), 1) if total_questoes > 0 else 0.0
 
-    dias_unicos = set()
-    for s in sessoes:
-        if s.data:
-            dias_unicos.add(s.data.split("T")[0] if "T" in str(s.data) else str(s.data))
-    total_dias_estudados = len(dias_unicos)
+    # 1. Edital & Tópicos (Premissa: 1 hora de estudo = 1 tópico do edital)
+    ciclo = db.query(CicloEstudos).filter(CicloEstudos.ativo == True).first()
+    ciclo_nome = ciclo.nome if ciclo else "Ciclo de Estudos"
+    voltas_ciclo = ciclo.voltas_completas if ciclo else 0
+    carga_horaria_semanal = ciclo.carga_horaria_semanal if ciclo and ciclo.carga_horaria_semanal else 20.0
+
+    edital_id = ciclo.edital_id if ciclo and ciclo.edital_id else None
+    if not edital_id:
+        edital_first = db.query(Edital).first()
+        edital_id = edital_first.id if edital_first else None
+
+    total_topicos_edital = 0
+    if edital_id:
+        total_topicos_edital = db.query(Topico).join(Disciplina).filter(Disciplina.edital_id == edital_id).count()
+    if total_topicos_edital == 0:
+        total_topicos_edital = db.query(Topico).count() or 1
+
+    topicos_cobertos_estimados = min(total_horas, float(total_topicos_edital))
+    perc_edital_coberto = round((topicos_cobertos_estimados / total_topicos_edital * 100), 1) if total_topicos_edital > 0 else 0.0
+    topicos_restantes = max(0, total_topicos_edital - int(total_horas))
+    horas_para_zerar_edital = float(topicos_restantes)  # 1h por tópico
+
+    # Projeção de fechamento do edital
+    horas_dia_necessarias_40d = round(horas_para_zerar_edital / max(1, dias_restantes), 1) if dias_restantes > 0 else 0.0
+    ritmo_diario_declarado = round(carga_horaria_semanal / 7.0, 2)
+    dias_para_zerar_na_meta_semanal = int(horas_para_zerar_edital / ritmo_diario_declarado) if ritmo_diario_declarado > 0 else 0
+
+    topicos_cobertos_proj_ate_prova = int(min(total_topicos_edital, topicos_cobertos_estimados + (ritmo_diario_declarado * max(0, dias_restantes))))
+    perc_edital_proj_ate_prova = round((topicos_cobertos_proj_ate_prova / total_topicos_edital * 100), 1) if total_topicos_edital > 0 else 0.0
+
+    # 2. Competitividade, Cadência e Projeção de Questões
+    cadencia_questoes_hora = round(total_questoes / total_horas, 1) if total_horas > 0 else 0.0
+    horas_estudo_proj_ate_prova = round(ritmo_diario_declarado * max(0, dias_restantes), 1)
+    questoes_projetadas_adicionais = int(horas_estudo_proj_ate_prova * cadencia_questoes_hora)
+    total_questoes_proj_dia_prova = total_questoes + questoes_projetadas_adicionais
+
+    # Benchmarks Cebraspe / Concurso
+    benchmark_questoes_recomendado = "2.500 a 4.000 questões Cebraspe resolvidas"
+    benchmark_taxa_acerto_ideal = "82% a 88% de acerto bruto (para neutralizar o fator '1 errada anula 1 certa' e manter pontuação líquida > 78%)"
+    benchmark_cadencia_ideal = "12 a 18 questões por hora (com estudo reverso e baterias cronometradas)"
+
+    # 3. Constância de Estudo & Heatmap
+    datas_unicas = sorted(list(set(s.data for s in sessoes if s.data)))
+    total_dias_estudados = len(datas_unicas)
+
+    if datas_unicas:
+        p_val = datas_unicas[0]
+        u_val = datas_unicas[-1]
+        p_date = p_val if isinstance(p_val, date) else datetime.strptime(str(p_val).split("T")[0], "%Y-%m-%d").date()
+        u_date = u_val if isinstance(u_val, date) else datetime.strptime(str(u_val).split("T")[0], "%Y-%m-%d").date()
+        dias_corridos_periodo = max(1, (hoje - p_date).days + 1)
+        hiato_dias_sem_estudo = max(0, (hoje - u_date).days)
+        dias_com_estudo = total_dias_estudados
+        dias_sem_estudo = max(0, dias_corridos_periodo - dias_com_estudo)
+        taxa_constancia_heatmap = round((dias_com_estudo / dias_corridos_periodo * 100), 1)
+        media_horas_dia_estudo = round(total_horas / dias_com_estudo, 1) if dias_com_estudo > 0 else 0.0
+        media_horas_dia_corrido = round(total_horas / dias_corridos_periodo, 2)
+        primeira_str = p_date.strftime("%d/%m/%Y")
+        ultima_str = u_date.strftime("%d/%m/%Y")
+    else:
+        primeira_str = "Sem registros"
+        ultima_str = "Sem registros"
+        dias_corridos_periodo = 0
+        hiato_dias_sem_estudo = 0
+        dias_com_estudo = 0
+        dias_sem_estudo = 0
+        taxa_constancia_heatmap = 0.0
+        media_horas_dia_estudo = 0.0
+        media_horas_dia_corrido = 0.0
+
+    if taxa_constancia_heatmap < 30.0:
+        diagnostico_constancia = "Alerta Vermelho: padrão de 'estudo por explosão' com grandes hiatos de inatividade. O aluno estuda muitas horas em dias isolados, mas fica vários dias seguidos sem tocar no material, o que destrói a retenção na reta final."
+    elif taxa_constancia_heatmap < 60.0:
+        diagnostico_constancia = "Atenção: constância intermediária com oscilações semanais. Há semanas com bom ritmo e semanas com lapsos."
+    else:
+        diagnostico_constancia = "Excelente constância: frequência diária consolidada no Heatmap, condizente com a intensidade exigida para aprovação."
 
     disc_map: Dict[str, Dict[str, Any]] = {}
     for s in sessoes:
@@ -109,10 +181,6 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
     gargalos = [d for d in disciplinas_analise if d["questoes"] > 0 and d["taxa_acerto"] < 70.0]
     sem_questoes = [d for d in disciplinas_analise if d["questoes"] == 0]
 
-    ciclo = db.query(CicloEstudos).filter(CicloEstudos.ativo == True).first()
-    ciclo_nome = ciclo.nome if ciclo else "Ciclo de Estudos"
-    voltas_ciclo = ciclo.voltas_completas if ciclo else 0
-
     nota_corte = config.nota_corte or 78.5
     diff_corte = round(taxa_global - nota_corte, 1)
 
@@ -137,6 +205,33 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
         "total_erros": total_erros,
         "ciclo_nome": ciclo_nome,
         "voltas_ciclo": voltas_ciclo,
+        "carga_horaria_semanal": carga_horaria_semanal,
+        "total_topicos_edital": total_topicos_edital,
+        "topicos_cobertos_estimados": topicos_cobertos_estimados,
+        "perc_edital_coberto": perc_edital_coberto,
+        "topicos_restantes": topicos_restantes,
+        "horas_para_zerar_edital": horas_para_zerar_edital,
+        "horas_dia_necessarias_40d": horas_dia_necessarias_40d,
+        "dias_para_zerar_na_meta_semanal": dias_para_zerar_na_meta_semanal,
+        "topicos_cobertos_proj_ate_prova": topicos_cobertos_proj_ate_prova,
+        "perc_edital_proj_ate_prova": perc_edital_proj_ate_prova,
+        "cadencia_questoes_hora": cadencia_questoes_hora,
+        "horas_estudo_proj_ate_prova": horas_estudo_proj_ate_prova,
+        "questoes_projetadas_adicionais": questoes_projetadas_adicionais,
+        "total_questoes_proj_dia_prova": total_questoes_proj_dia_prova,
+        "benchmark_questoes_recomendado": benchmark_questoes_recomendado,
+        "benchmark_taxa_acerto_ideal": benchmark_taxa_acerto_ideal,
+        "benchmark_cadencia_ideal": benchmark_cadencia_ideal,
+        "primeira_data_estudo": primeira_str,
+        "ultima_data_estudo": ultima_str,
+        "dias_corridos_periodo": dias_corridos_periodo,
+        "dias_com_estudo": dias_com_estudo,
+        "dias_sem_estudo": dias_sem_estudo,
+        "taxa_constancia_heatmap": taxa_constancia_heatmap,
+        "hiato_dias_sem_estudo": hiato_dias_sem_estudo,
+        "media_horas_dia_estudo": media_horas_dia_estudo,
+        "media_horas_dia_corrido": media_horas_dia_corrido,
+        "diagnostico_constancia": diagnostico_constancia,
         "disciplinas": disciplinas_analise,
         "fortalezas": fortalezas,
         "gargalos": gargalos,
@@ -145,36 +240,61 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
 
 async def tentar_gerar_com_gemini(dados: Dict[str, Any], api_key: str) -> Optional[Dict[str, Any]]:
     prompt = f"""Você é o Coach de Estudos e Mentor Estratégico de Elite em Concursos Públicos do app Orbis.
-Analise com rigor técnico, olhar clínico, profundidade e linguagem viva, dinâmica e altamente visual os dados reais do aluno abaixo.
-IMPORTANTE: NUNCA USE RESPOSTAS GENÉRICAS OU CLICHÊS DE MODELO. Traga uma análise inédita e perspicaz, avaliando o comportamento específico da banca examinadora ({dados['banca']}), o tempo restante ({dados['dias_restantes']} dias), os pontos cegos e uma prescrição tática original.
+Analise com extremo rigor analítico, olhar clínico de coach de alta performance, profundidade matemática e linguagem viva, dinâmica e visual os dados reais e completos do aluno abaixo.
+
+IMPORTANTE: NUNCA USE RESPOSTAS GENÉRICAS OU CLICHÊS DE MODELO. Traga uma análise inédita e perspicaz, avaliando o comportamento específico da banca examinadora ({dados['banca']}), o tempo restante ({dados['dias_restantes']} dias), a viabilidade matemática de zerar o edital, a cadência e projeção de questões vs o patamar ideal de aprovação, e a leitura cirúrgica da constância no Heatmap.
 
 ESTILO VISUAL & ELEMENTOS GRÁFICOS OBRIGATÓRIOS:
-- Use emojis expressivos (🎯, 📊, 🚨, ⏳, 💡, 🛡️, 📈, ⚖️, 🔍, ⚡, 🔥) no início de blocos e para enfatizar mensagens, deixando o texto convidativo e dinâmico.
-- Use formatação Markdown (**negrito**) para destacar métricas críticas, percentuais, nomes de disciplinas e termos-chave.
+- Use emojis expressivos (🎯, 📊, 🚨, ⏳, 📅, 💡, 🛡️, 📈, ⚖️, 🔍, ⚡, 🔥) no início de blocos e para enfatizar mensagens, deixando o texto convidativo e dinâmico.
+- Use formatação Markdown (**negrito**) para destacar métricas críticas, percentuais, nomes de disciplinas, números de dias e termos-chave.
 - Deixe o texto claro, escaneável e visualmente estimulante, sem parágrafos maçantes.
 
 DADOS REAIS E COMPLETOS DO ALUNO:
 - Concurso Alvo: {dados['concurso']}
 - Cargo Alvo: {dados['cargo']} ({dados['especialidade']})
 - Banca Examinadora: {dados['banca']} (Critério: {dados['estilo_banca']})
-- Dias Restantes para a Prova: {dados['dias_restantes']} dias (Zona Atual: {dados['zona_tag']} - {dados['zona_fase']})
+- Dias Restantes para a Prova: {dados['dias_restantes']} dias (Zona: {dados['zona_tag']} - {dados['zona_fase']})
 - Nota de Corte Projetada: {dados['nota_corte']}%
-- Total Horas Estudadas: {dados['total_horas']}h acumuladas em {dados['total_dias_estudados']} dias estudados ({dados['total_sessoes']} sessões cumpridas)
-- Total de Questões Resolvidas: {dados['total_questoes']} ({dados['total_acertos']} acertos, {dados['total_erros']} erros)
-- Taxa Geral de Aproveitamento: {dados['taxa_global']}% (Diferença para a nota de corte: {dados['diff_corte']:+0.1f} p.p.)
-- Giros Completos no Ciclo: {dados['voltas_ciclo']}
+- Rendimento Global Atual: {dados['taxa_global']}% (Diferença para o corte: {dados['diff_corte']:+0.1f} p.p.)
 
-DESEMPENHO DETALHADO POR DISCIPLINA (Horas, Questões e % de Acerto):
+1. MÉTRICAS DO EDITAL & TÓPICOS (PREMISSA: 1 HORA = 1 TÓPICO):
+- Total de Tópicos no Edital: {dados['total_topicos_edital']} tópicos
+- Horas Estudadas Acumuladas: {dados['total_horas']}h (~{dados['topicos_cobertos_estimados']} tópicos cobertos, equivalente a {dados['perc_edital_coberto']}% do edital)
+- Tópicos Restantes para Zerar o Edital: {dados['topicos_restantes']} tópicos (= {dados['horas_para_zerar_edital']}h necessárias)
+- Ritmo Diário Necessário para Zerar 100% nos {dados['dias_restantes']} dias: {dados['horas_dia_necessarias_40d']}h líquidas por dia (ininterruptas)
+- Meta Semanal Declarada no Ciclo: {dados['carga_horaria_semanal']}h/semana (~{round(dados['carga_horaria_semanal']/7, 1)}h/dia)
+- Projeção no Ritmo Declarado até a Prova: cobrirá mais ~{round((dados['carga_horaria_semanal']/7)*dados['dias_restantes'])} tópicos, totalizando ~{dados['topicos_cobertos_proj_ate_prova']} de {dados['total_topicos_edital']} tópicos (~{dados['perc_edital_proj_ate_prova']}% do edital)
+- Dias Necessários para Zerar no Ritmo Declarado: {dados['dias_para_zerar_na_meta_semanal']} dias (muito superior aos {dados['dias_restantes']} dias restantes!)
+
+2. MÉTRICAS DE QUESTÕES & CADÊNCIA:
+- Total de Questões Resolvidas: {dados['total_questoes']} itens ({dados['total_acertos']} acertos, {dados['total_erros']} erros)
+- Cadência Atual de Treino: {dados['cadencia_questoes_hora']} questões resolvidas por hora de estudo
+- Projeção de Questões até a Prova (mantendo {dados['cadencia_questoes_hora']} q/h e carga projetada de {dados['horas_estudo_proj_ate_prova']}h): +{dados['questoes_projetadas_adicionais']} questões -> Total Acumulado: {dados['total_questoes_proj_dia_prova']} questões
+- Benchmark de Elite para {dados['banca']} no {dados['concurso']}:
+  * Volume total recomendado: {dados['benchmark_questoes_recomendado']}
+  * Taxa de acerto ideal recomendada: {dados['benchmark_taxa_acerto_ideal']}
+  * Cadência de treino recomendada: {dados['benchmark_cadencia_ideal']}
+
+3. CONSTÂNCIA DE ESTUDO & ANÁLISE DO HEATMAP:
+- Período Analisado: {dados['dias_corridos_periodo']} dias corridos (de {dados['primeira_data_estudo']} a {dados['ultima_data_estudo']})
+- Dias Ativos no Heatmap com Estudo: {dados['dias_com_estudo']} dias estudados vs {dados['dias_sem_estudo']} dias vazios
+- Taxa de Constância no Heatmap: {dados['taxa_constancia_heatmap']}% de presença
+- Média por Dia de Estudo Efetivo: {dados['media_horas_dia_estudo']}h/dia estudado
+- Média por Dia Corrido (Diluída): {dados['media_horas_dia_corrido']}h/dia
+- Hiato Atual sem Registrar Sessão: {dados['hiato_dias_sem_estudo']} dias
+- Diagnóstico do Padrão: {dados['diagnostico_constancia']}
+
+4. DESEMPENHO DETALHADO POR DISCIPLINA (Horas, Questões e % de Acerto):
 {json.dumps(dados['disciplinas'], indent=2, ensure_ascii=False)}
 
 RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
 {{
-  "resumo_executivo": "🎯 Parágrafo executivo afiado, direto e motivador (3 a 4 linhas). Comece com um emoji impactante (ex: 🎯 ou 🧭). Destaque em **negrito** métricas-chave, confronto da taxa ({dados['taxa_global']}%) com o corte ({dados['nota_corte']}%), a banca ({dados['banca']}) e a batalha tática a travar nos {dados['dias_restantes']} dias restantes.",
+  "resumo_executivo": "🎯 Parágrafo executivo afiado, direto, motivador e estratégico (3 a 4 linhas). Comece com emoji. Destaque em **negrito** métricas-chave, confronto da taxa ({dados['taxa_global']}%) com o corte ({dados['nota_corte']}%), dias restantes ({dados['dias_restantes']} dias), e a grande encruzilhada tática entre cobertura de edital, constância e a banca {dados['banca']}.",
   "pontos_analise": [
-    "📊 **Competitividade & Margem:** Análise da margem de segurança frente à nota de corte e banca, citando disciplinas de ponta em **negrito** e números reais.",
-    "🚨 **Ponto Cego & Alerta da Banca:** Diagnóstico cirúrgico dos maiores gargalos ou matérias perigosas, alertando sobre armadilhas da {dados['banca']} com emojis de atenção.",
-    "⏳ **Ritmo & Gestão do Tempo ({dados['dias_restantes']} dias):** Projeção prática de horas líquidas e volume de questões até a prova, orientando a energia do candidato.",
-    "💡 **Prescrição Tática Inédita:** Plano de ação direto (técnicas ativas, cadernos de erros, Anki, baterias focadas) para a semana."
+    "📊 **Competitividade & Projeção de Questões:** Confrontar a taxa atual ({dados['taxa_global']}%) com o corte ({dados['nota_corte']}%), analisar as questões feitas no tempo estudado ({dados['cadencia_questoes_hora']} q/h) e a projeção de {dados['total_questoes_proj_dia_prova']} itens até a prova. Comparar com o patamar ideal de acertos ({dados['benchmark_taxa_acerto_ideal']}) e o total de questões recomendado ({dados['benchmark_questoes_recomendado']}), indicando claramente se precisa acelerar a cadência prática.",
+    "🚨 **Ponto Cego & Análise de Gargalos:** Diagnóstico cirúrgico dos maiores gargalos ou matérias perigosas (ex: disciplinas zeradas ou com aproveitamento crítico), alertando sobre armadilhas da {dados['banca']} e a regra de 1 errada anula 1 certa com emojis de atenção.",
+    "⏳ **Ritmo, Tópicos & Fechamento do Edital:** Analisar o volume de horas ({dados['total_horas']}h) na premissa de 1 hora por tópico do edital ({dados['total_topicos_edital']} tópicos totais). Informar quantos tópicos restam ({dados['topicos_restantes']}), quanto tempo daria para zerar o edital nos {dados['dias_restantes']} dias restantes (necessárias {dados['horas_dia_necessarias_40d']}h/dia vs os {dados['dias_para_zerar_na_meta_semanal']} dias necessários no ritmo do ciclo), orientando se é viável zerar tudo ou se deve aplicar a priorização 80/20 de Pareto.",
+    "📅 **Constância no Heatmap & Prescrição Tática:** Analisar a regularidade no Heatmap ({dados['dias_com_estudo']} dias ativos em {dados['dias_corridos_periodo']} dias corridos, taxa de {dados['taxa_constancia_heatmap']}% e hiato de {dados['hiato_dias_sem_estudo']} dias). Dizer categoricamente se essa constância está condizente com o esforço exigido para {dados['concurso']} e prescrever a rotina semanal imediata (distribuição diária de horas, baterias comentadas e controle de consistência)."
   ]
 }}"""
 
@@ -221,7 +341,20 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
                     "pontos_analise": parsed.get("pontos_analise", []),
                     "modelo_origem": f"Google Gemini ({modelo})",
                     "timestamp": agora.strftime("%H:%M:%S"),
-                    "data_atualizacao": agora.isoformat()
+                    "data_atualizacao": agora.isoformat(),
+                    "metricas_rapidas": {
+                        "edital_coberto_perc": dados.get("perc_edital_coberto", 0),
+                        "topicos_cobertos": int(dados.get("topicos_cobertos_estimados", 0)),
+                        "total_topicos": dados.get("total_topicos_edital", 0),
+                        "cadencia_questoes_hora": dados.get("cadencia_questoes_hora", 0),
+                        "questoes_proj_prova": dados.get("total_questoes_proj_dia_prova", 0),
+                        "constancia_heatmap_perc": dados.get("taxa_constancia_heatmap", 0),
+                        "dias_estudados": dados.get("dias_com_estudo", 0),
+                        "dias_corridos": dados.get("dias_corridos_periodo", 0),
+                        "taxa_global": dados.get("taxa_global", 0),
+                        "nota_corte": dados.get("nota_corte", 0),
+                        "diff_corte": dados.get("diff_corte", 0)
+                    }
                 }
             except Exception as mod_err:
                 print(f"Modelo {modelo} indisponível ou em alta demanda: {mod_err}. Tentando próximo...")
@@ -235,14 +368,30 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
     concurso = dados["concurso"]
     banca = dados["banca"]
     dias = dados["dias_restantes"]
-    total_sessoes = dados.get("total_sessoes", 0)
     total_horas = dados["total_horas"]
-    total_dias = dados["total_dias_estudados"]
     total_questoes = dados["total_questoes"]
     taxa = dados["taxa_global"]
     corte = dados["nota_corte"]
     diff = dados["diff_corte"]
     zona = dados["zona_tag"]
+
+    total_topicos = dados.get("total_topicos_edital", 369)
+    topicos_cobertos = dados.get("topicos_cobertos_estimados", 0)
+    topicos_restantes = dados.get("topicos_restantes", 0)
+    perc_edital = dados.get("perc_edital_coberto", 0)
+    horas_dia_necessarias = dados.get("horas_dia_necessarias_40d", 0)
+    dias_para_zerar = dados.get("dias_para_zerar_na_meta_semanal", 0)
+    carga_semanal = dados.get("carga_horaria_semanal", 20.0)
+
+    cadencia = dados.get("cadencia_questoes_hora", 0)
+    questoes_proj = dados.get("total_questoes_proj_dia_prova", 0)
+    benchmark_questoes = dados.get("benchmark_questoes_recomendado", "2.500 a 4.000 questões Cebraspe")
+    benchmark_taxa = dados.get("benchmark_taxa_acerto_ideal", "82% a 88% de acerto bruto")
+
+    dias_com_estudo = dados.get("dias_com_estudo", 0)
+    dias_corridos = dados.get("dias_corridos_periodo", 0)
+    constancia_heatmap = dados.get("taxa_constancia_heatmap", 0)
+    hiato_dias = dados.get("hiato_dias_sem_estudo", 0)
 
     diff_str = f"+{diff} p.p. acima do corte" if diff >= 0 else f"{abs(diff)} p.p. abaixo do corte"
     fortalezas_nomes = [f"{d['nome']} ({d['taxa_acerto']}%)" for d in dados["fortalezas"][:2]]
@@ -260,37 +409,39 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
     if arq == "estrategista_corte":
         resumo_executivo = (
             f"🎯 **Contagem Regressiva de {dias} dias** para o **{concurso}** ({banca}). Sua margem atual está em **{taxa}%** ({diff_str} projetado de {corte}%). "
-            f"Você consolidou **{total_horas}h** de estudo e **{total_questoes} questões** resolvidas. A base está firme em {', '.join(fortalezas_nomes) if fortalezas_nomes else 'matérias-chave'}, "
-            f"mas para transformar essa margem em vaga garantida, é imperativo blindar a pontuação líquida frente a {', '.join(gargalos_nomes) if gargalos_nomes else 'erros evitáveis'}."
+            f"Você cobriu **{int(topicos_cobertos)} de {total_topicos} tópicos** ({perc_edital}% do edital) com **{total_questoes} questões resolvidas**. "
+            f"Para transformar essa margem em vaga garantida, é imperativo blindar a pontuação líquida frente a {', '.join(gargalos_nomes) if gargalos_nomes else 'erros evitáveis'} e regularizar a constância no Heatmap."
         )
     elif arq == "tatico_reta_final":
         resumo_executivo = (
-            f"⚡ **Fase Decisiva ({dias} dias)**: momento crítico para o **{concurso}**. Com **{total_sessoes} sessões** cumpridas e taxa global de **{taxa}%**, "
-            f"seu índice de competitividade é real. Contudo, no estilo **{banca}**, a estabilidade emocional e o controle de erros em "
-            f"{', '.join(gargalos_nomes) if gargalos_nomes else 'matérias com gaps'} definirão a aprovação. Hora de trocar estudo passivo por pressão tática."
+            f"⚡ **Fase Decisiva ({dias} dias)**: momento crítico para o **{concurso}**. Com aproveitamento de **{taxa}%** e cadência de **{cadencia} q/h**, "
+            f"seu índice de competitividade é real. Contudo, no estilo **{banca}**, a estabilidade emocional, o controle de erros em "
+            f"{', '.join(gargalos_nomes) if gargalos_nomes else 'matérias com gaps'} e o fechamento estratégico dos {topicos_restantes} tópicos restantes definirão a aprovação."
         )
     elif arq == "auditor_gargalos":
         resumo_executivo = (
             f"🔍 **Auditoria de Desempenho ({concurso} - {banca})**: Restam exatamente **{dias} dias**. Você acumula **{total_horas}h** e média de **{taxa}%** de aproveitamento. "
             f"Embora {', '.join(fortalezas_nomes) if fortalezas_nomes else 'disciplinas fortes'} puxem a nota para cima, "
-            f"o calcanhar de Aquiles em {', '.join(gargalos_nomes) if gargalos_nomes else 'disciplinas zeradas'} pode custar pontos preciosos de corte."
+            f"o calcanhar de Aquiles em {', '.join(gargalos_nomes) if gargalos_nomes else 'disciplinas zeradas'} e a cobertura de apenas {perc_edital}% do edital exigem recalibragem imediata."
         )
     else:
         resumo_executivo = (
-            f"🧭 **Radar da Banca ({banca})**: A **{dias} dias** da batalha no **{concurso}**, você acumula **{total_horas}h** estudadas em {total_dias} dias ativos e rendimento geral de **{taxa}%**. "
-            f"O ritmo é promissor, mas a banca {banca} pune severamente oscilações. A prioridade agora não é quantidade de horas, "
-            f"mas precisão cirúrgica de acertos e proteção de pontos nos tópicos mais críticos."
+            f"🧭 **Radar da Banca ({banca})**: A **{dias} dias** da batalha no **{concurso}**, você acumula **{total_horas}h** estudadas ({perc_edital}% do edital coberto) e rendimento geral de **{taxa}%**. "
+            f"O ritmo é promissor, mas a banca {banca} pune severamente oscilações. A prioridade agora não é tentar ler tudo de forma passiva, "
+            f"mas precisão cirúrgica de acertos nos tópicos mais recorrentes da prova."
         )
 
     pontos = []
 
-    # Ponto 1: Competitividade
-    ponto1_variacoes = [
-        f"📊 **Competitividade & Margem:** Com aproveitamento de **{taxa}%** ({diff_str}), você opera em zona de competitividade direta. {dados['fortalezas'][0]['nome'] + ' lidera com ' + str(dados['fortalezas'][0]['taxa_acerto']) + '% em ' + str(dados['fortalezas'][0]['questoes']) + ' questões' if dados['fortalezas'] else 'Mantenha ritmo para romper a barreira do corte.'}",
-        f"📊 **Linha de Corte Alvo ({corte}%):** Seu rendimento global de **{taxa}%** está {diff_str}. {dados['fortalezas'][0]['nome'] if dados['fortalezas'] else 'O topo da esteira'} sustenta o índice, mas é preciso replicar esse padrão nas matérias secundárias.",
-        f"📊 **Eficiência por Questão:** Das **{total_questoes} questões** registradas, seu índice de acertos é de **{taxa}%**. A consistência nas disciplinas centrais garante base sólida para a nota de corte (**{corte}%**)."
-    ]
-    pontos.append(random.choice(ponto1_variacoes))
+    # Ponto 1: Competitividade & Projeção de Questões
+    ponto1 = (
+        f"📊 **Competitividade & Projeção de Questões:** Com aproveitamento global de **{taxa}%** ({diff_str}), você opera com folga sobre a nota de corte ({corte}%). "
+        f"Nas **{total_horas}h estudadas**, você resolveu **{total_questoes} itens** (cadência de **{cadencia} q/h**). "
+        f"Mantendo esse ritmo, a projeção é alcançar **~{questoes_proj} questões** até a prova. "
+        f"Atenção ao perfil da banca **{banca}**: candidatos competitivos de elite acumulam **{benchmark_questoes}** com taxa ideal de **{benchmark_taxa}**. "
+        f"Para se aproximar desse patamar, é fundamental acelerar a resolução prática para 12 a 15 q/h através de estudo reverso."
+    )
+    pontos.append(ponto1)
 
     # Ponto 2: Gargalos
     if dados["gargalos"]:
@@ -307,47 +458,44 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
     else:
         pontos.append(f"🛡️ **Mapeamento de Lacunas:** Mantenha caderno de erros ativo em todas as disciplinas limítrofes para estancar perda de pontos.")
 
-    # Ponto 3: Projeção de Volume
-    if dias > 0:
-        media_bruta = round(total_horas / total_dias, 1) if total_dias > 0 else 2.5
-        ritmo_proj = min(max(media_bruta, 2.0), 4.5)
-        horas_semana_est = round(ritmo_proj * 6, 1)
-        questoes_por_hora = (total_questoes / total_horas) if total_horas > 0 else 8.0
-        questoes_proj = int(questoes_por_hora * ritmo_proj * dias)
-        ponto3_variacoes = [
-            f"⏳ **Volume & Cadência na Fase '{zona}':** Restam **{dias} dias**. Em ritmo recomendado de **{ritmo_proj}h/dia** (~{horas_semana_est}h/semana), a projeção é resolver cerca de **{questoes_proj} questões** da banca {banca} até o dia da prova.",
-            f"⏳ **Projeção Tática até o Dia D:** Com **{dias} dias restantes** e mantendo {ritmo_proj}h diárias, você adicionará cerca de **{questoes_proj} itens** ao seu repertório prático da banca.",
-            f"⚡ **Gestão de Energia & Tempo:** Na fase '{zona}', **{ritmo_proj}h líquidas diárias** garantem cobertura de mais **{questoes_proj} itens** da {banca} sem gerar estafa mental antes da prova."
-        ]
-        pontos.append(random.choice(ponto3_variacoes))
-    else:
-        pontos.append("🏁 **Fase Concluída:** Registre seus acertos na aba Resultados & Raio-X.")
+    # Ponto 3: Ritmo, Tópicos & Fechamento do Edital
+    ponto3 = (
+        f"⏳ **Ritmo, Tópicos & Fechamento do Edital:** Na premissa de 1 hora por tópico, suas **{total_horas}h estudadas** cobriram cerca de **{int(topicos_cobertos)} dos {total_topicos} tópicos** ({perc_edital}% do edital), "
+        f"restando **{topicos_restantes} tópicos** a serem vistos. Para zerar 100% do edital nos {dias} dias restantes, seriam necessárias **{horas_dia_necessarias}h líquidas diárias** sem folga — meta impraticável no ritmo semanal de {carga_semanal}h/sem (que levaria ~{dias_para_zerar} dias). "
+        f"A diretriz estratégica é abandonar a cobertura linear e aplicar a **Regra 80/20 de Pareto**: focar nos tópicos de maior peso histórico da banca {banca}."
+    )
+    pontos.append(ponto3)
 
-    # Ponto 4: Prescrição do Coach
-    if dados["gargalos"]:
-        foco = dados["gargalos"][0]["nome"]
-        ponto4_variacoes = [
-            f"💡 **Prescrição Inédita do Coach:** Aloque os primeiros 2 blocos da semana para bateria comentada focada em **{foco}**. Não avance sem entender o motivo de cada gabarito da {banca}.",
-            f"💡 **Ajuste de Rota Semanal:** Isole os 3 principais subtemas de **{foco}** e crie 20 cards no Anki com conceitos-chave para revisão diária acelerada.",
-            f"🎯 **Direcionamento Estratégico:** Reduza temporariamente o tempo das disciplinas já dominadas e concentre **60% da carga da semana** em exercícios práticos de **{foco}**."
-        ]
-        pontos.append(random.choice(ponto4_variacoes))
-    else:
-        ponto4_variacoes = [
-            f"💡 **Prescrição Inédita do Coach:** Implemente simulados parciais cronometrados de 40 questões em blocos mistos para treinar gestão de tempo e resistência mental sob pressão.",
-            f"🎯 **Direcionamento Estratégico:** Intensifique revisões ativas no Anki no primeiro bloco do dia e dedique os demais exclusivamente a baterias inéditas da banca {banca}."
-        ]
-        pontos.append(random.choice(ponto4_variacoes))
+    # Ponto 4: Constância no Heatmap & Prescrição Tática
+    ponto4 = (
+        f"📅 **Constância no Heatmap & Prescrição Tática:** A leitura do Heatmap acusa **{dias_com_estudo} dias com estudo em {dias_corridos} dias corridos** ({constancia_heatmap}% de constância) e um hiato recente de **{hiato_dias} dias sem estudo registrado**. "
+        f"Esse padrão de 'estudo por explosão' (cramming) não é condizente com o esforço e a retenção exigidos para o {concurso}. "
+        f"Prescrição imediata: dilua a carga em **3h a 4h líquidas diárias** com 6 dias de esteira ativa por semana, priorizando blocos de questões comentadas e revisão diária no Anki."
+    )
+    pontos.append(ponto4)
 
     agora = datetime.now()
     return {
         "titulo": "INSIGHTS DE IA",
-        "subtitulo": "Leitura dos indicadores a cada hora ou ao atualizar",
+        "subtitulo": "Leitura dos indicadores em tempo real",
         "resumo_executivo": resumo_executivo,
         "pontos_analise": pontos,
         "modelo_origem": "Coach IA Orbis (Heurístico Dinâmico)",
-        "timestamp": agora.strftime("%H:%M"),
-        "data_atualizacao": agora.isoformat()
+        "timestamp": agora.strftime("%H:%M:%S"),
+        "data_atualizacao": agora.isoformat(),
+        "metricas_rapidas": {
+            "edital_coberto_perc": dados.get("perc_edital_coberto", 0),
+            "topicos_cobertos": int(dados.get("topicos_cobertos_estimados", 0)),
+            "total_topicos": dados.get("total_topicos_edital", 0),
+            "cadencia_questoes_hora": dados.get("cadencia_questoes_hora", 0),
+            "questoes_proj_prova": dados.get("total_questoes_proj_dia_prova", 0),
+            "constancia_heatmap_perc": dados.get("taxa_constancia_heatmap", 0),
+            "dias_estudados": dados.get("dias_com_estudo", 0),
+            "dias_corridos": dados.get("dias_corridos_periodo", 0),
+            "taxa_global": dados.get("taxa_global", 0),
+            "nota_corte": dados.get("nota_corte", 0),
+            "diff_corte": dados.get("diff_corte", 0)
+        }
     }
 
 @router.get("/status-chave")
@@ -421,15 +569,12 @@ async def obter_insights_ia(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(config)
 
-    agora = datetime.now()
-    if config.ultimo_insight_ia and config.data_insight_ia:
-        delta = (agora - config.data_insight_ia).total_seconds()
-        if delta < 30:
-            try:
-                dados_cache = json.loads(config.ultimo_insight_ia)
-                return dados_cache
-            except Exception:
-                pass
+    # Retorno instantâneo do último insight em cache (< 2ms) para nunca travar a aplicação
+    if config.ultimo_insight_ia:
+        try:
+            return json.loads(config.ultimo_insight_ia)
+        except Exception:
+            pass
 
     dados_estudo = calcular_dados_estudo(db)
     chave_ativa = obter_chave_gemini(config)
@@ -441,7 +586,7 @@ async def obter_insights_ia(db: Session = Depends(get_db)):
         insight = gerar_insight_heuristico(dados_estudo)
 
     config.ultimo_insight_ia = json.dumps(insight, ensure_ascii=False)
-    config.data_insight_ia = agora
+    config.data_insight_ia = datetime.now()
     db.commit()
 
     return insight

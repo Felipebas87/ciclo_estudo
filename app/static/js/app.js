@@ -482,7 +482,9 @@ const app = createApp({
         const abrirModalInsightsIA = async () => {
             modalInsightsIAAberto.value = true;
             verificarStatusChaveIA();
-            await carregarInsightsIA();
+            if (!insightsIA.value) {
+                await carregarInsightsIA();
+            }
         };
 
         const formatarTextoIA = (texto) => {
@@ -1361,8 +1363,6 @@ const app = createApp({
             carregandoDados.value = true;
             try {
                 await carregarDadosProvaServidor();
-                await carregarInsightsIA();
-                await verificarStatusChaveIA();
 
                 const rEd = await fetch('/api/editais');
                 if (rEd.ok) {
@@ -1398,6 +1398,10 @@ const app = createApp({
                     renderDonut();
                     scrollToCurrentBlock();
                 }
+
+                // Carrega status da IA e insights em segundo plano sem travar a inicialização do app
+                verificarStatusChaveIA().catch(() => {});
+                carregarInsightsIA().catch(() => {});
             } catch (e) {
                 console.error('Erro ao inicializar dados:', e);
                 mostrarAlerta('Não foi possível sincronizar todos os dados com o servidor.', 'erro');
