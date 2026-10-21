@@ -6,9 +6,18 @@ class TopicoBase(BaseModel):
     titulo: str
     ordem: int = 0
     concluido: bool = False
+    mais_cobrado: bool = False
+    prioridade: Optional[int] = None
 
 class TopicoCreate(TopicoBase):
     pass
+
+class TopicoUpdate(BaseModel):
+    titulo: Optional[str] = None
+    ordem: Optional[int] = None
+    concluido: Optional[bool] = None
+    mais_cobrado: Optional[bool] = None
+    prioridade: Optional[int] = None
 
 class TopicoResponse(TopicoBase):
     id: int

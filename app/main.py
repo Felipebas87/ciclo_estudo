@@ -120,6 +120,18 @@ def auto_upgrade_db():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN gemini_api_key VARCHAR(255);"))
                 print("Coluna 'gemini_api_key' adicionada em configuracao_painel_prova.")
+
+        # 6. Colunas 'mais_cobrado' e 'prioridade' na tabela 'topicos'
+        if "topicos" in existing_tables:
+            col_names = [col["name"] for col in inspector.get_columns("topicos")]
+            if "mais_cobrado" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topicos ADD COLUMN mais_cobrado BOOLEAN DEFAULT FALSE;"))
+                print("Coluna 'mais_cobrado' adicionada na tabela topicos.")
+            if "prioridade" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topicos ADD COLUMN prioridade INTEGER;"))
+                print("Coluna 'prioridade' adicionada na tabela topicos.")
     except Exception as e:
         print(f"Aviso no auto_upgrade_db: {e}")
 

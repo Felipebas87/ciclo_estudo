@@ -149,6 +149,8 @@ const app = createApp({
         const modalResumoAberto = ref(false);
         const resumoSessaoAtual = ref(null);
         const verticalizadoAberto = ref({});
+        const filtroVerticalizado = ref({}); // { [discId]: 'todos' | 'mais_cobrados' | 'prioritarios' | 'pendentes' }
+        const ordenacaoVerticalizado = ref({}); // { [discId]: 'edital' | 'trilha' }
 
         const formSessao = ref({
             id: null,
@@ -706,13 +708,14 @@ const app = createApp({
         const topicosDaDisciplina = computed(() => {
             const discId = formSessao.value?.disciplina_id;
             if (!discId) return [];
+            const numId = Number(discId);
 
-            let disc = todasDisciplinas.value ? todasDisciplinas.value.find(d => d.id === discId) : null;
+            let disc = todasDisciplinas.value ? todasDisciplinas.value.find(d => Number(d.id) === numId) : null;
 
             if (!disc && editais.value) {
                 for (const ed of editais.value) {
                     if (ed.disciplinas) {
-                        const encontrada = ed.disciplinas.find(d => d.id === discId);
+                        const encontrada = ed.disciplinas.find(d => Number(d.id) === numId);
                         if (encontrada) {
                             disc = encontrada;
                             break;
@@ -721,12 +724,34 @@ const app = createApp({
                 }
             }
 
-            if (!disc && blocoAtual.value && blocoAtual.value.disciplina_id === discId) {
+            if ((!disc || !disc.topicos || disc.topicos.length === 0) && editalVerticalizadoData.value) {
+                const todas = [
+                    ...(editalVerticalizadoData.value.BASICOS || []),
+                    ...(editalVerticalizadoData.value.ESPECIFICOS || [])
+                ];
+                const found = todas.find(d => Number(d.id) === numId);
+                if (found && found.topicos) disc = found;
+            }
+
+            if (!disc && blocoAtual.value && Number(blocoAtual.value.disciplina_id) === numId) {
                 disc = blocoAtual.value.disciplina;
             }
 
             if (disc && disc.topicos && Array.isArray(disc.topicos)) {
-                return disc.topicos;
+                const lista = [...disc.topicos];
+                return lista.sort((a, b) => {
+                    const getPeso = (t) => {
+                        if (t.prioridade === 1) return 1;
+                        if (t.prioridade === 2) return 2;
+                        if (t.prioridade === 3) return 3;
+                        if (t.mais_cobrado) return 4;
+                        return 5;
+                    };
+                    const pa = getPeso(a);
+                    const pb = getPeso(b);
+                    if (pa !== pb) return pa - pb;
+                    return (a.ordem || 0) - (b.ordem || 0);
+                });
             }
             return [];
         });
@@ -921,10 +946,18 @@ const app = createApp({
         const formatarTituloTopico = (t) => {
             if (!t) return '';
             const tit = (t.titulo || '').trim();
-            if (/^\d+(\.\d+)*\.\s+/.test(tit)) return tit;
-            const m = tit.match(/^(\d+(\.\d+)*)\s+(.*)$/);
-            if (m) return `${m[1]}. ${m[3]}`;
-            return tit;
+            let base = tit;
+            if (!/^\d+(\.\d+)*\.\s+/.test(tit)) {
+                const m = tit.match(/^(\d+(\.\d+)*)\s+(.*)$/);
+                if (m) base = `${m[1]}. ${m[3]}`;
+            }
+            const badges = [];
+            if (t.prioridade === 1) badges.push('⚡ P1');
+            else if (t.prioridade === 2) badges.push('⭐ P2');
+            else if (t.prioridade === 3) badges.push('🔹 P3');
+            if (t.mais_cobrado) badges.push('🔥');
+
+            return badges.length > 0 ? `[${badges.join(' ')}] ${base}` : base;
         };
 
         const formatarPercentualBR = (val) => {
@@ -967,6 +1000,278 @@ const app = createApp({
 
         const toggleVerticalizado = (id) => {
             verticalizadoAberto.value[id] = !verticalizadoAberto.value[id];
+        };
+
+        const getTopicosFiltradosEOrdenados = (disc) => {
+            if (!disc || !disc.topicos) return [];
+            let lista = [...disc.topicos];
+            
+            // Filtro
+            const f = filtroVerticalizado.value[disc.id] || 'todos';
+            if (f === 'mais_cobrados') {
+                lista = lista.filter(t => t.mais_cobrado);
+            } else if (f === 'prioritarios') {
+                lista = lista.filter(t => t.prioridade !== null && t.prioridade !== undefined);
+            } else if (f === 'p1') {
+                lista = lista.filter(t => t.prioridade === 1);
+            } else if (f === 'pendentes') {
+                lista = lista.filter(t => !t.visto && !t.concluido);
+            }
+
+            // Ordenação
+            const ord = ordenacaoVerticalizado.value[disc.id] || 'edital';
+            if (ord === 'trilha') {
+                lista.sort((a, b) => {
+                    const getPeso = (t) => {
+                        if (t.prioridade === 1) return 1;
+                        if (t.prioridade === 2) return 2;
+                        if (t.prioridade === 3) return 3;
+                        if (t.mais_cobrado) return 4;
+                        return 5;
+                    };
+                    const pa = getPeso(a);
+                    const pb = getPeso(b);
+                    if (pa !== pb) return pa - pb;
+                    // Se mesmo peso, não vistos vêm antes
+                    const va = (a.visto || a.concluido) ? 1 : 0;
+                    const vb = (b.visto || b.concluido) ? 1 : 0;
+                    if (va !== vb) return va - vb;
+                    return (a.ordem || 0) - (b.ordem || 0);
+                });
+            } else {
+                lista.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
+            }
+
+            return lista;
+        };
+
+        const setFiltroVerticalizado = (discId, tipo) => {
+            filtroVerticalizado.value[discId] = tipo;
+        };
+
+        const setOrdenacaoVerticalizado = (discId, modo) => {
+            ordenacaoVerticalizado.value[discId] = modo;
+        };
+
+        const toggleMaisCobrado = async (topico) => {
+            const novoValor = !topico.mais_cobrado;
+            topico.mais_cobrado = novoValor;
+
+            sincronizarTopicoEmEstado(topico.id, { mais_cobrado: novoValor });
+
+            try {
+                const res = await fetch(`/api/editais/topicos/${topico.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mais_cobrado: novoValor })
+                });
+                if (!res.ok) throw new Error('Falha ao salvar no banco');
+                mostrarAlerta(novoValor ? 'Tópico destacado como Mais Cobrado 🔥' : 'Destaque de Mais Cobrado removido', 'sucesso');
+            } catch (e) {
+                console.error(e);
+                topico.mais_cobrado = !novoValor;
+                sincronizarTopicoEmEstado(topico.id, { mais_cobrado: !novoValor });
+                mostrarAlerta('Erro ao salvar alteração no banco.', 'erro');
+            }
+        };
+
+        const alterarPrioridadeTopico = async (topico, valor) => {
+            const novaPrioridade = (valor === '' || valor === null || valor === undefined) ? null : parseInt(valor);
+            const prioridadeAnterior = topico.prioridade;
+            topico.prioridade = novaPrioridade;
+
+            sincronizarTopicoEmEstado(topico.id, { prioridade: novaPrioridade });
+
+            try {
+                const res = await fetch(`/api/editais/topicos/${topico.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prioridade: novaPrioridade })
+                });
+                if (!res.ok) throw new Error('Falha ao salvar no banco');
+                mostrarAlerta(novaPrioridade ? `Prioridade P${novaPrioridade} definida para o tópico!` : 'Prioridade removida.', 'sucesso');
+            } catch (e) {
+                console.error(e);
+                topico.prioridade = prioridadeAnterior;
+                sincronizarTopicoEmEstado(topico.id, { prioridade: prioridadeAnterior });
+                mostrarAlerta('Erro ao persistir prioridade no banco.', 'erro');
+            }
+        };
+
+        const toggleConcluidoTopico = async (topico) => {
+            const novoValor = !topico.concluido;
+            topico.concluido = novoValor;
+            if (novoValor) topico.visto = true;
+
+            sincronizarTopicoEmEstado(topico.id, { concluido: novoValor, visto: topico.visto });
+
+            try {
+                const res = await fetch(`/api/editais/topicos/${topico.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ concluido: novoValor })
+                });
+                if (!res.ok) throw new Error('Falha ao salvar');
+                mostrarAlerta(novoValor ? 'Tópico marcado como concluído! ✅' : 'Tópico marcado como pendente.', 'sucesso');
+            } catch (e) {
+                console.error(e);
+                topico.concluido = !novoValor;
+                mostrarAlerta('Erro ao persistir status.', 'erro');
+            }
+        };
+
+        const sincronizarTopicoEmEstado = (topicoId, updates) => {
+            const atualizarEmLista = (lista) => {
+                if (!lista) return;
+                const item = lista.find(t => t.id === topicoId);
+                if (item) Object.assign(item, updates);
+            };
+
+            if (todasDisciplinas.value) {
+                todasDisciplinas.value.forEach(d => atualizarEmLista(d.topicos));
+            }
+            if (editais.value) {
+                editais.value.forEach(ed => (ed.disciplinas || []).forEach(d => atualizarEmLista(d.topicos)));
+            }
+            if (editalVerticalizadoData.value) {
+                (editalVerticalizadoData.value.BASICOS || []).forEach(d => atualizarEmLista(d.topicos));
+                (editalVerticalizadoData.value.ESPECIFICOS || []).forEach(d => atualizarEmLista(d.topicos));
+            }
+        };
+
+        const getProximoTopicoTrilha = (discId) => {
+            if (!discId) return null;
+            const numId = Number(discId);
+            let topicos = [];
+            if (editalVerticalizadoData.value) {
+                const todosDiscs = [
+                    ...(editalVerticalizadoData.value.BASICOS || []),
+                    ...(editalVerticalizadoData.value.ESPECIFICOS || [])
+                ];
+                const d = todosDiscs.find(x => Number(x.id) === numId);
+                if (d && d.topicos && d.topicos.length > 0) {
+                    topicos = d.topicos;
+                }
+            }
+
+            if (!topicos || topicos.length === 0) {
+                const d = (todasDisciplinas.value || []).find(x => Number(x.id) === numId);
+                if (d && d.topicos) topicos = d.topicos;
+            }
+
+            if ((!topicos || topicos.length === 0) && editais.value) {
+                for (const ed of editais.value) {
+                    if (ed.disciplinas) {
+                        const d = ed.disciplinas.find(x => Number(x.id) === numId);
+                        if (d && d.topicos) {
+                            topicos = d.topicos;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (!topicos || topicos.length === 0) return null;
+
+            const pendentes = topicos.filter(t => !t.visto && !t.concluido);
+            const pool = pendentes.length > 0 ? pendentes : topicos;
+
+            const p1 = pool.find(t => t.prioridade === 1);
+            if (p1) return p1;
+            const p2 = pool.find(t => t.prioridade === 2);
+            if (p2) return p2;
+            const p3 = pool.find(t => t.prioridade === 3);
+            if (p3) return p3;
+            const mc = pool.find(t => t.mais_cobrado);
+            if (mc) return mc;
+
+            return pool[0] || null;
+        };
+
+        const proximoTopicoBlocoAtual = computed(() => {
+            if (!blocoAtual.value || !blocoAtual.value.disciplina_id) return null;
+            if (blocoAtual.value.disciplina && blocoAtual.value.disciplina.categoria === 'REVISAO_ANKI') return null;
+            return getProximoTopicoTrilha(blocoAtual.value.disciplina_id);
+        });
+
+        const iniciarEstudoDoTopico = (disc, topico) => {
+            let discId = null;
+            if (typeof disc === 'number' || (typeof disc === 'string' && /^\d+$/.test(disc))) {
+                discId = Number(disc);
+            } else if (disc && disc.id) {
+                discId = Number(disc.id);
+            } else if (disc && disc.disciplina_id) {
+                discId = Number(disc.disciplina_id);
+            } else if (topico && topico.disciplina_id) {
+                discId = Number(topico.disciplina_id);
+            } else if (blocoAtual.value && blocoAtual.value.disciplina_id) {
+                discId = Number(blocoAtual.value.disciplina_id);
+            } else {
+                discId = todasDisciplinas.value[0]?.id || '';
+            }
+
+            let topicoId = '';
+            if (topico && topico.id) {
+                topicoId = topico.id;
+            } else if (typeof topico === 'number' || (typeof topico === 'string' && /^\d+$/.test(topico))) {
+                topicoId = Number(topico);
+            } else {
+                const prox = getProximoTopicoTrilha(discId);
+                topicoId = prox ? prox.id : '';
+            }
+
+            const blocoCorrespondente = (blocoAtual.value && Number(blocoAtual.value.disciplina_id) === Number(discId)) ? blocoAtual.value : null;
+
+            formSessao.value = {
+                id: null,
+                disciplina_id: discId,
+                bloco_ciclo_id: blocoCorrespondente ? blocoCorrespondente.id : null,
+                topico_id: topicoId,
+                tempo_estudado_minutos: timerSegundos.value >= 60 ? Math.round(timerSegundos.value / 60) : 60,
+                qtd_questoes_total: 0,
+                qtd_acertos: 0,
+                qtd_erros: 0,
+                is_revisao_anki: false,
+                avancar_ciclo: !!blocoCorrespondente,
+                data: getDataHojeLocal()
+            };
+            modalCheckinAberto.value = true;
+        };
+
+        const onDisciplinaSessaoChange = () => {
+            const dId = formSessao.value.disciplina_id;
+            if (!dId) {
+                formSessao.value.topico_id = '';
+                return;
+            }
+            const prox = getProximoTopicoTrilha(Number(dId));
+            formSessao.value.topico_id = prox ? prox.id : '';
+        };
+
+        const getTopicoRowClass = (topico) => {
+            if (topico.mais_cobrado && topico.prioridade === 1) {
+                return 'bg-gradient-to-r from-amber-500/15 via-rose-500/10 to-transparent border-l-4 border-l-rose-500 dark:from-amber-500/25 dark:via-rose-500/20';
+            }
+            if (topico.mais_cobrado) {
+                return 'bg-amber-500/10 dark:bg-amber-500/15 border-l-4 border-l-amber-500';
+            }
+            if (topico.prioridade === 1) {
+                return 'bg-rose-500/10 dark:bg-rose-500/15 border-l-4 border-l-rose-500';
+            }
+            if (topico.prioridade === 2) {
+                return 'bg-amber-500/5 dark:bg-amber-500/10 border-l-4 border-l-amber-400';
+            }
+            if (topico.prioridade === 3) {
+                return 'bg-sky-500/5 dark:bg-sky-500/10 border-l-4 border-l-sky-400';
+            }
+            return 'border-l-4 border-l-transparent hover:bg-slate-50 dark:hover:bg-[#1B2638]/50';
+        };
+
+        const badgePrioridadeSelectClass = (p) => {
+            if (p === 1) return 'bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/40';
+            if (p === 2) return 'bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-500/20 dark:text-amber-300 dark:border-amber-500/40';
+            if (p === 3) return 'bg-sky-100 text-sky-800 border-sky-300 dark:bg-sky-500/20 dark:text-sky-300 dark:border-sky-500/40';
+            return 'bg-slate-100 text-slate-600 border-slate-300 dark:bg-[#1E293B] dark:text-[#94A3B8] dark:border-[#334155]';
         };
 
         // ==========================================
@@ -1606,16 +1911,19 @@ const app = createApp({
 
         function abrirModalCheckin() {
             const tempoCronometrado = timerSegundos.value >= 60 ? Math.round(timerSegundos.value / 60) : 60;
+            const isRevisao = blocoAtual.value && blocoAtual.value.disciplina && blocoAtual.value.disciplina.categoria === 'REVISAO_ANKI';
+            const dId = (!isRevisao && blocoAtual.value && blocoAtual.value.disciplina_id) ? blocoAtual.value.disciplina_id : (todasDisciplinas.value[0]?.id || '');
+            const topicoSugerido = getProximoTopicoTrilha(dId);
             formSessao.value = {
                 id: null,
-                disciplina_id: (blocoAtual.value && blocoAtual.value.disciplina_id) ? blocoAtual.value.disciplina_id : (todasDisciplinas.value[0]?.id || ''),
+                disciplina_id: dId,
                 bloco_ciclo_id: blocoAtual.value ? blocoAtual.value.id : null,
-                topico_id: '',
+                topico_id: topicoSugerido ? topicoSugerido.id : '',
                 tempo_estudado_minutos: tempoCronometrado,
                 qtd_questoes_total: 0,
                 qtd_acertos: 0,
                 qtd_erros: 0,
-                is_revisao_anki: false,
+                is_revisao_anki: isRevisao,
                 avancar_ciclo: true,
                 data: getDataHojeLocal()
             };
@@ -1627,14 +1935,16 @@ const app = createApp({
             const isRevisao = bloco && bloco.disciplina && bloco.disciplina.categoria === 'REVISAO_ANKI';
             const tempoSugerido = timerSegundos.value >= 60
                 ? Math.round(timerSegundos.value / 60)
-                : (bloco?.duracao_minutos || 60);
+                : 60; // 60 min por padrão conforme solicitado
+            const dId = (bloco && !isRevisao) ? bloco.disciplina_id : (todasDisciplinas.value[0]?.id || '');
+            const topicoSugerido = getProximoTopicoTrilha(dId);
 
             formSessao.value = {
                 id: null,
                 is_revisao_anki: isRevisao,
-                disciplina_id: isRevisao ? (todasDisciplinas.value[0]?.id || '') : (bloco ? bloco.disciplina_id : (todasDisciplinas.value[0]?.id || '')),
+                disciplina_id: dId,
                 bloco_ciclo_id: bloco ? bloco.id : (blocoAtual.value ? blocoAtual.value.id : null),
-                topico_id: '',
+                topico_id: topicoSugerido ? topicoSugerido.id : '',
                 tempo_estudado_minutos: tempoSugerido,
                 qtd_questoes_total: 0,
                 qtd_acertos: 0,
@@ -3200,9 +3510,23 @@ const app = createApp({
             excluirSessao,
             excluirTodasSessoes,
 
-            // Verticalizado e Dashboard
+            // Verticalizado e Trilha de Estudos
             verticalizadoAberto,
             toggleVerticalizado,
+            filtroVerticalizado,
+            ordenacaoVerticalizado,
+            setFiltroVerticalizado,
+            setOrdenacaoVerticalizado,
+            getTopicosFiltradosEOrdenados,
+            toggleMaisCobrado,
+            alterarPrioridadeTopico,
+            toggleConcluidoTopico,
+            iniciarEstudoDoTopico,
+            onDisciplinaSessaoChange,
+            getTopicoRowClass,
+            badgePrioridadeSelectClass,
+            getProximoTopicoTrilha,
+            proximoTopicoBlocoAtual,
             abrirDashboard,
             carregarEditalVerticalizado,
 

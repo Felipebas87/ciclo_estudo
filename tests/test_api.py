@@ -340,6 +340,55 @@ def test_ia_insights():
     assert res_limpar.status_code == 200
     assert res_limpar.json()["configurada"] is False
 
+def test_topico_prioridade_e_mais_cobrado():
+    # 1. Cria edital com tópico
+    res_ed = client.post("/api/editais", json={
+        "nome": "Edital Trilha",
+        "disciplinas": [{
+            "nome": "Direito Tributário",
+            "categoria": "TEORICA_DIREITO",
+            "peso_prova": 2.0,
+            "relevancia_dificuldade": 4,
+            "topicos": [
+                {"titulo": "Imunidades Tributárias", "mais_cobrado": False, "prioridade": None},
+                {"titulo": "Crédito Tributário", "mais_cobrado": True, "prioridade": 1}
+            ]
+        }]
+    })
+    assert res_ed.status_code == 200
+    ed_data = res_ed.json()
+    topicos = ed_data["disciplinas"][0]["topicos"]
+    t1_id = topicos[0]["id"]
+    t2_id = topicos[1]["id"]
+    assert topicos[1]["mais_cobrado"] is True
+    assert topicos[1]["prioridade"] == 1
+
+    # 2. Atualizar t1 para P1 e Mais Cobrado via PATCH
+    res_patch = client.patch(f"/api/editais/topicos/{t1_id}", json={
+        "mais_cobrado": True,
+        "prioridade": 2
+    })
+    assert res_patch.status_code == 200
+    t1_updated = res_patch.json()
+    assert t1_updated["mais_cobrado"] is True
+    assert t1_updated["prioridade"] == 2
+
+    # 3. Remover prioridade (setar para null)
+    res_patch_null = client.patch(f"/api/editais/topicos/{t1_id}", json={
+        "prioridade": None
+    })
+    assert res_patch_null.status_code == 200
+    assert res_patch_null.json()["prioridade"] is None
+    assert res_patch_null.json()["mais_cobrado"] is True
+
+    # 4. Verificar no endpoint de Edital Verticalizado
+    res_vert = client.get(f"/api/dashboard/edital-verticalizado?edital_id={ed_data['id']}")
+    assert res_vert.status_code == 200
+    vert_data = res_vert.json()
+    disc_vert = vert_data["BASICOS"][0]
+    assert disc_vert["total_mais_cobrados"] >= 1
+    assert any(t["id"] == t2_id and t["mais_cobrado"] is True and t["prioridade"] == 1 for t in disc_vert["topicos"])
+
 
 
 

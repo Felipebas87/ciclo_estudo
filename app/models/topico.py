@@ -10,6 +10,8 @@ class Topico(Base):
     titulo = Column(Text, nullable=False)
     ordem = Column(Integer, default=0)
     concluido = Column(Boolean, default=False)
+    mais_cobrado = Column(Boolean, default=False)
+    prioridade = Column(Integer, nullable=True)  # 1 (Alta/P1), 2 (Média/P2), 3 (Baixa/P3) ou None
 
     disciplina = relationship("Disciplina", back_populates="topicos")
     sessoes = relationship("SessaoEstudo", back_populates="topico")

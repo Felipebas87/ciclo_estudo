@@ -12,6 +12,7 @@ from app.schemas.edital import (
     DisciplinaResponse,
     DisciplinaUpdate,
     TopicoCreate,
+    TopicoUpdate,
     TopicoResponse
 )
 from app.services.ingestao_service import processar_arquivo_edital
@@ -56,7 +57,10 @@ def criar_edital(dados: EditalCreate, db: Session = Depends(get_db)):
                     topico = Topico(
                         disciplina_id=disciplina.id,
                         titulo=t.titulo,
-                        ordem=t.ordem
+                        ordem=t.ordem,
+                        concluido=getattr(t, "concluido", False),
+                        mais_cobrado=getattr(t, "mais_cobrado", False),
+                        prioridade=getattr(t, "prioridade", None)
                     )
                     db.add(topico)
 
@@ -158,9 +162,35 @@ def adicionar_topico(disciplina_id: int, dados: TopicoCreate, db: Session = Depe
         disciplina_id=disciplina_id,
         titulo=dados.titulo,
         ordem=dados.ordem or len(disc.topicos),
-        concluido=dados.concluido
+        concluido=dados.concluido,
+        mais_cobrado=dados.mais_cobrado,
+        prioridade=dados.prioridade
     )
     db.add(topico)
+    db.commit()
+    db.refresh(topico)
+    return topico
+
+@router.patch("/topicos/{topico_id}", response_model=TopicoResponse)
+@router.put("/topicos/{topico_id}", response_model=TopicoResponse)
+def atualizar_topico(topico_id: int, dados: TopicoUpdate, db: Session = Depends(get_db)):
+    topico = db.query(Topico).filter(Topico.id == topico_id).first()
+    if not topico:
+        raise HTTPException(status_code=404, detail="Tópico não encontrado")
+
+    campos_recebidos = dados.model_fields_set
+
+    if "titulo" in campos_recebidos and dados.titulo is not None:
+        topico.titulo = dados.titulo
+    if "ordem" in campos_recebidos and dados.ordem is not None:
+        topico.ordem = dados.ordem
+    if "concluido" in campos_recebidos and dados.concluido is not None:
+        topico.concluido = dados.concluido
+    if "mais_cobrado" in campos_recebidos and dados.mais_cobrado is not None:
+        topico.mais_cobrado = dados.mais_cobrado
+    if "prioridade" in campos_recebidos:
+        topico.prioridade = dados.prioridade
+
     db.commit()
     db.refresh(topico)
     return topico

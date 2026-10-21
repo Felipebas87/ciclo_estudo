@@ -97,6 +97,47 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
     topicos_cobertos_proj_ate_prova = int(min(total_topicos_edital, topicos_cobertos_estimados + (ritmo_diario_declarado * max(0, dias_restantes))))
     perc_edital_proj_ate_prova = round((topicos_cobertos_proj_ate_prova / total_topicos_edital * 100), 1) if total_topicos_edital > 0 else 0.0
 
+    # 1.1 Tópicos com priorização (P1, P2, P3 e Mais Cobrados) e sessões necessárias
+    topicos_query = db.query(Topico).join(Disciplina).filter(Disciplina.categoria != 'REVISAO_ANKI')
+    if edital_id:
+        topicos_query = topicos_query.filter(Disciplina.edital_id == edital_id)
+    todos_topicos_db = topicos_query.all()
+
+    sessoes_topicos_vistos_ids = set(s.topico_id for s in sessoes if s.topico_id is not None)
+
+    def topico_esta_visto(t):
+        return (t.id in sessoes_topicos_vistos_ids) or bool(t.concluido)
+
+    topicos_prioritarios = [t for t in todos_topicos_db if t.prioridade is not None or t.mais_cobrado]
+    total_prioritarios = len(topicos_prioritarios)
+    prioritarios_vistos = [t for t in topicos_prioritarios if topico_esta_visto(t)]
+    prioritarios_pendentes = [t for t in topicos_prioritarios if not topico_esta_visto(t)]
+
+    total_prioritarios_vistos = len(prioritarios_vistos)
+    total_prioritarios_pendentes = len(prioritarios_pendentes)
+    perc_prioritarios_cobertos = round((total_prioritarios_vistos / total_prioritarios * 100), 1) if total_prioritarios > 0 else 0.0
+
+    total_p1 = sum(1 for t in todos_topicos_db if t.prioridade == 1)
+    p1_vistos = sum(1 for t in todos_topicos_db if t.prioridade == 1 and topico_esta_visto(t))
+    p1_pendentes = max(0, total_p1 - p1_vistos)
+
+    total_p2 = sum(1 for t in todos_topicos_db if t.prioridade == 2)
+    p2_vistos = sum(1 for t in todos_topicos_db if t.prioridade == 2 and topico_esta_visto(t))
+    p2_pendentes = max(0, total_p2 - p2_vistos)
+
+    total_p3 = sum(1 for t in todos_topicos_db if t.prioridade == 3)
+    p3_vistos = sum(1 for t in todos_topicos_db if t.prioridade == 3 and topico_esta_visto(t))
+    p3_pendentes = max(0, total_p3 - p3_vistos)
+
+    total_mais_cobrados = sum(1 for t in todos_topicos_db if t.mais_cobrado)
+    mais_cobrados_vistos = sum(1 for t in todos_topicos_db if t.mais_cobrado and topico_esta_visto(t))
+    mais_cobrados_pendentes = max(0, total_mais_cobrados - mais_cobrados_vistos)
+
+    # Sessões de estudo necessárias para terminar os tópicos prioritários (1 sessão = 1 tópico = 1 hora)
+    sessoes_necessarias_prioritarios = total_prioritarios_pendentes
+    horas_necessarias_prioritarios = float(total_prioritarios_pendentes)
+    dias_para_zerar_prioritarios = round(horas_necessarias_prioritarios / ritmo_diario_declarado, 1) if ritmo_diario_declarado > 0 else 0
+
     # 2. Competitividade, Cadência e Projeção de Questões
     cadencia_questoes_hora = round(total_questoes / total_horas, 1) if total_horas > 0 else 0.0
     horas_estudo_proj_ate_prova = round(ritmo_diario_declarado * max(0, dias_restantes), 1)
@@ -215,6 +256,21 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
         "dias_para_zerar_na_meta_semanal": dias_para_zerar_na_meta_semanal,
         "topicos_cobertos_proj_ate_prova": topicos_cobertos_proj_ate_prova,
         "perc_edital_proj_ate_prova": perc_edital_proj_ate_prova,
+        "total_prioritarios": total_prioritarios,
+        "total_prioritarios_vistos": total_prioritarios_vistos,
+        "total_prioritarios_pendentes": total_prioritarios_pendentes,
+        "perc_prioritarios_cobertos": perc_prioritarios_cobertos,
+        "total_p1": total_p1,
+        "p1_pendentes": p1_pendentes,
+        "total_p2": total_p2,
+        "p2_pendentes": p2_pendentes,
+        "total_p3": total_p3,
+        "p3_pendentes": p3_pendentes,
+        "total_mais_cobrados": total_mais_cobrados,
+        "mais_cobrados_pendentes": mais_cobrados_pendentes,
+        "sessoes_necessarias_prioritarios": sessoes_necessarias_prioritarios,
+        "horas_necessarias_prioritarios": horas_necessarias_prioritarios,
+        "dias_para_zerar_prioritarios": dias_para_zerar_prioritarios,
         "cadencia_questoes_hora": cadencia_questoes_hora,
         "horas_estudo_proj_ate_prova": horas_estudo_proj_ate_prova,
         "questoes_projetadas_adicionais": questoes_projetadas_adicionais,
@@ -256,15 +312,18 @@ DADOS REAIS E COMPLETOS DO ALUNO:
 - Dias Restantes para a Prova: {dados['dias_restantes']} dias (Zona: {dados['zona_tag']} - {dados['zona_fase']})
 - Nota de Corte Projetada: {dados['nota_corte']}%
 - Rendimento Global Atual: {dados['taxa_global']}% (Diferença para o corte: {dados['diff_corte']:+0.1f} p.p.)
+- REGRA OBRIGATÓRIA DE ANÁLISE DO CORTE:
+  * Se a taxa atual ({dados['taxa_global']}%) for MENOR que a nota de corte ({dados['nota_corte']}%), o aluno está {abs(dados['diff_corte']):.1f} p.p. ABAIXO DO CORTE. NUNCA diga que o aluno 'opera com folga' ou 'com margem confortável'! Afirme com clareza matemática que ele está abaixo da nota de corte, na zona de risco/atenção, e indique o que precisa para reverter.
+  * Se a taxa for maior ou igual ao corte, aponte a margem positiva real sobre a nota de corte.
 
-1. MÉTRICAS DO EDITAL & TÓPICOS (PREMISSA: 1 HORA = 1 TÓPICO):
+1. MÉTRICAS DO EDITAL & TRILHA DE TÓPICOS PRIORITÁRIOS (1 HORA = 1 SESSÃO = 1 TÓPICO):
 - Total de Tópicos no Edital: {dados['total_topicos_edital']} tópicos
-- Horas Estudadas Acumuladas: {dados['total_horas']}h (~{dados['topicos_cobertos_estimados']} tópicos cobertos, equivalente a {dados['perc_edital_coberto']}% do edital)
-- Tópicos Restantes para Zerar o Edital: {dados['topicos_restantes']} tópicos (= {dados['horas_para_zerar_edital']}h necessárias)
-- Ritmo Diário Necessário para Zerar 100% nos {dados['dias_restantes']} dias: {dados['horas_dia_necessarias_40d']}h líquidas por dia (ininterruptas)
-- Meta Semanal Declarada no Ciclo: {dados['carga_horaria_semanal']}h/semana (~{round(dados['carga_horaria_semanal']/7, 1)}h/dia)
-- Projeção no Ritmo Declarado até a Prova: cobrirá mais ~{round((dados['carga_horaria_semanal']/7)*dados['dias_restantes'])} tópicos, totalizando ~{dados['topicos_cobertos_proj_ate_prova']} de {dados['total_topicos_edital']} tópicos (~{dados['perc_edital_proj_ate_prova']}% do edital)
-- Dias Necessários para Zerar no Ritmo Declarado: {dados['dias_para_zerar_na_meta_semanal']} dias (muito superior aos {dados['dias_restantes']} dias restantes!)
+- Tópicos Mapeados com Prioridade (P1, P2, P3 ou Mais Cobrados): {dados['total_prioritarios']} tópicos ({dados['total_p1']} P1, {dados['total_p2']} P2, {dados['total_p3']} P3 e {dados['total_mais_cobrados']} Mais Cobrados)
+- Tópicos Prioritários já Vencidos: {dados['total_prioritarios_vistos']} de {dados['total_prioritarios']} ({dados['perc_prioritarios_cobertos']}%)
+- Tópicos Prioritários Restantes / Pendentes: {dados['total_prioritarios_pendentes']} tópicos ({dados['p1_pendentes']} P1 pendentes, {dados['mais_cobrados_pendentes']} Mais Cobrados pendentes)
+- Sessões de Estudo Necessárias para Zerar os Tópicos Prioritários: {dados['sessoes_necessarias_prioritarios']} sessões de 1h (~{dados['dias_para_zerar_prioritarios']} dias necessários no ritmo do ciclo)
+- Tópicos Gerais Restantes no Edital Inteiro: {dados['topicos_restantes']} tópicos (levaria {dados['dias_para_zerar_na_meta_semanal']} dias para ver tudo)
+- Conclusão Tática: Zerar 100% de todo o edital ({dados['total_topicos_edital']} tópicos) em {dados['dias_restantes']} dias é inviável, MAS cobrir os {dados['total_prioritarios_pendentes']} tópicos prioritários exige apenas {dados['sessoes_necessarias_prioritarios']} sessões de 1h (~{dados['dias_para_zerar_prioritarios']} dias), sendo a estratégia de ouro para aprovação!
 
 2. MÉTRICAS DE QUESTÕES & CADÊNCIA:
 - Total de Questões Resolvidas: {dados['total_questoes']} itens ({dados['total_acertos']} acertos, {dados['total_erros']} erros)
@@ -291,9 +350,9 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
 {{
   "resumo_executivo": "🎯 Parágrafo executivo afiado, direto, motivador e estratégico (3 a 4 linhas). Comece com emoji. Destaque em **negrito** métricas-chave, confronto da taxa ({dados['taxa_global']}%) com o corte ({dados['nota_corte']}%), dias restantes ({dados['dias_restantes']} dias), e a grande encruzilhada tática entre cobertura de edital, constância e a banca {dados['banca']}.",
   "pontos_analise": [
-    "📊 **Competitividade & Projeção de Questões:** Confrontar a taxa atual ({dados['taxa_global']}%) com o corte ({dados['nota_corte']}%), analisar as questões feitas no tempo estudado ({dados['cadencia_questoes_hora']} q/h) e a projeção de {dados['total_questoes_proj_dia_prova']} itens até a prova. Comparar com o patamar ideal de acertos ({dados['benchmark_taxa_acerto_ideal']}) e o total de questões recomendado ({dados['benchmark_questoes_recomendado']}), indicando claramente se precisa acelerar a cadência prática.",
+    "📊 **Competitividade & Projeção de Questões:** Confrontar a taxa atual ({dados['taxa_global']}%) com o corte ({dados['nota_corte']}%). Se estiver abaixo do corte ({dados['diff_corte']} p.p.), declare com precisão e seriedade que está abaixo do corte na zona de atenção/risco. NUNCA use 'opera com folga' se taxa < corte! Analisar a cadência ({dados['cadencia_questoes_hora']} q/h) e projeção ({dados['total_questoes_proj_dia_prova']} itens) vs benchmarks ({dados['benchmark_questoes_recomendado']} e {dados['benchmark_taxa_acerto_ideal']}).",
     "🚨 **Ponto Cego & Análise de Gargalos:** Diagnóstico cirúrgico dos maiores gargalos ou matérias perigosas (ex: disciplinas zeradas ou com aproveitamento crítico), alertando sobre armadilhas da {dados['banca']} e a regra de 1 errada anula 1 certa com emojis de atenção.",
-    "⏳ **Ritmo, Tópicos & Fechamento do Edital:** Analisar o volume de horas ({dados['total_horas']}h) na premissa de 1 hora por tópico do edital ({dados['total_topicos_edital']} tópicos totais). Informar quantos tópicos restam ({dados['topicos_restantes']}), quanto tempo daria para zerar o edital nos {dados['dias_restantes']} dias restantes (necessárias {dados['horas_dia_necessarias_40d']}h/dia vs os {dados['dias_para_zerar_na_meta_semanal']} dias necessários no ritmo do ciclo), orientando se é viável zerar tudo ou se deve aplicar a priorização 80/20 de Pareto.",
+    "🎯 **Trilha Prioritária, Ritmo & Sessões Necessárias:** Analisar quantos tópicos possuem priorização definida ({dados['total_prioritarios']} tópicos mapeados, sendo {dados['total_prioritarios_vistos']} vencidos e {dados['total_prioritarios_pendentes']} pendentes). Explicar que para fechar esse núcleo de maior peso são necessárias exatamente {dados['sessoes_necessarias_prioritarios']} sessões de 1h de estudo (~{dados['dias_para_zerar_prioritarios']} dias de estudo), sendo o plano de ação perfeito contra a inviabilidade de ver os {dados['total_topicos_edital']} tópicos gerais.", 
     "📅 **Constância no Heatmap & Prescrição Tática:** Analisar a regularidade no Heatmap ({dados['dias_com_estudo']} dias ativos em {dados['dias_corridos_periodo']} dias corridos, taxa de {dados['taxa_constancia_heatmap']}% e hiato de {dados['hiato_dias_sem_estudo']} dias). Dizer categoricamente se essa constância está condizente com o esforço exigido para {dados['concurso']} e prescrever a rotina semanal imediata (distribuição diária de horas, baterias comentadas e controle de consistência)."
   ]
 }}"""
@@ -353,7 +412,10 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
                         "dias_corridos": dados.get("dias_corridos_periodo", 0),
                         "taxa_global": dados.get("taxa_global", 0),
                         "nota_corte": dados.get("nota_corte", 0),
-                        "diff_corte": dados.get("diff_corte", 0)
+                        "diff_corte": dados.get("diff_corte", 0),
+                        "total_prioritarios": dados.get("total_prioritarios", 0),
+                        "total_prioritarios_pendentes": dados.get("total_prioritarios_pendentes", 0),
+                        "sessoes_necessarias_prioritarios": dados.get("sessoes_necessarias_prioritarios", 0)
                     }
                 }
             except Exception as mod_err:
@@ -433,13 +495,22 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
 
     pontos = []
 
-    # Ponto 1: Competitividade & Projeção de Questões
+    # Ponto 1: Competitividade & Projeção de Questões (diagnóstico sem contradição)
+    if diff >= 3.0:
+        corte_diagnostico = f"você opera com margem de segurança de **+{diff:.1f} p.p.** sobre a nota de corte projetada ({corte}%)."
+    elif diff >= 0.0:
+        corte_diagnostico = f"você opera no limiar da nota de corte projetada ({corte}%), com margem estreita de **+{diff:.1f} p.p.** que exige máxima atenção contra oscilações."
+    elif diff >= -3.0:
+        corte_diagnostico = f"você está em zona de atenção, **{abs(diff):.1f} p.p. abaixo da nota de corte** projetada ({corte}%). A distância é curta e plenamente recuperável estancando erros nas matérias mais cobradas."
+    else:
+        corte_diagnostico = f"você se encontra em zona de risco crítico, **{abs(diff):.1f} p.p. abaixo da nota de corte** projetada ({corte}%). É mandatório eliminar o chute cego e revisar a teoria dos pontos vulneráveis."
+
     ponto1 = (
-        f"📊 **Competitividade & Projeção de Questões:** Com aproveitamento global de **{taxa}%** ({diff_str}), você opera com folga sobre a nota de corte ({corte}%). "
+        f"📊 **Competitividade & Projeção de Questões:** Com aproveitamento global de **{taxa}%** ({diff_str}), {corte_diagnostico} "
         f"Nas **{total_horas}h estudadas**, você resolveu **{total_questoes} itens** (cadência de **{cadencia} q/h**). "
         f"Mantendo esse ritmo, a projeção é alcançar **~{questoes_proj} questões** até a prova. "
         f"Atenção ao perfil da banca **{banca}**: candidatos competitivos de elite acumulam **{benchmark_questoes}** com taxa ideal de **{benchmark_taxa}**. "
-        f"Para se aproximar desse patamar, é fundamental acelerar a resolução prática para 12 a 15 q/h através de estudo reverso."
+        f"Para se aproximar desse patamar, acelere a cadência prática para 12 a 15 q/h através de estudo reverso."
     )
     pontos.append(ponto1)
 
@@ -458,11 +529,34 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
     else:
         pontos.append(f"🛡️ **Mapeamento de Lacunas:** Mantenha caderno de erros ativo em todas as disciplinas limítrofes para estancar perda de pontos.")
 
-    # Ponto 3: Ritmo, Tópicos & Fechamento do Edital
+    # Ponto 3: Trilha Prioritária, Ritmo & Sessões Necessárias
+    tot_pri = dados.get("total_prioritarios", 0)
+    pri_pend = dados.get("total_prioritarios_pendentes", 0)
+    pri_vistos = dados.get("total_prioritarios_vistos", 0)
+    sess_pri = dados.get("sessoes_necessarias_prioritarios", 0)
+    dias_pri = dados.get("dias_para_zerar_prioritarios", 0)
+    tot_p1 = dados.get("total_p1", 0)
+    tot_p2 = dados.get("total_p2", 0)
+    tot_p3 = dados.get("total_p3", 0)
+    tot_mc = dados.get("total_mais_cobrados", 0)
+    perc_pri = dados.get("perc_prioritarios_cobertos", 0)
+
+    if tot_pri > 0:
+        detalhe_trilha = (
+            f"Na sua **Trilha Prioritária**, você mapeou **{tot_pri} tópicos essenciais** ({tot_p1} P1, {tot_p2} P2, {tot_p3} P3 e {tot_mc} Mais Cobrados), "
+            f"com **{pri_vistos} já concluídos** ({perc_pri}%). Restam **{pri_pend} tópicos prioritários**, o que exige exatamente **{sess_pri} sessões de estudo de 1h** "
+            f"para fechar 100% do núcleo decisivo da prova — meta plenamente viável em **~{dias_pri} dias** no ritmo semanal de {carga_semanal}h/sem do seu ciclo."
+        )
+    else:
+        detalhe_trilha = (
+            f"Você ainda não marcou tópicos com prioridade na aba **Verticalizado**. "
+            f"Defina seus tópicos P1/P2/P3 e Mais Cobrados para que o sistema projete exatamente quantas sessões restam para garantir o núcleo essencial da aprovação."
+        )
+
     ponto3 = (
-        f"⏳ **Ritmo, Tópicos & Fechamento do Edital:** Na premissa de 1 hora por tópico, suas **{total_horas}h estudadas** cobriram cerca de **{int(topicos_cobertos)} dos {total_topicos} tópicos** ({perc_edital}% do edital), "
-        f"restando **{topicos_restantes} tópicos** a serem vistos. Para zerar 100% do edital nos {dias} dias restantes, seriam necessárias **{horas_dia_necessarias}h líquidas diárias** sem folga — meta impraticável no ritmo semanal de {carga_semanal}h/sem (que levaria ~{dias_para_zerar} dias). "
-        f"A diretriz estratégica é abandonar a cobertura linear e aplicar a **Regra 80/20 de Pareto**: focar nos tópicos de maior peso histórico da banca {banca}."
+        f"🎯 **Trilha Prioritária, Ritmo & Sessões Necessárias:** Na premissa de 1 hora por tópico, suas **{total_horas}h estudadas** cobriram cerca de **{int(topicos_cobertos)} dos {total_topicos} tópicos** ({perc_edital}% do edital total). "
+        f"Zerar todos os {topicos_restantes} tópicos restantes nos {dias} dias restantes exigiria {horas_dia_necessarias}h/dia (inviável). "
+        f"Por isso, a Regra 80/20 de Pareto é o caminho cirúrgico: {detalhe_trilha}"
     )
     pontos.append(ponto3)
 
@@ -487,6 +581,9 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
             "edital_coberto_perc": dados.get("perc_edital_coberto", 0),
             "topicos_cobertos": int(dados.get("topicos_cobertos_estimados", 0)),
             "total_topicos": dados.get("total_topicos_edital", 0),
+            "total_prioritarios": dados.get("total_prioritarios", 0),
+            "total_prioritarios_pendentes": dados.get("total_prioritarios_pendentes", 0),
+            "sessoes_necessarias_prioritarios": dados.get("sessoes_necessarias_prioritarios", 0),
             "cadencia_questoes_hora": dados.get("cadencia_questoes_hora", 0),
             "questoes_proj_prova": dados.get("total_questoes_proj_dia_prova", 0),
             "constancia_heatmap_perc": dados.get("taxa_constancia_heatmap", 0),

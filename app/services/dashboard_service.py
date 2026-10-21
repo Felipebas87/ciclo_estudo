@@ -303,7 +303,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                 p = round((c / r * 100), 1) if r > 0 else 0
                 ultima_data = max([s.data for s in s_top]) if s_top else None
                 
-                visto = len(s_top) > 0
+                visto = len(s_top) > 0 or bool(t.concluido)
                 if visto:
                     disc_topicos_vistos += 1
                 
@@ -315,7 +315,9 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                     "percentual": p,
                     "revisoes_anki": revs_anki,
                     "ultima_data": ultima_data.isoformat() if ultima_data else None,
-                    "concluido": t.concluido,
+                    "concluido": bool(t.concluido),
+                    "mais_cobrado": bool(getattr(t, "mais_cobrado", False)),
+                    "prioridade": getattr(t, "prioridade", None),
                     "visto": visto
                 })
                 
@@ -335,6 +337,11 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                 "revisoes_anki": t_revisoes_anki,
                 "topicos_vistos": disc_topicos_vistos,
                 "total_topicos": len(disc.topicos),
+                "total_mais_cobrados": sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False)),
+                "total_prioritarios": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) is not None),
+                "total_p1": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 1),
+                "total_p2": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 2),
+                "total_p3": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 3),
                 "cobertura_percentual": cobertura_perc,
                 "topicos": topicos_data
             })
