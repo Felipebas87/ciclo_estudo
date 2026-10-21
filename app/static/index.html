@@ -1362,14 +1362,6 @@
                                                         <i class="fa-regular fa-circle-dot text-[10px]"></i> Pendentes
                                                     </button>
                                                 </div>
-
-                                                <button @click.stop="setOrdenacaoVerticalizado(disc.id, (ordenacaoVerticalizado[disc.id] === 'trilha' ? 'edital' : 'trilha'))"
-                                                    :class="ordenacaoVerticalizado[disc.id] === 'trilha' ? 'bg-purple-600 text-white border-purple-600 font-bold shadow-xs' : 'bg-white dark:bg-[#0E1622] text-slate-700 dark:text-[#CBD5E1] border-slate-200 dark:border-[#24324A] hover:bg-slate-50'"
-                                                    class="px-2.5 py-1 rounded-lg border text-[11px] transition-all flex items-center gap-1.5"
-                                                    title="Alternar entre ordenação padrão do edital e ordem da trilha prioritária">
-                                                    <i class="fa-solid fa-arrow-down-wide-short text-[11px]"></i>
-                                                    <span>{{ ordenacaoVerticalizado[disc.id] === 'trilha' ? 'Trilha: P1 > P2 > P3' : 'Ordem Edital' }}</span>
-                                                </button>
                                             </div>
                                         </div>
 
@@ -1577,14 +1569,6 @@
                                                         <i class="fa-regular fa-circle-dot text-[10px]"></i> Pendentes
                                                     </button>
                                                 </div>
-
-                                                <button @click.stop="setOrdenacaoVerticalizado(disc.id, (ordenacaoVerticalizado[disc.id] === 'trilha' ? 'edital' : 'trilha'))"
-                                                    :class="ordenacaoVerticalizado[disc.id] === 'trilha' ? 'bg-purple-600 text-white border-purple-600 font-bold shadow-xs' : 'bg-white dark:bg-[#0E1622] text-slate-700 dark:text-[#CBD5E1] border-slate-200 dark:border-[#24324A] hover:bg-slate-50'"
-                                                    class="px-2.5 py-1 rounded-lg border text-[11px] transition-all flex items-center gap-1.5"
-                                                    title="Alternar entre ordenação padrão do edital e ordem da trilha prioritária">
-                                                    <i class="fa-solid fa-arrow-down-wide-short text-[11px]"></i>
-                                                    <span>{{ ordenacaoVerticalizado[disc.id] === 'trilha' ? 'Trilha: P1 > P2 > P3' : 'Ordem Edital' }}</span>
-                                                </button>
                                             </div>
                                         </div>
 

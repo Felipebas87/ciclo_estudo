@@ -16,6 +16,6 @@ class Disciplina(Base):
     qtd_questoes_prova = Column(Integer, nullable=True)
 
     edital = relationship("Edital", back_populates="disciplinas")
-    topicos = relationship("Topico", back_populates="disciplina", cascade="all, delete-orphan")
+    topicos = relationship("Topico", back_populates="disciplina", cascade="all, delete-orphan", order_by="Topico.ordem")
     blocos = relationship("BlocoCiclo", back_populates="disciplina", cascade="all, delete-orphan")
     sessoes = relationship("SessaoEstudo", back_populates="disciplina", cascade="all, delete-orphan")

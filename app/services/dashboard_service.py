@@ -295,7 +295,8 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             
             topicos_data = []
             disc_topicos_vistos = 0
-            for t in disc.topicos:
+            topicos_ordenados = sorted(disc.topicos, key=lambda x: (x.ordem if x.ordem is not None else 0, x.id))
+            for t in topicos_ordenados:
                 s_top = [s for s in sessoes_disc if s.topico_id == t.id]
                 c = sum(s.qtd_acertos for s in s_top)
                 r = sum(s.qtd_questoes_total for s in s_top)
@@ -310,6 +311,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                 topicos_data.append({
                     "id": t.id,
                     "titulo": t.titulo,
+                    "ordem": t.ordem if t.ordem is not None else 0,
                     "certas": c,
                     "resolvidas": r,
                     "percentual": p,

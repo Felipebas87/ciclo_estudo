@@ -1006,7 +1006,7 @@ const app = createApp({
             if (!disc || !disc.topicos) return [];
             let lista = [...disc.topicos];
             
-            // Filtro
+            // Filtro (se o usuário selecionou apenas Mais Cobrados, Prioritários, P1 ou Pendentes)
             const f = filtroVerticalizado.value[disc.id] || 'todos';
             if (f === 'mais_cobrados') {
                 lista = lista.filter(t => t.mais_cobrado);
@@ -1018,29 +1018,13 @@ const app = createApp({
                 lista = lista.filter(t => !t.visto && !t.concluido);
             }
 
-            // Ordenação
-            const ord = ordenacaoVerticalizado.value[disc.id] || 'edital';
-            if (ord === 'trilha') {
-                lista.sort((a, b) => {
-                    const getPeso = (t) => {
-                        if (t.prioridade === 1) return 1;
-                        if (t.prioridade === 2) return 2;
-                        if (t.prioridade === 3) return 3;
-                        if (t.mais_cobrado) return 4;
-                        return 5;
-                    };
-                    const pa = getPeso(a);
-                    const pb = getPeso(b);
-                    if (pa !== pb) return pa - pb;
-                    // Se mesmo peso, não vistos vêm antes
-                    const va = (a.visto || a.concluido) ? 1 : 0;
-                    const vb = (b.visto || b.concluido) ? 1 : 0;
-                    if (va !== vb) return va - vb;
-                    return (a.ordem || 0) - (b.ordem || 0);
-                });
-            } else {
-                lista.sort((a, b) => (a.ordem || 0) - (b.ordem || 0));
-            }
+            // Preserva rigorosamente a ordem original do edital (t.ordem e comparação numérica natural)
+            lista.sort((a, b) => {
+                const oa = (a.ordem !== undefined && a.ordem !== null) ? Number(a.ordem) : Number(a.id || 0);
+                const ob = (b.ordem !== undefined && b.ordem !== null) ? Number(b.ordem) : Number(b.id || 0);
+                if (oa !== ob) return oa - ob;
+                return (a.titulo || '').localeCompare(b.titulo || '', undefined, { numeric: true, sensitivity: 'base' });
+            });
 
             return lista;
         };
