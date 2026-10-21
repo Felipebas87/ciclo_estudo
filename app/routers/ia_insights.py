@@ -1,6 +1,7 @@
 import os
 import json
 import random
+import httpx
 from datetime import datetime, date, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, Query, HTTPException, Body
@@ -20,11 +21,15 @@ router = APIRouter(prefix="/api/ia", tags=["Insights de IA"])
 def obter_chave_gemini(config: ConfiguracaoPainelProva) -> Optional[str]:
     # Prioridade 1: Chave salva no banco de dados pelo usuário
     if config and config.gemini_api_key and config.gemini_api_key.strip():
-        return config.gemini_api_key.strip()
+        k = config.gemini_api_key.strip(" \t\r\n'\"")
+        if k:
+            return k
     # Prioridade 2: Variável de ambiente no servidor (.env ou os.environ)
     env_key = os.getenv("GEMINI_API_KEY")
     if env_key and env_key.strip():
-        return env_key.strip()
+        k = env_key.strip(" \t\r\n'\"")
+        if k:
+            return k
     return None
 
 def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
@@ -294,6 +299,33 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
         "sem_questoes": sem_questoes
     }
 
+def _montar_resposta_insight(parsed: dict, modelo_origem: str, agora: datetime, dados: dict) -> dict:
+    return {
+        "titulo": "INSIGHTS DE IA",
+        "subtitulo": "Leitura dos indicadores em tempo real",
+        "resumo_executivo": parsed.get("resumo_executivo"),
+        "pontos_analise": parsed.get("pontos_analise", []),
+        "modelo_origem": modelo_origem,
+        "timestamp": agora.strftime("%H:%M:%S"),
+        "data_atualizacao": agora.isoformat(),
+        "metricas_rapidas": {
+            "edital_coberto_perc": dados.get("perc_edital_coberto", 0),
+            "topicos_cobertos": int(dados.get("topicos_cobertos_estimados", 0)),
+            "total_topicos": dados.get("total_topicos_edital", 0),
+            "cadencia_questoes_hora": dados.get("cadencia_questoes_hora", 0),
+            "questoes_proj_prova": dados.get("total_questoes_proj_dia_prova", 0),
+            "constancia_heatmap_perc": dados.get("taxa_constancia_heatmap", 0),
+            "dias_estudados": dados.get("dias_com_estudo", 0),
+            "dias_corridos": dados.get("dias_corridos_periodo", 0),
+            "taxa_global": dados.get("taxa_global", 0),
+            "nota_corte": dados.get("nota_corte", 0),
+            "diff_corte": dados.get("diff_corte", 0),
+            "total_prioritarios": dados.get("total_prioritarios", 0),
+            "total_prioritarios_pendentes": dados.get("total_prioritarios_pendentes", 0),
+            "sessoes_necessarias_prioritarios": dados.get("sessoes_necessarias_prioritarios", 0)
+        }
+    }
+
 async def tentar_gerar_com_gemini(dados: Dict[str, Any], api_key: str) -> Optional[Dict[str, Any]]:
     prompt = f"""Você é o Coach de Estudos e Mentor Estratégico de Elite em Concursos Públicos do app Orbis.
 Analise com extremo rigor analítico, olhar clínico de coach de alta performance, profundidade matemática e linguagem viva, dinâmica e visual os dados reais e completos do aluno abaixo.
@@ -363,12 +395,13 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
     # Lista de modelos do Google Gemini com alta disponibilidade e suporte a resposta JSON
     modelos_candidatos = [
         "gemini-flash-lite-latest",
-        "gemini-3.1-flash-lite",
+        "gemini-3.5-flash-lite",
         "gemini-3.5-flash",
-        "gemini-3.8-flash",
-        "gemini-flash-latest"
+        "gemini-flash-latest",
+        "gemini-3.1-flash-lite"
     ]
 
+    # Tentativa 1: Via SDK oficial google.genai (se instalado no ambiente)
     try:
         from google import genai
         from google.genai import types
@@ -392,38 +425,44 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
                 if texto.endswith("```"):
                     texto = texto[:-3]
                 parsed = json.loads(texto.strip())
-                agora = datetime.now()
-                return {
-                    "titulo": "INSIGHTS DE IA",
-                    "subtitulo": "Leitura dos indicadores em tempo real",
-                    "resumo_executivo": parsed.get("resumo_executivo"),
-                    "pontos_analise": parsed.get("pontos_analise", []),
-                    "modelo_origem": f"Google Gemini ({modelo})",
-                    "timestamp": agora.strftime("%H:%M:%S"),
-                    "data_atualizacao": agora.isoformat(),
-                    "metricas_rapidas": {
-                        "edital_coberto_perc": dados.get("perc_edital_coberto", 0),
-                        "topicos_cobertos": int(dados.get("topicos_cobertos_estimados", 0)),
-                        "total_topicos": dados.get("total_topicos_edital", 0),
-                        "cadencia_questoes_hora": dados.get("cadencia_questoes_hora", 0),
-                        "questoes_proj_prova": dados.get("total_questoes_proj_dia_prova", 0),
-                        "constancia_heatmap_perc": dados.get("taxa_constancia_heatmap", 0),
-                        "dias_estudados": dados.get("dias_com_estudo", 0),
-                        "dias_corridos": dados.get("dias_corridos_periodo", 0),
-                        "taxa_global": dados.get("taxa_global", 0),
-                        "nota_corte": dados.get("nota_corte", 0),
-                        "diff_corte": dados.get("diff_corte", 0),
-                        "total_prioritarios": dados.get("total_prioritarios", 0),
-                        "total_prioritarios_pendentes": dados.get("total_prioritarios_pendentes", 0),
-                        "sessoes_necessarias_prioritarios": dados.get("sessoes_necessarias_prioritarios", 0)
-                    }
-                }
+                print(f"[IA INSIGHTS] Sucesso via SDK google.genai com modelo {modelo}")
+                return _montar_resposta_insight(parsed, f"Google Gemini ({modelo})", datetime.now(), dados)
             except Exception as mod_err:
-                print(f"Modelo {modelo} indisponível ou em alta demanda: {mod_err}. Tentando próximo...")
+                print(f"[IA INSIGHTS] Modelo {modelo} via SDK falhou: {mod_err}. Tentando próximo...")
                 continue
     except Exception as e:
-        print(f"Erro ao instanciar cliente genai: {e}")
+        print(f"[IA INSIGHTS] SDK google.genai não carregado ({e}). Acionando API REST direta com HTTPX...")
 
+    # Tentativa 2: Via REST API direta do Google Gemini com HTTPX (autônomo, sem dependências extras)
+    for modelo in modelos_candidatos:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+            payload = {
+                "contents": [{"parts": [{"text": prompt_completo}]}],
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                    "temperature": 0.95
+                }
+            }
+            async with httpx.AsyncClient(timeout=35.0) as http_client:
+                resp = await http_client.post(url, json=payload)
+                if resp.status_code == 200:
+                    resp_json = resp.json()
+                    texto = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
+                    if texto.startswith("```json"):
+                        texto = texto[7:]
+                    if texto.endswith("```"):
+                        texto = texto[:-3]
+                    parsed = json.loads(texto.strip())
+                    print(f"[IA INSIGHTS] Sucesso via REST HTTPX com modelo {modelo}")
+                    return _montar_resposta_insight(parsed, f"Google Gemini ({modelo})", datetime.now(), dados)
+                else:
+                    print(f"[IA INSIGHTS] Modelo {modelo} via REST retornou HTTP {resp.status_code}: {resp.text[:120]}")
+        except Exception as rest_err:
+            print(f"[IA INSIGHTS] Erro na requisição REST para modelo {modelo}: {rest_err}")
+            continue
+
+    print("[IA INSIGHTS] Todos os modelos e métodos Gemini falharam. Recorrendo ao motor heurístico.")
     return None
 
 def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
@@ -666,15 +705,20 @@ async def obter_insights_ia(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(config)
 
+    chave_ativa = obter_chave_gemini(config)
+
     # Retorno instantâneo do último insight em cache (< 2ms) para nunca travar a aplicação
     if config.ultimo_insight_ia:
         try:
-            return json.loads(config.ultimo_insight_ia)
+            cached = json.loads(config.ultimo_insight_ia)
+            # Se o cache atual for heurístico mas agora há uma chave Gemini ativa,
+            # tenta gerar com Gemini para atualizar o painel automaticamente!
+            if not ("Heurístico" in str(cached.get("modelo_origem", "")) and chave_ativa):
+                return cached
         except Exception:
             pass
 
     dados_estudo = calcular_dados_estudo(db)
-    chave_ativa = obter_chave_gemini(config)
     insight = None
     if chave_ativa:
         insight = await tentar_gerar_com_gemini(dados_estudo, chave_ativa)
