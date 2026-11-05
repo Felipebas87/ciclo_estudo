@@ -149,8 +149,10 @@ const app = createApp({
         const modalResumoAberto = ref(false);
         const resumoSessaoAtual = ref(null);
         const verticalizadoAberto = ref({});
-        const filtroVerticalizado = ref({}); // { [discId]: 'todos' | 'mais_cobrados' | 'prioritarios' | 'pendentes' }
-        const ordenacaoVerticalizado = ref({}); // { [discId]: 'edital' | 'trilha' }
+        const filtroVerticalizado = ref({}); // { [discId]: 'todos' | 'mais_cobrados' | 'prioritarios' | 'p1' | 'pendentes' }
+        const ordenacaoVerticalizado = ref({}); // { [discId]: 'trilha' | 'edital' }
+        const analisandoTrilhaIA = ref(false);
+        const mostrarResumoTrilhaIA = ref(true);
 
         const formSessao = ref({
             id: null,
@@ -222,6 +224,7 @@ const app = createApp({
         // ==========================================
         const dadosProvaPadrao = {
             concurso: 'SEFAZ ALAGOAS',
+            area_concurso: 'Fiscal',
             cargo: 'Auditor Fiscal da Receita Estadual',
             especialidade: 'Tecnologia da Informação',
             banca: 'Cebraspe',
@@ -258,6 +261,7 @@ const app = createApp({
                     const data = await res.json();
                     const dadosAtualizados = {
                         concurso: data.concurso || dadosProvaPadrao.concurso,
+                        area_concurso: data.area_concurso || dadosProvaPadrao.area_concurso || 'Fiscal',
                         cargo: data.cargo || dadosProvaPadrao.cargo,
                         especialidade: data.especialidade || dadosProvaPadrao.especialidade,
                         banca: data.banca || dadosProvaPadrao.banca,
@@ -1002,6 +1006,10 @@ const app = createApp({
             verticalizadoAberto.value[id] = !verticalizadoAberto.value[id];
         };
 
+        const toggleResumoTrilhaIA = () => {
+            mostrarResumoTrilhaIA.value = !mostrarResumoTrilhaIA.value;
+        };
+
         const getTopicosFiltradosEOrdenados = (disc) => {
             if (!disc || !disc.topicos) return [];
             let lista = [...disc.topicos];
@@ -1011,20 +1019,45 @@ const app = createApp({
             if (f === 'mais_cobrados') {
                 lista = lista.filter(t => t.mais_cobrado);
             } else if (f === 'prioritarios') {
-                lista = lista.filter(t => t.prioridade !== null && t.prioridade !== undefined);
+                lista = lista.filter(t => (t.prioridade !== null && t.prioridade !== undefined) || t.mais_cobrado);
             } else if (f === 'p1') {
                 lista = lista.filter(t => t.prioridade === 1);
             } else if (f === 'pendentes') {
                 lista = lista.filter(t => !t.visto && !t.concluido);
             }
 
-            // Preserva rigorosamente a ordem original do edital (t.ordem e comparação numérica natural)
-            lista.sort((a, b) => {
-                const oa = (a.ordem !== undefined && a.ordem !== null) ? Number(a.ordem) : Number(a.id || 0);
-                const ob = (b.ordem !== undefined && b.ordem !== null) ? Number(b.ordem) : Number(b.id || 0);
-                if (oa !== ob) return oa - ob;
-                return (a.titulo || '').localeCompare(b.titulo || '', undefined, { numeric: true, sensitivity: 'base' });
-            });
+            // Modo de ordenação: 'trilha' (padrão quando a trilha IA está ativa: Pré-requisitos + Pareto P1->P2->P3) ou 'edital'
+            const modoOrd = ordenacaoVerticalizado.value[disc.id] || 'trilha';
+
+            if (modoOrd === 'trilha') {
+                const getPesoPrioridade = (t) => {
+                    if (t.prioridade === 1) return 1;
+                    if (t.mais_cobrado && t.prioridade === 2) return 2;
+                    if (t.prioridade === 2) return 3;
+                    if (t.mais_cobrado) return 4;
+                    if (t.prioridade === 3) return 5;
+                    return 6;
+                };
+                lista.sort((a, b) => {
+                    const ta = (a.ordem_trilha !== undefined && a.ordem_trilha !== null) ? Number(a.ordem_trilha) : 999999;
+                    const tb = (b.ordem_trilha !== undefined && b.ordem_trilha !== null) ? Number(b.ordem_trilha) : 999999;
+                    if (ta !== tb) return ta - tb;
+                    const pa = getPesoPrioridade(a);
+                    const pb = getPesoPrioridade(b);
+                    if (pa !== pb) return pa - pb;
+                    const oa = (a.ordem !== undefined && a.ordem !== null) ? Number(a.ordem) : Number(a.id || 0);
+                    const ob = (b.ordem !== undefined && b.ordem !== null) ? Number(b.ordem) : Number(b.id || 0);
+                    return oa - ob;
+                });
+            } else {
+                // Preserva rigorosamente a ordem natural do edital
+                lista.sort((a, b) => {
+                    const oa = (a.ordem !== undefined && a.ordem !== null) ? Number(a.ordem) : Number(a.id || 0);
+                    const ob = (b.ordem !== undefined && b.ordem !== null) ? Number(b.ordem) : Number(b.id || 0);
+                    if (oa !== ob) return oa - ob;
+                    return (a.titulo || '').localeCompare(b.titulo || '', undefined, { numeric: true, sensitivity: 'base' });
+                });
+            }
 
             return lista;
         };
@@ -1120,7 +1153,28 @@ const app = createApp({
             if (editalVerticalizadoData.value) {
                 (editalVerticalizadoData.value.BASICOS || []).forEach(d => atualizarEmLista(d.topicos));
                 (editalVerticalizadoData.value.ESPECIFICOS || []).forEach(d => atualizarEmLista(d.topicos));
+                (editalVerticalizadoData.value.TRILHA_COMPLETA || []).forEach(d => atualizarEmLista(d.topicos));
             }
+        };
+
+        const ordenarTopicosPorTrilha = (listaTopicos) => {
+            return [...listaTopicos].sort((a, b) => {
+                const ta = (a.ordem_trilha !== undefined && a.ordem_trilha !== null) ? Number(a.ordem_trilha) : 999999;
+                const tb = (b.ordem_trilha !== undefined && b.ordem_trilha !== null) ? Number(b.ordem_trilha) : 999999;
+                if (ta !== tb) return ta - tb;
+                const getPeso = (t) => {
+                    if (t.prioridade === 1) return 1;
+                    if (t.mais_cobrado && t.prioridade === 2) return 2;
+                    if (t.prioridade === 2) return 3;
+                    if (t.mais_cobrado) return 4;
+                    if (t.prioridade === 3) return 5;
+                    return 6;
+                };
+                const pa = getPeso(a);
+                const pb = getPeso(b);
+                if (pa !== pb) return pa - pb;
+                return (a.ordem || 0) - (b.ordem || 0);
+            });
         };
 
         const getProximoTopicoTrilha = (discId) => {
@@ -1130,24 +1184,27 @@ const app = createApp({
             if (editalVerticalizadoData.value) {
                 const todosDiscs = [
                     ...(editalVerticalizadoData.value.BASICOS || []),
-                    ...(editalVerticalizadoData.value.ESPECIFICOS || [])
+                    ...(editalVerticalizadoData.value.ESPECIFICOS || []),
+                    ...(editalVerticalizadoData.value.TRILHA_COMPLETA || [])
                 ];
                 const d = todosDiscs.find(x => Number(x.id) === numId);
                 if (d && d.topicos && d.topicos.length > 0) {
                     topicos = d.topicos;
+                } else if (d && d.proximo_topico) {
+                    return d.proximo_topico;
                 }
             }
 
             if (!topicos || topicos.length === 0) {
                 const d = (todasDisciplinas.value || []).find(x => Number(x.id) === numId);
-                if (d && d.topicos) topicos = d.topicos;
+                if (d && d.topicos && d.topicos.length > 0) topicos = d.topicos;
             }
 
             if ((!topicos || topicos.length === 0) && editais.value) {
                 for (const ed of editais.value) {
                     if (ed.disciplinas) {
                         const d = ed.disciplinas.find(x => Number(x.id) === numId);
-                        if (d && d.topicos) {
+                        if (d && d.topicos && d.topicos.length > 0) {
                             topicos = d.topicos;
                             break;
                         }
@@ -1155,19 +1212,16 @@ const app = createApp({
                 }
             }
 
+            if ((!topicos || topicos.length === 0) && cicloAtivo.value && cicloAtivo.value.blocos) {
+                const blocoDisc = cicloAtivo.value.blocos.find(b => Number(b.disciplina_id) === numId);
+                if (blocoDisc && blocoDisc.proximo_topico) return blocoDisc.proximo_topico;
+            }
+
             if (!topicos || topicos.length === 0) return null;
 
-            const pendentes = topicos.filter(t => !t.visto && !t.concluido);
-            const pool = pendentes.length > 0 ? pendentes : topicos;
-
-            const p1 = pool.find(t => t.prioridade === 1);
-            if (p1) return p1;
-            const p2 = pool.find(t => t.prioridade === 2);
-            if (p2) return p2;
-            const p3 = pool.find(t => t.prioridade === 3);
-            if (p3) return p3;
-            const mc = pool.find(t => t.mais_cobrado);
-            if (mc) return mc;
+            const ordenados = ordenarTopicosPorTrilha(topicos);
+            const pendentes = ordenados.filter(t => !t.visto && !t.concluido);
+            const pool = pendentes.length > 0 ? pendentes : ordenados;
 
             return pool[0] || null;
         };
@@ -1290,13 +1344,30 @@ const app = createApp({
         // 6. CÁLCULOS E ESTATÍSTICAS LOCAIS
         // ==========================================
         function getEstatisticasDisciplina(id) {
-            if (!dashboardData.value) return { qtd: 0, perc: 0, perc_vistos: 0 };
-            const stats = dashboardData.value.rendimento_disciplinas || [];
+            let qtd = 0;
+            let acertos = 0;
+            let perc = 0;
+            let perc_vistos = 0;
+
+            const sessoesDisc = (sessoes.value || []).filter(s => s.disciplina_id === id);
+            const totalQLocal = sessoesDisc.reduce((acc, s) => acc + (s.qtd_questoes_total || s.qtd_questoes || 0), 0);
+            const totalALocal = sessoesDisc.reduce((acc, s) => acc + (s.qtd_acertos || 0), 0);
+
+            const stats = dashboardData.value?.rendimento_disciplinas || [];
             const d = stats.find(x => x.disciplina_id === id);
 
-            let perc_vistos = 0;
+            if (d && d.total_questoes > 0) {
+                qtd = d.total_questoes;
+                acertos = d.acertos !== undefined ? d.acertos : totalALocal;
+                perc = d.percentual_acerto || 0;
+            } else if (totalQLocal > 0) {
+                qtd = totalQLocal;
+                acertos = totalALocal;
+                perc = (totalALocal / totalQLocal) * 100;
+            }
+
             let disciplina = null;
-            for (const ed of editais.value) {
+            for (const ed of (editais.value || [])) {
                 const found = (ed.disciplinas || []).find(x => x.id === id);
                 if (found) {
                     disciplina = found;
@@ -1305,15 +1376,20 @@ const app = createApp({
             }
             if (disciplina && disciplina.topicos && disciplina.topicos.length > 0) {
                 const topicosId = disciplina.topicos.map(t => t.id);
-                const sessoesDisc = sessoes.value.filter(s => s.disciplina_id === id && s.topico_id !== null);
-                const topicosVistos = new Set(sessoesDisc.map(s => s.topico_id));
+                const topicosVistos = new Set(sessoesDisc.filter(s => s.topico_id !== null && s.topico_id !== undefined).map(s => s.topico_id));
                 perc_vistos = (topicosVistos.size / topicosId.length) * 100;
             }
 
-            if (d && d.total_questoes > 0) {
-                return { qtd: d.total_questoes, perc: d.percentual_acerto, perc_vistos };
-            }
-            return { qtd: 0, perc: 0, perc_vistos };
+            return {
+                qtd,
+                questoes_feitas: qtd,
+                total_questoes: qtd,
+                acertos,
+                perc,
+                taxa_acerto: perc,
+                percentual_acerto: perc,
+                perc_vistos
+            };
         }
 
         function getEstatisticasEdital(ed) {
@@ -1681,6 +1757,10 @@ const app = createApp({
                 const targetEditalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
                 if (targetEditalId) {
                     await carregarDashboardData(targetEditalId);
+                    // Se o edital ainda não teve a Trilha IA & Pareto analisada, executa automaticamente apenas na 1ª vez!
+                    if (editalVerticalizadoData.value && !editalVerticalizadoData.value.ia_trilha_analisada) {
+                        analisarTrilhaVerticalizadoIA(false).catch(() => {});
+                    }
                 }
 
                 if (abaAtiva.value === 'ciclo') {
@@ -1830,6 +1910,55 @@ const app = createApp({
             await carregarDashboardData(id);
             abaAtiva.value = 'verticalizado';
             mostrarAlerta('Relatório verticalizado sincronizado!', 'sucesso');
+        };
+
+        const analisarTrilhaVerticalizadoIA = async (forcar = true) => {
+            if (analisandoTrilhaIA.value) return;
+            const targetEditalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+            if (!targetEditalId) {
+                mostrarAlerta('Nenhum edital ativo encontrado para análise.', 'aviso');
+                return;
+            }
+
+            analisandoTrilhaIA.value = true;
+            try {
+                const res = await fetch('/api/ia/gerar-trilha-verticalizado', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ edital_id: targetEditalId, forcar: !!forcar })
+                });
+                if (!res.ok) {
+                    const err = await res.json().catch(() => ({}));
+                    throw new Error(err.detail || 'Falha ao gerar trilha com IA');
+                }
+                const dadosTrilha = await res.json();
+
+                // Recarrega editais, ciclo ativo (com blocos ordenados e tópicos apontados) e verticalizado
+                const [rEd, rCiclo] = await Promise.all([
+                    fetch('/api/editais'),
+                    fetch('/api/ciclos/ativo')
+                ]);
+                if (rEd.ok) editais.value = await rEd.json();
+                if (rCiclo.ok) cicloAtivo.value = await rCiclo.json();
+                await carregarDashboardData(targetEditalId);
+
+                if (forcar) {
+                    const totMc = dadosTrilha?.metricas_pareto?.total_mais_cobrados || 0;
+                    const totP1 = dadosTrilha?.metricas_pareto?.total_p1 || 0;
+                    mostrarAlerta(
+                        `✨ Trilha IA & Pareto 80/20 salva no banco! (${totMc} Mais Cobrados 🔥, ${totP1} P1 ⚡ e Ciclo sincronizado)`,
+                        'sucesso'
+                    );
+                }
+                carregarInsightsIA(true).catch(() => {});
+            } catch (e) {
+                console.error('Erro na análise da Trilha IA:', e);
+                if (forcar) {
+                    mostrarAlerta('Erro ao analisar trilha com IA: ' + (e.message || 'verifique a conexão'), 'erro');
+                }
+            } finally {
+                analisandoTrilhaIA.value = false;
+            }
         };
 
         // ==========================================
@@ -2550,8 +2679,8 @@ const app = createApp({
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        cutout: '72%',
-                        layout: { padding: 42 },
+                        cutout: '70%',
+                        layout: { padding: 6 },
                         plugins: {
                             legend: { display: false },
                             tooltip: {
@@ -3424,6 +3553,328 @@ const app = createApp({
             }
         });
 
+
+        // ==========================================
+        // 14.5 INTEGRAÇÃO TEC CONCURSOS (DE-PARA & LINKS DIRETOS)
+        // ==========================================
+        const modalVinculoTecAberto = ref(false);
+        const carregandoModalTec = ref(false);
+        const sincronizandoTec = ref(false);
+        const topicoEmVinculacaoTec = ref(null);
+        const vinculoTecAtualModal = ref(null);
+        const sugestoesTecModal = ref([]);
+        const resultadosArvoreTecModal = ref([]);
+        const materiasTecLista = ref([]);
+        const buscaArvoreTecQuery = ref('');
+        const filtroMateriaTecId = ref('');
+        const statusSessaoTec = ref({ autenticado: false, email_configurado: 'fbasantos10@gmail.com', pasta_padrao: 'Sefaz Alagoas Auditor TI' });
+        const gerandoCadernoTec = ref(false);
+        const autenticandoTec = ref(false);
+        const inputCadernoManual = ref('');
+
+        const limparNumeracaoTituloFront = (titulo) => {
+            if (!titulo) return '';
+            return String(titulo).replace(/^(?:\d+(?:\.\d+)*|[IVXLCDM]+)[\.\-\)\s]+/i, '').trim();
+        };
+
+        const obterUrlTecTopico = (topico) => {
+            if (!topico) return 'https://www.tecconcursos.com.br/questoes/cadernos/novo/';
+            if (topico.tec_vinculo) {
+                if (topico.tec_vinculo.url_caderno) return topico.tec_vinculo.url_caderno;
+                if (topico.tec_vinculo.url_tec) return topico.tec_vinculo.url_tec;
+            }
+            const limpo = limparNumeracaoTituloFront(topico.titulo || '');
+            const curto = limpo.split(/[,:;()\-\/]/)[0].trim().slice(0, 45) || limpo.slice(0, 45);
+            return `https://www.tecconcursos.com.br/materias/?filtro=${encodeURIComponent(curto)}&incluirAssuntos=true`;
+        };
+
+        const obterUrlCadernoTecTopico = (topico) => {
+            if (!topico) return 'https://www.tecconcursos.com.br/materias';
+            if (topico.tec_vinculo && topico.tec_vinculo.url_caderno) {
+                return topico.tec_vinculo.url_caderno;
+            }
+            return obterUrlTecTopico(topico);
+        };
+
+        const obterLabelTipoVinculoTec = (vinculo) => {
+            if (!vinculo || !vinculo.vinculado) return 'Busca Fallback';
+            const t = vinculo.tipo_vinculo;
+            if (t === 'MANUAL') return 'Fixado Manual';
+            if (t === 'AUTOMATICO_EXATO') return 'Match Exato';
+            if (t === 'AUTOMATICO_IA') return 'IA Semântico';
+            return 'Match Fuzzy';
+        };
+
+        const atualizarVinculoTopicoLocal = (topicoId, novoVinculo) => {
+            const numId = Number(topicoId);
+            if (editalVerticalizadoData.value) {
+                for (const chave of ['BASICOS', 'ESPECIFICOS', 'TRILHA_COMPLETA']) {
+                    const lista = editalVerticalizadoData.value[chave] || [];
+                    for (const d of lista) {
+                        if (d.topicos) {
+                            const t = d.topicos.find(x => Number(x.id) === numId);
+                            if (t) t.tec_vinculo = novoVinculo;
+                        }
+                        if (d.proximo_topico && Number(d.proximo_topico.id) === numId) {
+                            d.proximo_topico.tec_vinculo = novoVinculo;
+                        }
+                    }
+                }
+            }
+            if (editais.value) {
+                for (const ed of editais.value) {
+                    for (const d of (ed.disciplinas || [])) {
+                        const t = (d.topicos || []).find(x => Number(x.id) === numId);
+                        if (t) t.tec_vinculo = novoVinculo;
+                    }
+                }
+            }
+            if (cicloAtivo.value && cicloAtivo.value.blocos) {
+                for (const b of cicloAtivo.value.blocos) {
+                    if (b.proximo_topico && Number(b.proximo_topico.id) === numId) {
+                        b.proximo_topico.tec_vinculo = novoVinculo;
+                    }
+                }
+            }
+        };
+
+        const carregarMateriasTec = async () => {
+            if (materiasTecLista.value.length > 0) return;
+            try {
+                const res = await fetch('/api/tec/materias');
+                if (res.ok) {
+                    materiasTecLista.value = await res.json();
+                }
+            } catch (e) {
+                console.warn('Erro ao carregar matérias TEC:', e);
+            }
+        };
+
+        const buscarNaArvoreTecModal = async () => {
+            if (!topicoEmVinculacaoTec.value) return;
+            carregandoModalTec.value = true;
+            try {
+                const params = new URLSearchParams();
+                if (buscaArvoreTecQuery.value && buscaArvoreTecQuery.value.trim()) {
+                    params.set('q', buscaArvoreTecQuery.value.trim());
+                }
+                if (filtroMateriaTecId.value) {
+                    params.set('materia_tec_id', String(filtroMateriaTecId.value));
+                } else if (topicoEmVinculacaoTec.value.disciplina_nome) {
+                    params.set('disciplina_nome', topicoEmVinculacaoTec.value.disciplina_nome);
+                }
+                params.set('apenas_assuntos', 'true');
+                params.set('limite', '80');
+
+                const res = await fetch(`/api/tec/arvore?${params.toString()}`);
+                if (res.ok) {
+                    resultadosArvoreTecModal.value = await res.json();
+                }
+            } catch (e) {
+                console.error('Erro na busca da árvore TEC:', e);
+            } finally {
+                carregandoModalTec.value = false;
+            }
+        };
+
+        const abrirModalVinculoTec = async (topico, disciplinaNome = '') => {
+            if (!topico || !topico.id) return;
+            const nomeDisc = disciplinaNome || getNomeDisciplina(topico.disciplina_id) || '';
+            topicoEmVinculacaoTec.value = {
+                id: topico.id,
+                titulo: topico.titulo,
+                disciplina_id: topico.disciplina_id,
+                disciplina_nome: nomeDisc
+            };
+            vinculoTecAtualModal.value = topico.tec_vinculo || null;
+            sugestoesTecModal.value = [];
+            resultadosArvoreTecModal.value = [];
+            buscaArvoreTecQuery.value = '';
+            filtroMateriaTecId.value = '';
+            modalVinculoTecAberto.value = true;
+            carregandoModalTec.value = true;
+
+            try {
+                await carregarMateriasTec();
+                const [resLink] = await Promise.all([
+                    fetch(`/api/tec/topico/${topico.id}/link?incluir_sugestoes=true`),
+                    buscarNaArvoreTecModal()
+                ]);
+                if (resLink.ok) {
+                    const data = await resLink.json();
+                    vinculoTecAtualModal.value = data.vinculo;
+                    sugestoesTecModal.value = data.sugestoes || [];
+                    if (data.topico && data.topico.disciplina_nome && !topicoEmVinculacaoTec.value.disciplina_nome) {
+                        topicoEmVinculacaoTec.value.disciplina_nome = data.topico.disciplina_nome;
+                    }
+                    atualizarVinculoTopicoLocal(topico.id, data.vinculo);
+                }
+            } catch (e) {
+                console.error('Erro ao abrir modal vínculo TEC:', e);
+            } finally {
+                carregandoModalTec.value = false;
+            }
+        };
+
+        const fecharModalVinculoTec = () => {
+            modalVinculoTecAberto.value = false;
+        };
+
+        const fixarVinculoManualTec = async (tecTaxonomiaDbId) => {
+            if (!topicoEmVinculacaoTec.value || !tecTaxonomiaDbId) return;
+            carregandoModalTec.value = true;
+            try {
+                const res = await fetch(`/api/tec/topico/${topicoEmVinculacaoTec.value.id}/vincular`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tec_taxonomia_id: Number(tecTaxonomiaDbId) })
+                });
+                if (res.ok) {
+                    const novoVinculo = await res.json();
+                    vinculoTecAtualModal.value = novoVinculo;
+                    atualizarVinculoTopicoLocal(topicoEmVinculacaoTec.value.id, novoVinculo);
+                    mostrarAlerta('Vínculo com o TEC Concursos fixado com sucesso!', 'sucesso');
+                } else {
+                    mostrarAlerta('Erro ao fixar vínculo com o TEC Concursos.', 'erro');
+                }
+            } catch (e) {
+                mostrarAlerta('Erro de conexão ao salvar vínculo TEC.', 'erro');
+            } finally {
+                carregandoModalTec.value = false;
+            }
+        };
+
+        const removerVinculoManualTec = async () => {
+            if (!topicoEmVinculacaoTec.value) return;
+            carregandoModalTec.value = true;
+            try {
+                const res = await fetch(`/api/tec/topico/${topicoEmVinculacaoTec.value.id}/vincular`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    vinculoTecAtualModal.value = data.vinculo;
+                    atualizarVinculoTopicoLocal(topicoEmVinculacaoTec.value.id, data.vinculo);
+                    mostrarAlerta('Vínculo removido. Usando busca fallback.', 'sucesso');
+                }
+            } catch (e) {
+                mostrarAlerta('Erro ao remover vínculo TEC.', 'erro');
+            } finally {
+                carregandoModalTec.value = false;
+            }
+        };
+
+        const desvincularCadernoManualTec = async () => {
+            if (!topicoEmVinculacaoTec.value) return;
+            carregandoModalTec.value = true;
+            try {
+                const res = await fetch(`/api/tec/topico/${topicoEmVinculacaoTec.value.id}/caderno`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                if (res.ok && data.sucesso) {
+                    mostrarAlerta('Caderno manual removido. O tópico agora abrirá o link direto da matéria e banca no TEC!', 'sucesso');
+                    vinculoTecAtualModal.value = data.vinculo;
+                    atualizarVinculoTopicoLocal(topicoEmVinculacaoTec.value.id, data.vinculo);
+                    inputCadernoManual.value = '';
+                } else {
+                    mostrarAlerta(data.detail || data.mensagem || 'Erro ao desvincular caderno.', 'erro');
+                }
+            } catch (e) {
+                mostrarAlerta('Erro ao desvincular caderno: ' + e.message, 'erro');
+            } finally {
+                carregandoModalTec.value = false;
+            }
+        };
+
+        const associarCadernoManualTec = async () => {
+            if (!topicoEmVinculacaoTec.value || !inputCadernoManual.value.trim()) {
+                mostrarAlerta('Informe o número ou a URL do caderno (ex: 107798461).', 'alerta');
+                return;
+            }
+            carregandoModalTec.value = true;
+            try {
+                const res = await fetch(`/api/tec/topico/${topicoEmVinculacaoTec.value.id}/associar-caderno`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        caderno_url_ou_id: inputCadernoManual.value.trim(),
+                        pasta_nome: 'Sefaz Alagoas Auditor TI'
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.sucesso) {
+                    mostrarAlerta(data.mensagem || 'Caderno associado com sucesso!', 'sucesso');
+                    vinculoTecAtualModal.value = data.vinculo;
+                    atualizarVinculoTopicoLocal(topicoEmVinculacaoTec.value.id, data.vinculo);
+                    inputCadernoManual.value = '';
+                } else {
+                    mostrarAlerta(data.detail || data.mensagem || 'Erro ao associar caderno.', 'erro');
+                }
+            } catch (e) {
+                mostrarAlerta('Erro ao associar caderno: ' + e.message, 'erro');
+            } finally {
+                carregandoModalTec.value = false;
+            }
+        };
+
+        const copiarTextoTec = (txt) => {
+            if (!txt) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt);
+                mostrarAlerta(`Termo '${txt}' copiado! Cole no filtro do TEC em 'Pesquisar por nome'.`, 'sucesso');
+            } else {
+                mostrarAlerta(`Copie o termo: ${txt}`, 'info');
+            }
+        };
+
+        const sincronizarEMapearTec = async (forcarScraping = false) => {
+            const edId = cicloAtivo.value?.edital_id || editais.value[0]?.id || 1;
+            sincronizandoTec.value = true;
+            try {
+                let res;
+                if (forcarScraping) {
+                    res = await fetch('/api/tec/sincronizar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            edital_id: edId,
+                            executar_matching: true,
+                            usar_ia_se_necessario: true
+                        })
+                    });
+                } else {
+                    res = await fetch(`/api/tec/reconciliar/${edId}?usar_ia=true`, {
+                        method: 'POST'
+                    });
+                }
+                if (res.ok) {
+                    const data = await res.json();
+                    await carregarEditalVerticalizado(edId);
+                    const resCiclo = await fetch('/api/ciclos/ativo');
+                    if (resCiclo.ok) {
+                        cicloAtivo.value = await resCiclo.json();
+                    }
+                    const m = data.matching && Array.isArray(data.matching) ? data.matching[0] : data.matching;
+                    if (m) {
+                        mostrarAlerta(
+                            `Mapeamento TEC concluído! ${m.total_topicos} tópicos vinculados (${m.alta_confianca_85} com alta confiança >= 85%).`,
+                            'sucesso'
+                        );
+                    } else {
+                        mostrarAlerta('Sincronização com o TEC Concursos concluída!', 'sucesso');
+                    }
+                } else {
+                    mostrarAlerta('Erro ao reconciliar tópicos com o TEC Concursos.', 'erro');
+                }
+            } catch (e) {
+                console.error(e);
+                mostrarAlerta('Falha de comunicação ao sincronizar TEC Concursos.', 'erro');
+            } finally {
+                sincronizandoTec.value = false;
+            }
+        };
+
         // ==========================================
         // 15. EXPOSIÇÃO DE PROPRIEDADES PARA O TEMPLATE
         // ==========================================
@@ -3513,6 +3964,10 @@ const app = createApp({
             proximoTopicoBlocoAtual,
             abrirDashboard,
             carregarEditalVerticalizado,
+            analisandoTrilhaIA,
+            mostrarResumoTrilhaIA,
+            toggleResumoTrilhaIA,
+            analisarTrilhaVerticalizadoIA,
 
             // Formatadores e Estatísticas
             formatarTempoTimer,
@@ -3611,7 +4066,35 @@ const app = createApp({
             salvandoChaveIA,
             salvarChaveGemini,
             verificarStatusChaveIA,
-            formatarTextoIA
+            formatarTextoIA,
+
+            // Integração TEC Concursos
+            modalVinculoTecAberto,
+            carregandoModalTec,
+            sincronizandoTec,
+            topicoEmVinculacaoTec,
+            vinculoTecAtualModal,
+            sugestoesTecModal,
+            resultadosArvoreTecModal,
+            materiasTecLista,
+            buscaArvoreTecQuery,
+            filtroMateriaTecId,
+            obterUrlTecTopico,
+            obterUrlCadernoTecTopico,
+            obterLabelTipoVinculoTec,
+            abrirModalVinculoTec,
+            fecharModalVinculoTec,
+            statusSessaoTec,
+            gerandoCadernoTec,
+            autenticandoTec,
+            inputCadernoManual,
+            associarCadernoManualTec,
+            desvincularCadernoManualTec,
+            copiarTextoTec,
+            buscarNaArvoreTecModal,
+            fixarVinculoManualTec,
+            removerVinculoManualTec,
+            sincronizarEMapearTec
         };
     }
 });

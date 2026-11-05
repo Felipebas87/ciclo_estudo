@@ -113,7 +113,11 @@ def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
     def topico_esta_visto(t):
         return (t.id in sessoes_topicos_vistos_ids) or bool(t.concluido)
 
-    topicos_prioritarios = [t for t in todos_topicos_db if t.prioridade is not None or t.mais_cobrado]
+    nucleo_pareto = [t for t in todos_topicos_db if t.prioridade == 1 or t.mais_cobrado]
+    if nucleo_pareto:
+        topicos_prioritarios = nucleo_pareto
+    else:
+        topicos_prioritarios = [t for t in todos_topicos_db if t.prioridade is not None or t.mais_cobrado]
     total_prioritarios = len(topicos_prioritarios)
     prioritarios_vistos = [t for t in topicos_prioritarios if topico_esta_visto(t)]
     prioritarios_pendentes = [t for t in topicos_prioritarios if not topico_esta_visto(t)]
@@ -756,3 +760,66 @@ async def recarregar_insights_ia(db: Session = Depends(get_db)):
     db.commit()
 
     return insight
+
+
+@router.get("/trilha-verticalizado")
+async def obter_ou_iniciar_trilha_verticalizado(
+    edital_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db)
+):
+    """
+    Verifica e retorna a Trilha de Aprendizado & Pareto 80/20 do Edital Verticalizado.
+    Se o edital ainda não foi analisado pela IA (`ia_trilha_analisada == False`),
+    executa a análise completa automaticamente apenas uma vez e salva no banco de dados.
+    """
+    from app.services.trilha_ia_service import analisar_e_gerar_trilha_edital
+
+    config = db.query(ConfiguracaoPainelProva).first()
+    chave_ativa = obter_chave_gemini(config) if config else os.getenv("GEMINI_API_KEY")
+
+    try:
+        resultado = await analisar_e_gerar_trilha_edital(
+            db=db,
+            edital_id=edital_id,
+            forcar=False,
+            api_key=chave_ativa
+        )
+        return resultado
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao obter/gerar trilha IA: {str(e)}")
+
+
+@router.post("/gerar-trilha-verticalizado")
+async def gerar_trilha_verticalizado_ia(
+    payload: dict = Body(default={}),
+    db: Session = Depends(get_db)
+):
+    """
+    Acionado pelo botão no Edital Verticalizado (ou na inicialização) para analisar
+    todas as disciplinas e tópicos com a IA Gemini segundo a banca cadastrada,
+    pré-requisitos de aprendizado e Regra de Pareto (80/20), persistindo no banco
+    e sincronizando a ordem no Ciclo Atual.
+    """
+    from app.services.trilha_ia_service import analisar_e_gerar_trilha_edital
+
+    config = db.query(ConfiguracaoPainelProva).first()
+    chave_ativa = obter_chave_gemini(config) if config else os.getenv("GEMINI_API_KEY")
+
+    edital_id = payload.get("edital_id") if isinstance(payload, dict) else None
+    forcar = bool(payload.get("forcar", True)) if isinstance(payload, dict) else True
+
+    try:
+        resultado = await analisar_e_gerar_trilha_edital(
+            db=db,
+            edital_id=edital_id,
+            forcar=forcar,
+            api_key=chave_ativa
+        )
+        return resultado
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao gerar trilha com IA: {str(e)}")
+

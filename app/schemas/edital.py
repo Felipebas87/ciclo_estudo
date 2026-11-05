@@ -8,6 +8,8 @@ class TopicoBase(BaseModel):
     concluido: bool = False
     mais_cobrado: bool = False
     prioridade: Optional[int] = None
+    ordem_trilha: Optional[int] = None
+    motivo_ia: Optional[str] = None
 
 class TopicoCreate(TopicoBase):
     pass
@@ -18,10 +20,13 @@ class TopicoUpdate(BaseModel):
     concluido: Optional[bool] = None
     mais_cobrado: Optional[bool] = None
     prioridade: Optional[int] = None
+    ordem_trilha: Optional[int] = None
+    motivo_ia: Optional[str] = None
 
 class TopicoResponse(TopicoBase):
     id: int
     disciplina_id: int
+    tec_vinculo: Optional[dict] = None
     model_config = ConfigDict(from_attributes=True)
 
 class DisciplinaBase(BaseModel):
@@ -32,6 +37,9 @@ class DisciplinaBase(BaseModel):
     relevancia_dificuldade: int = 3
     incluir_no_ciclo: bool = False
     qtd_questoes_prova: Optional[int] = None
+    ordem_trilha: Optional[int] = None
+    pre_requisitos_ia: Optional[str] = None
+    justificativa_trilha_ia: Optional[str] = None
     model_config = ConfigDict(from_attributes=True)
 
 class DisciplinaCreate(DisciplinaBase):
@@ -45,6 +53,9 @@ class DisciplinaUpdate(BaseModel):
     relevancia_dificuldade: Optional[int] = None
     incluir_no_ciclo: Optional[bool] = None
     qtd_questoes_prova: Optional[int] = None
+    ordem_trilha: Optional[int] = None
+    pre_requisitos_ia: Optional[str] = None
+    justificativa_trilha_ia: Optional[str] = None
 
 class DisciplinaResponse(DisciplinaBase):
     id: int
@@ -69,5 +80,9 @@ class EditalResponse(EditalBase):
     id: int
     ativo: bool
     data_criacao: datetime
+    ia_trilha_analisada: Optional[bool] = False
+    ia_trilha_data: Optional[datetime] = None
+    ia_trilha_banca: Optional[str] = None
+    ia_trilha_resumo: Optional[str] = None
     disciplinas: List[DisciplinaResponse] = []
     model_config = ConfigDict(from_attributes=True)

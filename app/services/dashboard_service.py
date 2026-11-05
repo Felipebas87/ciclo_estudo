@@ -270,13 +270,45 @@ def get_calendario_estudos(db: Session, edital_id: int, dias: int = 30) -> Dict[
 
 def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
     """
-    Retorna os dados para visualização de Edital Verticalizado Granular.
+    Retorna os dados para visualização de Edital Verticalizado Granular,
+    já ordenando as disciplinas e tópicos segundo a Trilha de Aprendizado & Pareto 80/20.
     """
+    import json
+    from app.services.trilha_ia_service import obter_proximo_topico_trilha_disciplina
+
     edital = db.query(Edital).filter(Edital.id == edital_id).first()
     if not edital:
         return {}
 
-    resultado = {"BASICOS": [], "ESPECIFICOS": [], "resumo_basicos": {}, "resumo_especificos": {}}
+    resumo_meta = {}
+    if getattr(edital, "ia_trilha_resumo", None):
+        try:
+            resumo_meta = json.loads(edital.ia_trilha_resumo)
+        except Exception:
+            resumo_meta = {"resumo_estrategico": edital.ia_trilha_resumo}
+
+    resultado: Dict[str, Any] = {
+        "BASICOS": [],
+        "ESPECIFICOS": [],
+        "TRILHA_COMPLETA": [],
+        "resumo_basicos": {},
+        "resumo_especificos": {},
+        "ia_trilha_analisada": bool(getattr(edital, "ia_trilha_analisada", False)),
+        "ia_trilha_banca": getattr(edital, "ia_trilha_banca", None) or resumo_meta.get("banca", "Cebraspe"),
+        "ia_trilha_area": resumo_meta.get("area_concurso", "Fiscal"),
+        "parametros_prova": resumo_meta,
+        "ia_trilha_data": edital.ia_trilha_data.isoformat() if getattr(edital, "ia_trilha_data", None) else None,
+        "ia_trilha_resumo": resumo_meta.get("resumo_estrategico", ""),
+        "ia_trilha_modelo": resumo_meta.get("modelo_origem", "Google Gemini"),
+        "metricas_pareto": {}
+    }
+
+    global_topicos = 0
+    global_vistos = 0
+    global_mc = 0
+    global_p1 = 0
+    global_p2 = 0
+    global_p3 = 0
 
     for grupo in ["BASICOS", "ESPECIFICOS"]:
         total_topicos = 0
@@ -284,7 +316,9 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
         certas = 0
         resolvidas = 0
         
-        disciplinas_grupo = [d for d in edital.disciplinas if d.grupo_conhecimento == grupo and d.categoria != 'REVISAO_ANKI']
+        disciplinas_grupo = [d for d in edital.disciplinas if d.grupo_conhecimento == grupo and d.categoria != 'REVISAO_ANKI' and d.nome != 'REVISÃO ANKI']
+        # Ordem natural das disciplinas no edital
+        disciplinas_grupo.sort(key=lambda d: d.id)
         
         for disc in disciplinas_grupo:
             sessoes_disc = db.query(SessaoEstudo).filter(SessaoEstudo.disciplina_id == disc.id).all()
@@ -295,6 +329,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             
             topicos_data = []
             disc_topicos_vistos = 0
+            topicos_vistos_ids = set()
             topicos_ordenados = sorted(disc.topicos, key=lambda x: (x.ordem if x.ordem is not None else 0, x.id))
             for t in topicos_ordenados:
                 s_top = [s for s in sessoes_disc if s.topico_id == t.id]
@@ -307,11 +342,15 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                 visto = len(s_top) > 0 or bool(t.concluido)
                 if visto:
                     disc_topicos_vistos += 1
+                    topicos_vistos_ids.add(t.id)
                 
                 topicos_data.append({
                     "id": t.id,
+                    "disciplina_id": disc.id,
                     "titulo": t.titulo,
                     "ordem": t.ordem if t.ordem is not None else 0,
+                    "ordem_trilha": getattr(t, "ordem_trilha", None),
+                    "motivo_ia": getattr(t, "motivo_ia", None),
                     "certas": c,
                     "resolvidas": r,
                     "percentual": p,
@@ -320,7 +359,8 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                     "concluido": bool(t.concluido),
                     "mais_cobrado": bool(getattr(t, "mais_cobrado", False)),
                     "prioridade": getattr(t, "prioridade", None),
-                    "visto": visto
+                    "visto": visto,
+                    "tec_vinculo": getattr(t, "tec_vinculo", None)
                 })
                 
             total_topicos += len(disc.topicos)
@@ -329,24 +369,46 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             resolvidas += t_resolvidas
             
             cobertura_perc = round((disc_topicos_vistos / len(disc.topicos) * 100), 1) if len(disc.topicos) > 0 else 0
-            
-            resultado[grupo].append({
+            prox_topico = obter_proximo_topico_trilha_disciplina(disc, topicos_vistos_ids)
+
+            d_mc = sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False))
+            d_p1 = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 1)
+            d_p2 = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 2)
+            d_p3 = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 3)
+
+            global_topicos += len(disc.topicos)
+            global_vistos += disc_topicos_vistos
+            global_mc += d_mc
+            global_p1 += d_p1
+            global_p2 += d_p2
+            global_p3 += d_p3
+
+            disc_payload = {
                 "id": disc.id,
                 "nome": disc.nome,
+                "grupo_conhecimento": disc.grupo_conhecimento,
+                "peso_prova": disc.peso_prova,
+                "qtd_questoes_prova": disc.qtd_questoes_prova,
+                "ordem_trilha": getattr(disc, "ordem_trilha", None),
+                "pre_requisitos_ia": getattr(disc, "pre_requisitos_ia", None),
+                "justificativa_trilha_ia": getattr(disc, "justificativa_trilha_ia", None),
+                "proximo_topico": prox_topico,
                 "certas": t_certas,
                 "resolvidas": t_resolvidas,
                 "percentual": perc,
                 "revisoes_anki": t_revisoes_anki,
                 "topicos_vistos": disc_topicos_vistos,
                 "total_topicos": len(disc.topicos),
-                "total_mais_cobrados": sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False)),
+                "total_mais_cobrados": d_mc,
                 "total_prioritarios": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) is not None),
-                "total_p1": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 1),
-                "total_p2": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 2),
-                "total_p3": sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 3),
+                "total_p1": d_p1,
+                "total_p2": d_p2,
+                "total_p3": d_p3,
                 "cobertura_percentual": cobertura_perc,
                 "topicos": topicos_data
-            })
+            }
+            resultado[grupo].append(disc_payload)
+            resultado["TRILHA_COMPLETA"].append(disc_payload)
             
         cobertura_grupo = round((topicos_vistos / total_topicos * 100), 1) if total_topicos > 0 else 0
         perc_grupo = round((certas / resolvidas * 100), 1) if resolvidas > 0 else 0
@@ -359,5 +421,20 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             "resolvidas": resolvidas,
             "percentual": perc_grupo
         }
+
+    resultado["TRILHA_COMPLETA"].sort(
+        key=lambda d: (d["ordem_trilha"] if d.get("ordem_trilha") is not None else 999, d["id"])
+    )
+    resultado["metricas_pareto"] = {
+        "total_disciplinas": len(resultado["TRILHA_COMPLETA"]),
+        "total_topicos": global_topicos,
+        "topicos_vistos": global_vistos,
+        "total_mais_cobrados": global_mc,
+        "perc_mais_cobrados": round((global_mc / global_topicos * 100), 1) if global_topicos > 0 else 0.0,
+        "total_p1": global_p1,
+        "total_p2": global_p2,
+        "total_p3": global_p3,
+        "total_nucleo_pareto": global_p1 + global_p2
+    }
 
     return resultado

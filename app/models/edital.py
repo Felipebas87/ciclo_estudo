@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -16,6 +16,10 @@ class Edital(Base):
     ativo = Column(Boolean, default=True)
     encerrado = Column(Boolean, default=False)
     data_criacao = Column(DateTime, default=utc_now)
+    ia_trilha_analisada = Column(Boolean, default=False)
+    ia_trilha_data = Column(DateTime, nullable=True)
+    ia_trilha_banca = Column(String(100), nullable=True)
+    ia_trilha_resumo = Column(Text, nullable=True)
 
     disciplinas = relationship("Disciplina", back_populates="edital", cascade="all, delete-orphan")
     ciclos = relationship("CicloEstudos", back_populates="edital", cascade="all, delete-orphan")

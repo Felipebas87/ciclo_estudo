@@ -46,7 +46,7 @@ load_dotenv()
 
 from app.database import Base, engine
 import app.models  # Garante registro dos modelos no SQLAlchemy
-from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova, ia_insights
+from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova, ia_insights, tec_integracao
 
 # MIGRACAO AUTOMATICA E CRIACAO DE TABELAS (POSTGRES / SQLITE)
 from sqlalchemy import inspect, text
@@ -120,8 +120,12 @@ def auto_upgrade_db():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN gemini_api_key VARCHAR(255);"))
                 print("Coluna 'gemini_api_key' adicionada em configuracao_painel_prova.")
+            if "area_concurso" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN area_concurso VARCHAR(100) DEFAULT 'Fiscal';"))
+                print("Coluna 'area_concurso' adicionada em configuracao_painel_prova.")
 
-        # 6. Colunas 'mais_cobrado' e 'prioridade' na tabela 'topicos'
+        # 6. Colunas 'mais_cobrado', 'prioridade', 'ordem_trilha' e 'motivo_ia' na tabela 'topicos'
         if "topicos" in existing_tables:
             col_names = [col["name"] for col in inspector.get_columns("topicos")]
             if "mais_cobrado" not in col_names:
@@ -132,6 +136,70 @@ def auto_upgrade_db():
                 with engine.begin() as conn:
                     conn.execute(text("ALTER TABLE topicos ADD COLUMN prioridade INTEGER;"))
                 print("Coluna 'prioridade' adicionada na tabela topicos.")
+            if "ordem_trilha" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topicos ADD COLUMN ordem_trilha INTEGER;"))
+                print("Coluna 'ordem_trilha' adicionada na tabela topicos.")
+            if "motivo_ia" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topicos ADD COLUMN motivo_ia TEXT;"))
+                print("Coluna 'motivo_ia' adicionada na tabela topicos.")
+
+        # 7. Colunas de Trilha IA em 'disciplinas'
+        if "disciplinas" in existing_tables:
+            col_names = [col["name"] for col in inspector.get_columns("disciplinas")]
+            if "ordem_trilha" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE disciplinas ADD COLUMN ordem_trilha INTEGER;"))
+                print("Coluna 'ordem_trilha' adicionada na tabela disciplinas.")
+            if "pre_requisitos_ia" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE disciplinas ADD COLUMN pre_requisitos_ia TEXT;"))
+                print("Coluna 'pre_requisitos_ia' adicionada na tabela disciplinas.")
+            if "justificativa_trilha_ia" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE disciplinas ADD COLUMN justificativa_trilha_ia TEXT;"))
+                print("Coluna 'justificativa_trilha_ia' adicionada na tabela disciplinas.")
+
+        # 8. Colunas de Trilha IA em 'editais'
+        if "editais" in existing_tables:
+            col_names = [col["name"] for col in inspector.get_columns("editais")]
+            if "ia_trilha_analisada" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_analisada BOOLEAN DEFAULT FALSE;"))
+                print("Coluna 'ia_trilha_analisada' adicionada na tabela editais.")
+            if "ia_trilha_data" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_data TIMESTAMP;"))
+                print("Coluna 'ia_trilha_data' adicionada na tabela editais.")
+            if "ia_trilha_banca" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_banca VARCHAR(100);"))
+                print("Coluna 'ia_trilha_banca' adicionada na tabela editais.")
+            if "ia_trilha_resumo" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_resumo TEXT;"))
+                print("Coluna 'ia_trilha_resumo' adicionada na tabela editais.")
+
+        # 9. Colunas de Caderno em 'topico_estudo_tec_de_para'
+        if "topico_estudo_tec_de_para" in existing_tables:
+            col_names = [col["name"] for col in inspector.get_columns("topico_estudo_tec_de_para")]
+            if "caderno_id" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN caderno_id VARCHAR(50);"))
+                print("Coluna 'caderno_id' adicionada na tabela topico_estudo_tec_de_para.")
+            if "url_caderno_criado" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN url_caderno_criado VARCHAR(300);"))
+                print("Coluna 'url_caderno_criado' adicionada na tabela topico_estudo_tec_de_para.")
+            if "pasta_tec_nome" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN pasta_tec_nome VARCHAR(100);"))
+                print("Coluna 'pasta_tec_nome' adicionada na tabela topico_estudo_tec_de_para.")
+            if "data_geracao_caderno" not in col_names:
+                with engine.begin() as conn:
+                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN data_geracao_caderno TIMESTAMP;"))
+                print("Coluna 'data_geracao_caderno' adicionada na tabela topico_estudo_tec_de_para.")
     except Exception as e:
         print(f"Aviso no auto_upgrade_db: {e}")
 
@@ -161,6 +229,7 @@ app.include_router(dashboard.router)
 app.include_router(resultados.router)
 app.include_router(configuracao_prova.router)
 app.include_router(ia_insights.router)
+app.include_router(tec_integracao.router)
 
 # Configuração dos Arquivos Estáticos e SPA Frontend
 STATIC_DIR = Path(__file__).resolve().parent / "static"

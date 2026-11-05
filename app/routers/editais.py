@@ -21,13 +21,19 @@ router = APIRouter(prefix="/api/editais", tags=["Editais"])
 
 @router.get("", response_model=List[EditalResponse])
 def listar_editais(db: Session = Depends(get_db)):
-    return db.query(Edital).order_by(Edital.data_criacao.desc()).all()
+    editais = db.query(Edital).order_by(Edital.data_criacao.desc()).all()
+    for ed in editais:
+        if ed.disciplinas:
+            ed.disciplinas.sort(key=lambda d: d.id)
+    return editais
 
 @router.get("/{edital_id}", response_model=EditalResponse)
 def obter_edital(edital_id: int, db: Session = Depends(get_db)):
     edital = db.query(Edital).filter(Edital.id == edital_id).first()
     if not edital:
         raise HTTPException(status_code=404, detail="Edital não encontrado")
+    if edital.disciplinas:
+        edital.disciplinas.sort(key=lambda d: d.id)
     return edital
 
 @router.post("", response_model=EditalResponse)
@@ -190,6 +196,10 @@ def atualizar_topico(topico_id: int, dados: TopicoUpdate, db: Session = Depends(
         topico.mais_cobrado = dados.mais_cobrado
     if "prioridade" in campos_recebidos:
         topico.prioridade = dados.prioridade
+    if "ordem_trilha" in campos_recebidos:
+        topico.ordem_trilha = dados.ordem_trilha
+    if "motivo_ia" in campos_recebidos:
+        topico.motivo_ia = dados.motivo_ia
 
     db.commit()
     db.refresh(topico)

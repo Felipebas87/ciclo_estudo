@@ -287,7 +287,13 @@ html:not(.dark) .card-hero-ciclo .hero-subcard p.text-xs {
     color: #64748B !important;
 }
 
-html:not(.dark) .card-hero-ciclo .hero-subcard .bg-slate-800.h-2 {
+html:not(.dark) .card-hero-ciclo .hero-subcard .text-slate-800 {
+    color: #0F172A !important;
+}
+
+html:not(.dark) .card-hero-ciclo .hero-subcard .bg-slate-800.h-2,
+html:not(.dark) .card-hero-ciclo .hero-subcard .bg-slate-800.h-1\.5,
+html:not(.dark) .card-hero-ciclo .hero-subcard .bg-slate-800 {
     background-color: #E2E8F0 !important;
 }
 

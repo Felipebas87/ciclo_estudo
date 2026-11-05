@@ -12,6 +12,19 @@ class Topico(Base):
     concluido = Column(Boolean, default=False)
     mais_cobrado = Column(Boolean, default=False)
     prioridade = Column(Integer, nullable=True)  # 1 (Alta/P1), 2 (Média/P2), 3 (Baixa/P3) ou None
+    ordem_trilha = Column(Integer, nullable=True)
+    motivo_ia = Column(Text, nullable=True)
 
     disciplina = relationship("Disciplina", back_populates="topicos")
     sessoes = relationship("SessaoEstudo", back_populates="topico")
+    vinculo_tec = relationship(
+        "TopicoEstudoTecDePara",
+        back_populates="topico",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+    @property
+    def tec_vinculo(self):
+        from app.services.tec_matching_service import montar_dados_vinculo_topico
+        return montar_dados_vinculo_topico(self, self.vinculo_tec)

@@ -10,6 +10,7 @@ class ConfiguracaoPainelProva(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     concurso = Column(String(200), nullable=True, default="SEFAZ ALAGOAS")
+    area_concurso = Column(String(100), nullable=True, default="Fiscal")
     cargo = Column(String(200), nullable=True, default="Auditor Fiscal da Receita Estadual")
     especialidade = Column(String(200), nullable=True, default="Tecnologia da Informação")
     banca = Column(String(100), nullable=True, default="Cebraspe")
@@ -24,5 +25,8 @@ class ConfiguracaoPainelProva(Base):
     ultimo_insight_ia = Column(Text, nullable=True)
     data_insight_ia = Column(DateTime, nullable=True)
     gemini_api_key = Column(String(255), nullable=True)
+    tec_email = Column(String(150), nullable=True, default="fbasantos10@gmail.com")
+    tec_senha = Column(String(200), nullable=True)
+    tec_pasta_padrao = Column(String(150), nullable=True, default="Sefaz Alagoas Auditor TI")
     data_atualizacao = Column(DateTime, default=utc_now, onupdate=utc_now)
 

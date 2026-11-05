@@ -3,6 +3,7 @@ from typing import Optional
 
 class ConfiguracaoPainelProvaBase(BaseModel):
     concurso: Optional[str] = "SEFAZ ALAGOAS"
+    area_concurso: Optional[str] = "Fiscal"
     cargo: Optional[str] = "Auditor Fiscal da Receita Estadual"
     especialidade: Optional[str] = "Tecnologia da Informação"
     banca: Optional[str] = "Cebraspe"

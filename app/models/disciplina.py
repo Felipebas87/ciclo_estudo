@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Boolean, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -14,6 +14,9 @@ class Disciplina(Base):
     relevancia_dificuldade = Column(Integer, default=3)  # Escala 1 a 5
     incluir_no_ciclo = Column(Boolean, default=False)
     qtd_questoes_prova = Column(Integer, nullable=True)
+    ordem_trilha = Column(Integer, nullable=True)
+    pre_requisitos_ia = Column(Text, nullable=True)
+    justificativa_trilha_ia = Column(Text, nullable=True)
 
     edital = relationship("Edital", back_populates="disciplinas")
     topicos = relationship("Topico", back_populates="disciplina", cascade="all, delete-orphan", order_by="Topico.ordem")

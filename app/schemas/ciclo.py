@@ -1,7 +1,19 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict
 from app.schemas.edital import DisciplinaBase
+
+class TopicoApontadoCiclo(BaseModel):
+    id: int
+    titulo: str
+    ordem: int = 0
+    ordem_trilha: Optional[int] = None
+    prioridade: Optional[int] = None
+    mais_cobrado: bool = False
+    motivo_ia: Optional[str] = None
+    concluido: bool = False
+    visto: bool = False
+    tec_vinculo: Optional[Dict[str, Any]] = None
 
 class BlocoCicloResponse(BaseModel):
     id: int
@@ -11,6 +23,7 @@ class BlocoCicloResponse(BaseModel):
     duracao_minutos: int
     concluido: bool
     disciplina: DisciplinaBase
+    proximo_topico: Optional[TopicoApontadoCiclo] = None
     model_config = ConfigDict(from_attributes=True)
 
 class CicloGerarRequest(BaseModel):

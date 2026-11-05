@@ -16,3 +16,12 @@ __all__ = [
 from app.models.resultado import ResultadoConcurso
 from .resultado_avulso import ResultadoAvulsoDB
 from app.models.configuracao_prova import ConfiguracaoPainelProva
+from app.models.tec_taxonomia import TecTaxonomia, TopicoEstudoTecDePara
+
+__all__.extend([
+    "ResultadoConcurso",
+    "ResultadoAvulsoDB",
+    "ConfiguracaoPainelProva",
+    "TecTaxonomia",
+    "TopicoEstudoTecDePara"
+])

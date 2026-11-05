@@ -222,8 +222,15 @@ def gerar_ciclo_para_edital(
     db.flush()
 
     # Cria 1 bloco por disciplina, com o tempo total daquela disciplina
-    # Ordenar por relevância (maior alocação primeiro)
-    disciplinas_ordenadas = sorted(disciplinas_ativas, key=lambda d: alocacao.get(d.id, 0), reverse=True)
+    # Ordenar pela ordem da Trilha de Aprendizado IA (se definida) e depois por alocação Pareto
+    disciplinas_ordenadas = sorted(
+        disciplinas_ativas,
+        key=lambda d: (
+            d.ordem_trilha if getattr(d, "ordem_trilha", None) is not None else 999,
+            -alocacao.get(d.id, 0),
+            d.id
+        )
+    )
     
     # Criar ou buscar a disciplina especial "REVISÃO ANKI"
     revisao_disc = db.query(Disciplina).filter(Disciplina.edital_id == edital.id, Disciplina.nome == "REVISÃO ANKI").first()
