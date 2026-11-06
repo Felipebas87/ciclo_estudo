@@ -140,3 +140,21 @@ def test_reconciliar_edital_endpoint():
     assert m["total_topicos"] > 0
     assert m["alta_confianca_85"] > 0
 
+
+def test_diagnostico_arvore_e_busca_fraude():
+    resp_diag = client.get("/api/tec/diagnostico-arvore")
+    assert resp_diag.status_code == 200
+    diag = resp_diag.json()
+    assert diag["status"] == "ok"
+    assert diag["total_nos"] >= 4056
+    assert diag["total_materias"] >= 20
+    assert diag["total_vinculos"] >= 300
+    assert diag["fraude_e_erro_encontrado"] is True
+    assert diag["fraude_e_erro_detalhes"]["nome"] == "Fraude e Erro (Auditoria)"
+
+    resp_busca = client.get("/api/tec/arvore", params={"q": "fraude", "apenas_assuntos": True})
+    assert resp_busca.status_code == 200
+    itens = resp_busca.json()
+    assert len(itens) >= 1
+    assert any("Fraude e Erro" in it["nome"] for it in itens)
+

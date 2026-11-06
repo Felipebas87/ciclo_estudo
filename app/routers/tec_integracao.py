@@ -108,9 +108,59 @@ def obter_estatisticas_tec(
     }
 
 
+@router.get("/diagnostico-arvore")
+def diagnostico_arvore_tec(
+    forcar_reseed: bool = Query(False, description="Forçar recarga do seed da taxonomia e vínculos"),
+    db: Session = Depends(get_db)
+):
+    """
+    Endpoint de diagnóstico para validar e garantir a integridade da árvore e vínculos do TEC Concursos
+    no ambiente de produção (Render / PostgreSQL).
+    """
+    if forcar_reseed:
+        from app.services.tec_seed_service import carregar_seed_tec_taxonomia, carregar_seed_tec_vinculos
+        carregar_seed_tec_taxonomia(db, forcar=True)
+        carregar_seed_tec_vinculos(db, forcar=True)
+
+    total_nos = db.query(func.count(TecTaxonomia.id)).scalar() or 0
+    total_materias = db.query(func.count(TecTaxonomia.id)).filter(TecTaxonomia.is_materia == True).scalar() or 0
+    total_assuntos = db.query(func.count(TecTaxonomia.id)).filter(TecTaxonomia.is_materia == False).scalar() or 0
+
+    fraude_no = db.query(TecTaxonomia).filter(
+        TecTaxonomia.is_materia == False,
+        TecTaxonomia.nome.ilike("%Fraude e Erro%")
+    ).first()
+
+    total_vinculos = db.query(func.count(TopicoEstudoTecDePara.id)).scalar() or 0
+
+    return {
+        "status": "ok" if total_nos >= 4056 and fraude_no is not None else "incompleto",
+        "total_nos": total_nos,
+        "total_materias": total_materias,
+        "total_assuntos": total_assuntos,
+        "total_vinculos": total_vinculos,
+        "fraude_e_erro_encontrado": fraude_no is not None,
+        "fraude_e_erro_detalhes": {
+            "id": fraude_no.id,
+            "tec_id": fraude_no.tec_id,
+            "nome": fraude_no.nome,
+            "caminho_completo": fraude_no.caminho_completo,
+            "total_questoes": fraude_no.total_questoes,
+        } if fraude_no else None
+    }
+
+
 @router.get("/materias", response_model=List[TecNoTaxonomiaResponse])
 def listar_materias_tec(db: Session = Depends(get_db)):
     """Lista todas as disciplinas/matérias (Nível 1) sincronizadas na árvore do TEC Concursos."""
+    total_materias = db.query(func.count(TecTaxonomia.id)).filter(TecTaxonomia.is_materia == True).scalar() or 0
+    if total_materias < 28:
+        try:
+            from app.services.tec_seed_service import carregar_seed_tec_taxonomia
+            carregar_seed_tec_taxonomia(db)
+        except Exception as err_s:
+            print(f"[TEC MATERIAS] Aviso ao garantir matérias completas: {err_s}")
+
     materias = (
         db.query(TecTaxonomia)
         .filter(TecTaxonomia.is_materia == True, TecTaxonomia.ativo == True)
@@ -132,12 +182,26 @@ def buscar_na_arvore_tec(
     """
     Endpoint de busca na árvore `tec_taxonomia` para o Modal de Validação/Associação Manual.
     Suporta busca sem acento e prioriza assuntos com mais questões.
+    Garante auto-carregamento imediato do seed caso a base do servidor ainda esteja incompleta.
     """
+    total_atual = db.query(func.count(TecTaxonomia.id)).scalar() or 0
+    if total_atual < 4056:
+        try:
+            from app.services.tec_seed_service import carregar_seed_tec_taxonomia
+            carregar_seed_tec_taxonomia(db)
+        except Exception as err_s:
+            print(f"[TEC ARVORE] Aviso ao garantir taxonomia completa: {err_s}")
+
     query = db.query(TecTaxonomia).filter(TecTaxonomia.ativo == True)
     if apenas_assuntos:
         query = query.filter(TecTaxonomia.is_materia == False)
-    if materia_tec_id is not None:
-        query = query.filter(TecTaxonomia.materia_tec_id == materia_tec_id)
+
+    if materia_tec_id is not None and not hasattr(materia_tec_id, 'default'):
+        try:
+            m_id = int(materia_tec_id)
+            query = query.filter(TecTaxonomia.materia_tec_id == m_id)
+        except (ValueError, TypeError):
+            pass
     elif disciplina_nome and not q:
         slugs = obter_slugs_tec_para_disciplina(disciplina_nome)
         if slugs:
@@ -307,9 +371,10 @@ async def reconciliar_edital_endpoint(
     """
     total_nos = db.query(func.count(TecTaxonomia.id)).scalar() or 0
     resumo_sync = None
-    if total_nos == 0:
-        from app.services.tec_seed_service import carregar_seed_tec_taxonomia
+    if total_nos < 4056:
+        from app.services.tec_seed_service import carregar_seed_tec_taxonomia, carregar_seed_tec_vinculos
         carregar_seed_tec_taxonomia(db)
+        carregar_seed_tec_vinculos(db)
         total_nos = db.query(func.count(TecTaxonomia.id)).scalar() or 0
         if total_nos == 0:
             resumo_sync = await sincronizar_taxonomia_tec(db, delay_entre_requisicoes=0.15)

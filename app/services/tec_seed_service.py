@@ -23,7 +23,7 @@ def carregar_seed_tec_taxonomia(db: Session, forcar: bool = False) -> int:
     sem depender de scraping ao vivo.
     """
     total_existente = db.query(func.count(TecTaxonomia.id)).scalar() or 0
-    if total_existente > 0 and not forcar:
+    if total_existente >= 4056 and not forcar:
         return total_existente
 
     if not os.path.exists(SEED_TAXONOMIA_GZ):
@@ -35,7 +35,6 @@ def carregar_seed_tec_taxonomia(db: Session, forcar: bool = False) -> int:
             nos_data = json.load(f)
 
         now = datetime.now(timezone.utc)
-        novos_objetos = []
 
         # Cache dos tec_id já existentes para evitar duplicidade
         existentes_chaves = {
@@ -43,31 +42,38 @@ def carregar_seed_tec_taxonomia(db: Session, forcar: bool = False) -> int:
             for r in db.query(TecTaxonomia.tec_id, TecTaxonomia.is_materia).all()
         }
 
+        novos_mappings = []
         for item in nos_data:
             chave = (int(item["tec_id"]), bool(item.get("is_materia", False)))
             if chave in existentes_chaves:
                 continue
 
-            novos_objetos.append(TecTaxonomia(
-                tec_id=int(item["tec_id"]),
-                is_materia=bool(item.get("is_materia", False)),
-                materia_tec_id=item.get("materia_tec_id"),
-                nome=str(item.get("nome", "")),
-                nivel_profundidade=int(item.get("nivel_profundidade", 1)),
-                hierarquia_tec=item.get("hierarquia_tec"),
-                caminho_completo=str(item.get("caminho_completo", "")),
-                slug_url=item.get("slug_url"),
-                total_questoes=int(item.get("total_questoes", 0)),
-                url_params_payload=item.get("url_params_payload"),
-                ativo=bool(item.get("ativo", True)),
-                updated_at=now
-            ))
+            novos_mappings.append({
+                "tec_id": int(item["tec_id"]),
+                "is_materia": bool(item.get("is_materia", False)),
+                "materia_tec_id": item.get("materia_tec_id"),
+                "nome": str(item.get("nome", "")),
+                "parent_id": None,
+                "nivel_profundidade": int(item.get("nivel_profundidade", 1)),
+                "hierarquia_tec": item.get("hierarquia_tec"),
+                "caminho_completo": str(item.get("caminho_completo", "")),
+                "slug_url": item.get("slug_url"),
+                "total_questoes": int(item.get("total_questoes", 0)),
+                "url_params_payload": item.get("url_params_payload"),
+                "ativo": bool(item.get("ativo", True)),
+                "updated_at": now
+            })
+            existentes_chaves.add(chave)
 
-        if novos_objetos:
-            db.bulk_save_objects(novos_objetos)
+        if novos_mappings:
+            chunk_size = 500
+            for i in range(0, len(novos_mappings), chunk_size):
+                chunk = novos_mappings[i:i + chunk_size]
+                db.bulk_insert_mappings(TecTaxonomia, chunk)
+                db.flush()
             db.commit()
-            print(f"[TEC SEED] {len(novos_objetos)} nós da árvore TEC importados com sucesso a partir do seed!")
-            return len(novos_objetos) + total_existente
+            print(f"[TEC SEED] {len(novos_mappings)} nós da árvore TEC importados com sucesso a partir do seed!")
+            return len(novos_mappings) + total_existente
 
         return total_existente
     except Exception as exc:
@@ -85,7 +91,7 @@ def carregar_seed_tec_vinculos(db: Session, forcar: bool = False) -> int:
     e os nós da taxonomia do TEC Concursos.
     """
     total_vinculos = db.query(func.count(TopicoEstudoTecDePara.id)).scalar() or 0
-    if total_vinculos > 0 and not forcar:
+    if total_vinculos >= 369 and not forcar:
         return total_vinculos
 
     if not os.path.exists(SEED_VINCULOS_JSON):
@@ -100,8 +106,8 @@ def carregar_seed_tec_vinculos(db: Session, forcar: bool = False) -> int:
             (n.tec_id, bool(n.is_materia)): n.id
             for n in db.query(TecTaxonomia.id, TecTaxonomia.tec_id, TecTaxonomia.is_materia).all()
         }
-        if not tec_nodes:
-            # Tenta carregar a taxonomia antes se estiver vazia
+        if len(tec_nodes) < 4056:
+            # Tenta carregar a taxonomia antes se estiver incompleta
             carregar_seed_tec_taxonomia(db)
             tec_nodes = {
                 (n.tec_id, bool(n.is_materia)): n.id
@@ -130,7 +136,7 @@ def carregar_seed_tec_vinculos(db: Session, forcar: bool = False) -> int:
         }
 
         now = datetime.now(timezone.utc)
-        inseridos = 0
+        novos_vinculos = []
 
         for item in v_data:
             d_nome = (item.get("disciplina_nome") or "").strip().lower()
@@ -146,26 +152,30 @@ def carregar_seed_tec_vinculos(db: Session, forcar: bool = False) -> int:
             if not topico_id or topico_id in vinculos_existentes_topico_ids:
                 continue
 
-            novo_v = TopicoEstudoTecDePara(
-                topico_id=topico_id,
-                tec_taxonomia_id=tec_taxonomia_id,
-                tipo_vinculo=item.get("tipo_vinculo", "AUTOMATICO_FUZZY"),
-                confianca_score=float(item.get("confianca_score", 0.85)),
-                validado=bool(item.get("validado", False)),
-                caderno_id=item.get("caderno_id"),
-                url_caderno_criado=item.get("url_caderno_criado"),
-                pasta_tec_nome=item.get("pasta_tec_nome"),
-                updated_at=now
-            )
-            db.add(novo_v)
+            novos_vinculos.append({
+                "topico_id": topico_id,
+                "tec_taxonomia_id": tec_taxonomia_id,
+                "tipo_vinculo": item.get("tipo_vinculo", "AUTOMATICO_FUZZY"),
+                "confianca_score": float(item.get("confianca_score", 0.85)),
+                "validado": bool(item.get("validado", False)),
+                "caderno_id": item.get("caderno_id"),
+                "url_caderno_criado": item.get("url_caderno_criado"),
+                "pasta_tec_nome": item.get("pasta_tec_nome"),
+                "updated_at": now
+            })
             vinculos_existentes_topico_ids.add(topico_id)
-            inseridos += 1
 
-        if inseridos > 0:
+        if novos_vinculos:
+            chunk_size = 500
+            for i in range(0, len(novos_vinculos), chunk_size):
+                chunk = novos_vinculos[i:i + chunk_size]
+                db.bulk_insert_mappings(TopicoEstudoTecDePara, chunk)
+                db.flush()
             db.commit()
-            print(f"[TEC SEED] {inseridos} vínculos De-Para aplicados com sucesso!")
+            print(f"[TEC SEED] {len(novos_vinculos)} vínculos De-Para aplicados com sucesso!")
+            return len(novos_vinculos) + total_vinculos
 
-        return inseridos + total_vinculos
+        return total_vinculos
     except Exception as exc:
         print(f"[TEC SEED] Erro ao carregar seed de vínculos: {exc}")
         try:
