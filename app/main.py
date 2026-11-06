@@ -51,157 +51,96 @@ from app.routers import editais, ciclos, sessoes, dashboard, resultados, configu
 # MIGRACAO AUTOMATICA E CRIACAO DE TABELAS (POSTGRES / SQLITE)
 from sqlalchemy import inspect, text
 
+def safe_add_column(target_engine, table_name: str, col_name: str, col_sql_type: str):
+    try:
+        insp = inspect(target_engine)
+        if table_name not in insp.get_table_names():
+            return
+        existing_cols = [c["name"] for c in insp.get_columns(table_name)]
+        if col_name not in existing_cols:
+            with target_engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table_name} ADD COLUMN {col_name} {col_sql_type};"))
+            print(f"[AUTO-UPGRADE] Coluna '{col_name}' adicionada com sucesso na tabela '{table_name}'.")
+    except Exception as col_err:
+        print(f"[AUTO-UPGRADE] Aviso ao checar/adicionar '{col_name}' em '{table_name}': {col_err}")
+
 def auto_upgrade_db():
     try:
-        inspector = inspect(engine)
-        existing_tables = inspector.get_table_names()
-
-        # 1. Coluna 'encerrado' na tabela 'editais'
-        if "editais" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("editais")]
-            if "encerrado" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE editais ADD COLUMN encerrado BOOLEAN DEFAULT FALSE;"))
-                print("Coluna 'encerrado' adicionada na tabela editais.")
-
-        # 2. Cria novas tabelas do SQLAlchemy se não existirem
+        # 1. Cria novas tabelas do SQLAlchemy se não existirem
         Base.metadata.create_all(bind=engine)
+    except Exception as e_create:
+        print(f"[AUTO-UPGRADE] Aviso em create_all: {e_create}")
 
-        # Atualiza o inspector apos create_all
-        inspector = inspect(engine)
-        existing_tables = inspector.get_table_names()
+    # 2. Migrações individuais com isolamento total para PostgreSQL e SQLite
+    colunas_migracao = [
+        # editais
+        ("editais", "encerrado", "BOOLEAN DEFAULT FALSE"),
+        ("editais", "ia_trilha_analisada", "BOOLEAN DEFAULT FALSE"),
+        ("editais", "ia_trilha_data", "TIMESTAMP"),
+        ("editais", "ia_trilha_banca", "VARCHAR(100)"),
+        ("editais", "ia_trilha_resumo", "TEXT"),
 
-        # 3. Coluna 'total_pontos_prova' na tabela 'resultados_concurso'
-        if "resultados_concurso" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("resultados_concurso")]
-            if "total_pontos_prova" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE resultados_concurso ADD COLUMN total_pontos_prova REAL;"))
-                print("Coluna 'total_pontos_prova' adicionada na tabela resultados_concurso.")
+        # configuracao_painel_prova
+        ("configuracao_painel_prova", "area_concurso", "VARCHAR(100) DEFAULT 'Fiscal'"),
+        ("configuracao_painel_prova", "marcos_alertados", "TEXT DEFAULT '{}'"),
+        ("configuracao_painel_prova", "ultimo_insight_ia", "TEXT"),
+        ("configuracao_painel_prova", "data_insight_ia", "TIMESTAMP"),
+        ("configuracao_painel_prova", "gemini_api_key", "VARCHAR(255)"),
+        ("configuracao_painel_prova", "tec_email", "VARCHAR(150) DEFAULT 'fbasantos10@gmail.com'"),
+        ("configuracao_painel_prova", "tec_senha", "VARCHAR(200)"),
+        ("configuracao_painel_prova", "tec_pasta_padrao", "VARCHAR(150) DEFAULT 'Sefaz Alagoas Auditor TI'"),
+        ("configuracao_painel_prova", "data_atualizacao", "TIMESTAMP"),
 
-        # 4. Colunas complementares na tabela 'resultados_avulsos'
-        if "resultados_avulsos" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("resultados_avulsos")]
-            cols_def = {
-                "banca": "TEXT",
-                "data_prova": "TEXT",
-                "total_pontos_prova": "REAL",
-                "nota_corte": "REAL",
-                "acertos_basicos": "INTEGER",
-                "erros_basicos": "INTEGER",
-                "nota_basicos": "REAL",
-                "acertos_especificos": "INTEGER",
-                "erros_especificos": "INTEGER",
-                "nota_especificos": "REAL",
-                "nota_discursiva": "REAL",
-                "posicao": "INTEGER"
-            }
-            for col, col_type in cols_def.items():
-                if col not in col_names:
-                    try:
-                        with engine.begin() as conn:
-                            conn.execute(text(f"ALTER TABLE resultados_avulsos ADD COLUMN {col} {col_type};"))
-                        print(f"Coluna '{col}' adicionada na tabela resultados_avulsos.")
-                    except Exception as col_err:
-                        print(f"Nota: coluna {col} em resultados_avulsos: {col_err}")
+        # disciplinas
+        ("disciplinas", "ordem_trilha", "INTEGER"),
+        ("disciplinas", "pre_requisitos_ia", "TEXT"),
+        ("disciplinas", "justificativa_trilha_ia", "TEXT"),
+        ("disciplinas", "qtd_questoes_prova", "INTEGER"),
 
-        # 5. Colunas de IA em 'configuracao_painel_prova'
-        if "configuracao_painel_prova" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("configuracao_painel_prova")]
-            if "ultimo_insight_ia" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN ultimo_insight_ia TEXT;"))
-                print("Coluna 'ultimo_insight_ia' adicionada em configuracao_painel_prova.")
-            if "data_insight_ia" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN data_insight_ia TIMESTAMP;"))
-                print("Coluna 'data_insight_ia' adicionada em configuracao_painel_prova.")
-            if "gemini_api_key" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN gemini_api_key VARCHAR(255);"))
-                print("Coluna 'gemini_api_key' adicionada em configuracao_painel_prova.")
-            if "area_concurso" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN area_concurso VARCHAR(100) DEFAULT 'Fiscal';"))
-                print("Coluna 'area_concurso' adicionada em configuracao_painel_prova.")
+        # topicos
+        ("topicos", "mais_cobrado", "BOOLEAN DEFAULT FALSE"),
+        ("topicos", "prioridade", "INTEGER"),
+        ("topicos", "ordem_trilha", "INTEGER"),
+        ("topicos", "motivo_ia", "TEXT"),
 
-        # 6. Colunas 'mais_cobrado', 'prioridade', 'ordem_trilha' e 'motivo_ia' na tabela 'topicos'
-        if "topicos" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("topicos")]
-            if "mais_cobrado" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topicos ADD COLUMN mais_cobrado BOOLEAN DEFAULT FALSE;"))
-                print("Coluna 'mais_cobrado' adicionada na tabela topicos.")
-            if "prioridade" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topicos ADD COLUMN prioridade INTEGER;"))
-                print("Coluna 'prioridade' adicionada na tabela topicos.")
-            if "ordem_trilha" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topicos ADD COLUMN ordem_trilha INTEGER;"))
-                print("Coluna 'ordem_trilha' adicionada na tabela topicos.")
-            if "motivo_ia" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topicos ADD COLUMN motivo_ia TEXT;"))
-                print("Coluna 'motivo_ia' adicionada na tabela topicos.")
+        # topico_estudo_tec_de_para
+        ("topico_estudo_tec_de_para", "caderno_id", "VARCHAR(50)"),
+        ("topico_estudo_tec_de_para", "url_caderno_criado", "VARCHAR(300)"),
+        ("topico_estudo_tec_de_para", "pasta_tec_nome", "VARCHAR(100)"),
+        ("topico_estudo_tec_de_para", "data_geracao_caderno", "TIMESTAMP"),
 
-        # 7. Colunas de Trilha IA em 'disciplinas'
-        if "disciplinas" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("disciplinas")]
-            if "ordem_trilha" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE disciplinas ADD COLUMN ordem_trilha INTEGER;"))
-                print("Coluna 'ordem_trilha' adicionada na tabela disciplinas.")
-            if "pre_requisitos_ia" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE disciplinas ADD COLUMN pre_requisitos_ia TEXT;"))
-                print("Coluna 'pre_requisitos_ia' adicionada na tabela disciplinas.")
-            if "justificativa_trilha_ia" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE disciplinas ADD COLUMN justificativa_trilha_ia TEXT;"))
-                print("Coluna 'justificativa_trilha_ia' adicionada na tabela disciplinas.")
+        # resultados_concurso
+        ("resultados_concurso", "total_pontos_prova", "REAL"),
 
-        # 8. Colunas de Trilha IA em 'editais'
-        if "editais" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("editais")]
-            if "ia_trilha_analisada" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_analisada BOOLEAN DEFAULT FALSE;"))
-                print("Coluna 'ia_trilha_analisada' adicionada na tabela editais.")
-            if "ia_trilha_data" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_data TIMESTAMP;"))
-                print("Coluna 'ia_trilha_data' adicionada na tabela editais.")
-            if "ia_trilha_banca" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_banca VARCHAR(100);"))
-                print("Coluna 'ia_trilha_banca' adicionada na tabela editais.")
-            if "ia_trilha_resumo" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE editais ADD COLUMN ia_trilha_resumo TEXT;"))
-                print("Coluna 'ia_trilha_resumo' adicionada na tabela editais.")
+        # resultados_avulsos
+        ("resultados_avulsos", "banca", "TEXT"),
+        ("resultados_avulsos", "data_prova", "TEXT"),
+        ("resultados_avulsos", "total_pontos_prova", "REAL"),
+        ("resultados_avulsos", "nota_corte", "REAL"),
+        ("resultados_avulsos", "acertos_basicos", "INTEGER"),
+        ("resultados_avulsos", "erros_basicos", "INTEGER"),
+        ("resultados_avulsos", "nota_basicos", "REAL"),
+        ("resultados_avulsos", "acertos_especificos", "INTEGER"),
+        ("resultados_avulsos", "erros_especificos", "INTEGER"),
+        ("resultados_avulsos", "nota_especificos", "REAL"),
+        ("resultados_avulsos", "nota_discursiva", "REAL"),
+        ("resultados_avulsos", "posicao", "INTEGER")
+    ]
 
-        # 9. Colunas de Caderno em 'topico_estudo_tec_de_para'
-        if "topico_estudo_tec_de_para" in existing_tables:
-            col_names = [col["name"] for col in inspector.get_columns("topico_estudo_tec_de_para")]
-            if "caderno_id" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN caderno_id VARCHAR(50);"))
-                print("Coluna 'caderno_id' adicionada na tabela topico_estudo_tec_de_para.")
-            if "url_caderno_criado" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN url_caderno_criado VARCHAR(300);"))
-                print("Coluna 'url_caderno_criado' adicionada na tabela topico_estudo_tec_de_para.")
-            if "pasta_tec_nome" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN pasta_tec_nome VARCHAR(100);"))
-                print("Coluna 'pasta_tec_nome' adicionada na tabela topico_estudo_tec_de_para.")
-            if "data_geracao_caderno" not in col_names:
-                with engine.begin() as conn:
-                    conn.execute(text("ALTER TABLE topico_estudo_tec_de_para ADD COLUMN data_geracao_caderno TIMESTAMP;"))
-                print("Coluna 'data_geracao_caderno' adicionada na tabela topico_estudo_tec_de_para.")
-    except Exception as e:
-        print(f"Aviso no auto_upgrade_db: {e}")
+    for tbl, col, ctype in colunas_migracao:
+        safe_add_column(engine, tbl, col, ctype)
+
+    # 3. Garante registro padrão (id=1) em configuracao_painel_prova
+    try:
+        with engine.begin() as conn:
+            insp = inspect(engine)
+            if "configuracao_painel_prova" in insp.get_table_names():
+                res = conn.execute(text("SELECT count(*) FROM configuracao_painel_prova")).scalar()
+                if not res or res == 0:
+                    conn.execute(text("INSERT INTO configuracao_painel_prova (id, concurso) VALUES (1, 'SEFAZ ALAGOAS');"))
+                    print("[AUTO-UPGRADE] Linha padrão criada em configuracao_painel_prova.")
+    except Exception as e_row:
+        print(f"[AUTO-UPGRADE] Aviso ao verificar linha 1 em configuracao_painel_prova: {e_row}")
 
 auto_upgrade_db()
 

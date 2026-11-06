@@ -643,23 +643,55 @@ def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
 
 @router.get("/status-chave")
 def status_chave_gemini(db: Session = Depends(get_db)):
-    config = db.query(ConfiguracaoPainelProva).first()
-    if not config:
-        config = ConfiguracaoPainelProva(id=1)
-        db.add(config)
-        db.commit()
-        db.refresh(config)
+    config = None
+    try:
+        config = db.query(ConfiguracaoPainelProva).first()
+        if not config:
+            config = ConfiguracaoPainelProva(id=1)
+            db.add(config)
+            db.commit()
+            db.refresh(config)
+    except Exception as e:
+        print(f"[STATUS CHAVE] Aviso ao ler configuracao_painel_prova via ORM: {e}")
+        try:
+            db.rollback()
+        except Exception:
+            pass
 
+    # 1. Tenta obter do objeto ORM se disponível
     chave = obter_chave_gemini(config)
+
+    # 2. Se a chave não veio do ORM, tenta fallback direto no SQL
+    if not chave:
+        try:
+            from app.database import engine
+            with engine.connect() as conn:
+                row = conn.execute(text("SELECT gemini_api_key FROM configuracao_painel_prova WHERE id = 1")).first()
+                if row and row[0] and str(row[0]).strip(" \t\r\n'\""):
+                    chave = str(row[0]).strip(" \t\r\n'\"")
+        except Exception:
+            pass
+
+    # 3. Se ainda não há chave, confere diretamente as variáveis de ambiente do servidor (Render)
+    if not chave:
+        for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "GOOGLE_GENAI_API_KEY"]:
+            env_val = os.getenv(env_var)
+            if env_val and env_val.strip(" \t\r\n'\""):
+                chave = env_val.strip(" \t\r\n'\"")
+                break
+
     configurada = bool(chave)
     mascarada = None
     origem = "nenhuma"
 
-    if config.gemini_api_key and config.gemini_api_key.strip(" \t\r\n'\""):
+    # Define a máscara e a origem (banco vs env)
+    chave_banco = getattr(config, "gemini_api_key", None) if config else None
+    if chave_banco and str(chave_banco).strip(" \t\r\n'\""):
         origem = "banco"
-        k = config.gemini_api_key.strip(" \t\r\n'\"")
+        k = str(chave_banco).strip(" \t\r\n'\"")
         mascarada = f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "******"
     else:
+        # Verifica se vem de variável de ambiente
         for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "GOOGLE_GENAI_API_KEY"]:
             env_val = os.getenv(env_var)
             if env_val and env_val.strip(" \t\r\n'\""):
@@ -667,6 +699,9 @@ def status_chave_gemini(db: Session = Depends(get_db)):
                 k = env_val.strip(" \t\r\n'\"")
                 mascarada = f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "******"
                 break
+        if not mascarada and chave:
+            origem = "banco"
+            mascarada = f"{chave[:6]}...{chave[-4:]}" if len(chave) > 10 else "******"
 
     return {
         "configurada": configurada,
@@ -677,39 +712,83 @@ def status_chave_gemini(db: Session = Depends(get_db)):
 
 @router.post("/config-chave")
 async def configurar_chave_gemini(payload: dict = Body(...), db: Session = Depends(get_db)):
-    config = db.query(ConfiguracaoPainelProva).first()
-    if not config:
-        config = ConfiguracaoPainelProva(id=1)
-        db.add(config)
-
     chave_raw = payload.get("api_key", "").strip() if payload.get("api_key") else ""
     chave_limpa = chave_raw.strip(" \t\r\n'\"")
-    config.gemini_api_key = chave_limpa if chave_limpa else None
-    config.ultimo_insight_ia = None  # Limpa cache para forçar análise nova
-    db.commit()
-    db.refresh(config)
+
+    config = None
+    salvo_ok = False
+    try:
+        config = db.query(ConfiguracaoPainelProva).first()
+        if not config:
+            config = ConfiguracaoPainelProva(id=1)
+            db.add(config)
+        config.gemini_api_key = chave_limpa if chave_limpa else None
+        config.ultimo_insight_ia = None  # Limpa cache para forçar análise nova
+        db.commit()
+        db.refresh(config)
+        salvo_ok = True
+    except Exception as e_orm:
+        print(f"[CONFIG CHAVE] Erro via ORM: {e_orm}. Acionando fallback direto SQL...")
+        try:
+            db.rollback()
+        except Exception:
+            pass
+        # Fallback SQL direto para nunca travar por divergência de schema
+        try:
+            from app.database import engine
+            with engine.begin() as conn:
+                try:
+                    conn.execute(text("ALTER TABLE configuracao_painel_prova ADD COLUMN gemini_api_key VARCHAR(255);"))
+                except Exception:
+                    pass
+                conn.execute(
+                    text("UPDATE configuracao_painel_prova SET gemini_api_key = :k, ultimo_insight_ia = NULL WHERE id = 1;"),
+                    {"k": chave_limpa if chave_limpa else None}
+                )
+            salvo_ok = True
+        except Exception as e_sql:
+            print(f"[CONFIG CHAVE] Falha no fallback SQL: {e_sql}")
 
     # Identifica chave ativa (seja salva no banco ou vinda do Render Env)
-    chave_ativa = obter_chave_gemini(config)
-    dados_estudo = calcular_dados_estudo(db)
+    chave_ativa = chave_limpa or (obter_chave_gemini(config) if config else None)
+    if not chave_ativa:
+        for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "GOOGLE_GENAI_API_KEY"]:
+            env_val = os.getenv(env_var)
+            if env_val and env_val.strip(" \t\r\n'\""):
+                chave_ativa = env_val.strip(" \t\r\n'\"")
+                break
+
+    dados_estudo = {}
+    try:
+        dados_estudo = calcular_dados_estudo(db)
+    except Exception as e_dados:
+        print(f"[CONFIG CHAVE] Aviso ao calcular dados de estudo: {e_dados}")
+
     insight = None
-    if chave_ativa:
+    if chave_ativa and dados_estudo:
         try:
             insight = await tentar_gerar_com_gemini(dados_estudo, chave_ativa)
-        except Exception as e:
-            print(f"[IA INSIGHTS] Falha controlada ao gerar insight na configuração de chave: {e}")
+        except Exception as e_gen:
+            print(f"[IA INSIGHTS] Falha controlada ao gerar insight: {e_gen}")
 
-    if not insight:
-        insight = gerar_insight_heuristico(dados_estudo)
+    if not insight and dados_estudo:
+        try:
+            insight = gerar_insight_heuristico(dados_estudo)
+        except Exception:
+            pass
 
-    config.ultimo_insight_ia = json.dumps(insight, ensure_ascii=False)
-    config.data_insight_ia = datetime.now()
-    db.commit()
+    if config and insight:
+        try:
+            config.ultimo_insight_ia = json.dumps(insight, ensure_ascii=False)
+            config.data_insight_ia = datetime.now()
+            db.commit()
+        except Exception:
+            pass
 
-    origem_resp = "banco" if config.gemini_api_key else ("env" if chave_ativa else "nenhuma")
+    origem_resp = "banco" if chave_limpa else ("env" if chave_ativa else "nenhuma")
 
     return {
-        "sucesso": True,
+        "sucesso": salvo_ok or bool(chave_ativa),
         "configurada": bool(chave_ativa),
         "origem": origem_resp,
         "insight": insight

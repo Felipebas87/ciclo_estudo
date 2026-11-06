@@ -1761,10 +1761,6 @@ const app = createApp({
                 const targetEditalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
                 if (targetEditalId) {
                     await carregarDashboardData(targetEditalId);
-                    // Se o edital ainda não teve a Trilha IA & Pareto analisada, executa automaticamente apenas na 1ª vez!
-                    if (editalVerticalizadoData.value && !editalVerticalizadoData.value.ia_trilha_analisada) {
-                        analisarTrilhaVerticalizadoIA(false).catch(() => {});
-                    }
                 }
 
                 if (abaAtiva.value === 'ciclo') {
