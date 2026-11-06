@@ -6,7 +6,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 from sqlalchemy.orm import Session
-from playwright.sync_api import sync_playwright, BrowserContext, Page, TimeoutError as PlaywrightTimeoutError
+try:
+    from playwright.sync_api import sync_playwright, BrowserContext, Page, TimeoutError as PlaywrightTimeoutError
+    PLAYWRIGHT_DISPONIVEL = True
+except ImportError:
+    PLAYWRIGHT_DISPONIVEL = False
+    sync_playwright = None
+    BrowserContext = None
+    Page = None
+    PlaywrightTimeoutError = Exception
 
 from app.database import SessionLocal
 from app.models.topico import Topico
@@ -76,6 +84,11 @@ def iniciar_login_interativo_tec(timeout_segundos: int = 150) -> Dict[str, Any]:
     O usuário faz login normalmente (com e-mail/senha ou Google).
     Assim que o usuário estiver comprovadamente logado no site, captura e salva a sessão em data/tec_session.json.
     """
+    if not PLAYWRIGHT_DISPONIVEL:
+        return {
+            "sucesso": False,
+            "mensagem": "Automação via navegador desativada neste ambiente. Utilize a inclusão manual de links de caderno."
+        }
     SESSION_FILE.parent.mkdir(parents=True, exist_ok=True)
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=False)
@@ -142,6 +155,11 @@ def autenticar_por_credenciais_tec(email: str, senha: str) -> Dict[str, Any]:
     """
     Realiza login headless com as credenciais informadas e salva a sessão em data/tec_session.json.
     """
+    if not PLAYWRIGHT_DISPONIVEL:
+        return {
+            "sucesso": False,
+            "mensagem": "Automação via navegador desativada neste ambiente. Utilize a inclusão manual de links de caderno."
+        }
     if not email or not senha:
         return {"sucesso": False, "mensagem": "E-mail e senha são obrigatórios."}
 
@@ -369,6 +387,11 @@ def gerar_caderno_topico_playwright(
     navega até a criação do caderno, preenche nome e pasta, submete e aguarda
     o redirecionamento para capturar o ID do caderno gerado (ex: 107798461).
     """
+    if not PLAYWRIGHT_DISPONIVEL:
+        return {
+            "sucesso": False,
+            "mensagem": "Criação automática de cadernos via robô está desativada. Cole o link ou ID do caderno diretamente para associá-lo ao tópico."
+        }
     close_db = False
     if db is None:
         db = SessionLocal()
