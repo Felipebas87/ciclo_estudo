@@ -3600,9 +3600,9 @@
                         <button type="button" @click="mostrarConfigChaveIA = !mostrarConfigChaveIA"
                             class="px-2 py-1 rounded-xl text-[10.5px] font-bold border transition-all flex items-center gap-1.5 active:scale-95"
                             :class="statusChaveGemini.configurada ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25' : 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 hover:bg-amber-500/25'"
-                            :title="statusChaveGemini.configurada ? 'Gemini 2.5 Flash conectado. Clique para gerenciar.' : 'Conecte sua chave gratuita do Gemini para análises 100% vivas'">
+                            :title="statusChaveGemini.configurada ? ('Gemini 2.5 Flash Conectado (' + (statusChaveGemini.origem === 'banco' ? 'Salva no App' : 'Render Env') + '). Clique para gerenciar.') : 'Conecte sua chave gratuita do Gemini para análises 100% vivas'">
                             <i :class="statusChaveGemini.configurada ? 'fa-solid fa-sparkles text-emerald-500 text-[10px]' : 'fa-solid fa-key text-amber-500 text-[10px]'"></i>
-                            <span>{{ statusChaveGemini.configurada ? 'Gemini Ativo' : 'Ativar Gemini' }}</span>
+                            <span>{{ statusChaveGemini.configurada ? (statusChaveGemini.origem === 'env' ? 'Gemini Ativo (Env)' : 'Gemini Ativo') : 'Ativar Gemini' }}</span>
                         </button>
 
                         <button @click="carregarInsightsIA(true)"
@@ -3628,7 +3628,7 @@
                             Conectar Google Gemini (IA Viva)
                         </span>
                         <span v-if="statusChaveGemini.configurada" class="text-[10px] font-semibold text-emerald-500">
-                            Chave ativa: {{ statusChaveGemini.chave_mascarada }}
+                            Chave ativa: {{ statusChaveGemini.chave_mascarada }} ({{ statusChaveGemini.origem === 'banco' ? 'Salva no App' : 'Variável Ambiente Render' }})
                         </span>
                     </div>
                     <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-tight">

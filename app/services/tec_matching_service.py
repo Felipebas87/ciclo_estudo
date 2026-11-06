@@ -568,10 +568,15 @@ async def executar_matching_edital(
 
     # Obtém chave Gemini se disponível para fallback semântico
     cfg = db.query(ConfiguracaoPainelProva).first()
-    api_key = (
-        (cfg.gemini_api_key.strip() if cfg and getattr(cfg, "gemini_api_key", None) else "")
-        or os.getenv("GEMINI_API_KEY", "").strip()
-    )
+    api_key = ""
+    if cfg and getattr(cfg, "gemini_api_key", None) and cfg.gemini_api_key.strip():
+        api_key = cfg.gemini_api_key.strip(" \t\r\n'\"")
+    if not api_key:
+        for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "GOOGLE_GENAI_API_KEY"]:
+            env_val = os.getenv(env_var)
+            if env_val and env_val.strip(" \t\r\n'\""):
+                api_key = env_val.strip(" \t\r\n'\"")
+                break
 
     vinculos_atuais = {
         v.topico_id: v

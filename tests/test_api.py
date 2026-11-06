@@ -390,5 +390,63 @@ def test_topico_prioridade_e_mais_cobrado():
     assert any(t["id"] == t2_id and t["mais_cobrado"] is True and t["prioridade"] == 1 for t in disc_vert["topicos"])
 
 
+def test_gemini_key_env_and_db_persistence(monkeypatch):
+    import os
+
+    # 1. Sem chave no banco nem no env
+    monkeypatch.delenv("GEMINI_API_KEY", raising=False)
+    monkeypatch.delenv("GOOGLE_API_KEY", raising=False)
+    # Limpa chave no banco se houver
+    client.post("/api/ia/config-chave", json={"api_key": ""})
+    res_status = client.get("/api/ia/status-chave")
+    assert res_status.status_code == 200
+    data_status = res_status.json()
+    assert data_status["configurada"] is False
+    assert data_status["origem"] == "nenhuma"
+
+    # 2. Com chave setada via variável de ambiente (como no Render)
+    monkeypatch.setenv("GEMINI_API_KEY", "AIzaSyFakeKeyFromRender123456789")
+    res_status_env = client.get("/api/ia/status-chave")
+    assert res_status_env.status_code == 200
+    data_env = res_status_env.json()
+    assert data_env["configurada"] is True
+    assert data_env["origem"] == "env"
+    assert "AIzaSy" in data_env["chave_mascarada"]
+
+    # 3. Salvar chave manualmente via UI (/api/ia/config-chave)
+    res_save = client.post("/api/ia/config-chave", json={"api_key": "AIzaSyManualSavedKey987654321"})
+    assert res_save.status_code == 200
+    save_data = res_save.json()
+    assert save_data["sucesso"] is True
+    assert save_data["configurada"] is True
+    assert save_data["origem"] == "banco"
+
+    # 4. Verifica status agora priorizando a chave do banco
+    res_status_banco = client.get("/api/ia/status-chave")
+    assert res_status_banco.status_code == 200
+    data_banco = res_status_banco.json()
+    assert data_banco["configurada"] is True
+    assert data_banco["origem"] == "banco"
+    assert "4321" in data_banco["chave_mascarada"]
+
+    # 5. Salvar configuração do painel da prova (/api/configuracao-prova) não pode apagar gemini_api_key
+    res_cfg_get = client.get("/api/configuracao-prova")
+    assert res_cfg_get.status_code == 200
+    cfg_data = res_cfg_get.json()
+    assert cfg_data.get("gemini_api_key") == "AIzaSyManualSavedKey987654321"
+
+    cfg_data["concurso"] = "SEFAZ ALAGOAS 2026"
+    res_cfg_put = client.put("/api/configuracao-prova", json=cfg_data)
+    assert res_cfg_put.status_code == 200
+    assert res_cfg_put.json()["gemini_api_key"] == "AIzaSyManualSavedKey987654321"
+
+    # 6. GET /api/ia/insights deve responder imediatamente (rápido e sem travar)
+    res_insights = client.get("/api/ia/insights")
+    assert res_insights.status_code == 200
+    insights_data = res_insights.json()
+    assert "resumo_executivo" in insights_data
+
+
+
 
 

@@ -1,5 +1,6 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, Any
+from datetime import datetime
 
 class ConfiguracaoPainelProvaBase(BaseModel):
     concurso: Optional[str] = "SEFAZ ALAGOAS"
@@ -16,7 +17,11 @@ class ConfiguracaoPainelProvaBase(BaseModel):
     status_edital: Optional[str] = "Pós-Edital (Edital Publicado)"
     marcos_alertados: Optional[str] = "{}"
     ultimo_insight_ia: Optional[str] = None
-    data_insight_ia: Optional[str] = None
+    data_insight_ia: Optional[datetime] = None
+    gemini_api_key: Optional[str] = None
+    tec_email: Optional[str] = "fbasantos10@gmail.com"
+    tec_senha: Optional[str] = None
+    tec_pasta_padrao: Optional[str] = "Sefaz Alagoas Auditor TI"
 
 class ConfiguracaoPainelProvaResponse(ConfiguracaoPainelProvaBase):
     id: Optional[int] = 1

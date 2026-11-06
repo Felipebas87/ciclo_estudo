@@ -476,10 +476,14 @@ const app = createApp({
                     mostrarConfigChaveIA.value = false;
                     chaveGeminiInput.value = '';
                     await verificarStatusChaveIA();
-                    mostrarAlerta(data.configurada ? 'Chave Gemini conectada! Análise viva gerada com sucesso.' : 'Chave removida. Modo heurístico ativo.', 'sucesso');
+                    const msgOrigem = data.origem === 'env' ? 'reconhecida via Variável de Ambiente (Render)' : 'salva no banco com sucesso';
+                    mostrarAlerta(data.configurada ? `Chave Gemini conectada (${msgOrigem})!` : 'Chave removida. Modo heurístico ativo.', 'sucesso');
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    mostrarAlerta(err.detail || 'Erro ao processar chave do Gemini no servidor.', 'erro');
                 }
             } catch (e) {
-                mostrarAlerta('Erro ao conectar chave do Gemini.', 'erro');
+                mostrarAlerta('Erro ao conectar com o servidor para salvar chave.', 'erro');
             } finally {
                 salvandoChaveIA.value = false;
             }

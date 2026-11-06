@@ -18,18 +18,19 @@ from app.models.topico import Topico
 
 router = APIRouter(prefix="/api/ia", tags=["Insights de IA"])
 
-def obter_chave_gemini(config: ConfiguracaoPainelProva) -> Optional[str]:
+def obter_chave_gemini(config: Optional[ConfiguracaoPainelProva] = None) -> Optional[str]:
     # Prioridade 1: Chave salva no banco de dados pelo usuário
     if config and config.gemini_api_key and config.gemini_api_key.strip():
         k = config.gemini_api_key.strip(" \t\r\n'\"")
         if k:
             return k
-    # Prioridade 2: Variável de ambiente no servidor (.env ou os.environ)
-    env_key = os.getenv("GEMINI_API_KEY")
-    if env_key and env_key.strip():
-        k = env_key.strip(" \t\r\n'\"")
-        if k:
-            return k
+    # Prioridade 2: Variáveis de ambiente no servidor (.env ou Environment Variables no Render)
+    for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "GOOGLE_GENAI_API_KEY"]:
+        env_key = os.getenv(env_var)
+        if env_key and env_key.strip():
+            k = env_key.strip(" \t\r\n'\"")
+            if k:
+                return k
     return None
 
 def calcular_dados_estudo(db: Session) -> Dict[str, Any]:
@@ -396,13 +397,12 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
     agora_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     prompt_completo = f"{prompt}\n\n[SEED TEMPORAL: {agora_timestamp}]"
 
-    # Lista de modelos do Google Gemini com alta disponibilidade e suporte a resposta JSON
+    # Lista de modelos oficiais do Google Gemini de alta velocidade
     modelos_candidatos = [
-        "gemini-flash-lite-latest",
-        "gemini-3.5-flash-lite",
-        "gemini-3.5-flash",
-        "gemini-flash-latest",
-        "gemini-3.1-flash-lite"
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash"
     ]
 
     # Tentativa 1: Via SDK oficial google.genai (se instalado no ambiente)
@@ -448,7 +448,7 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
                     "temperature": 0.95
                 }
             }
-            async with httpx.AsyncClient(timeout=35.0) as http_client:
+            async with httpx.AsyncClient(timeout=12.0) as http_client:
                 resp = await http_client.post(url, json=payload)
                 if resp.status_code == 200:
                     resp_json = resp.json()
@@ -460,6 +460,9 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
                     parsed = json.loads(texto.strip())
                     print(f"[IA INSIGHTS] Sucesso via REST HTTPX com modelo {modelo}")
                     return _montar_resposta_insight(parsed, f"Google Gemini ({modelo})", datetime.now(), dados)
+                elif resp.status_code in (400, 401, 403):
+                    print(f"[IA INSIGHTS] Chave inválida ou recusada com status {resp.status_code}: {resp.text[:120]}")
+                    break
                 else:
                     print(f"[IA INSIGHTS] Modelo {modelo} via REST retornou HTTP {resp.status_code}: {resp.text[:120]}")
         except Exception as rest_err:
@@ -651,20 +654,25 @@ def status_chave_gemini(db: Session = Depends(get_db)):
     configurada = bool(chave)
     mascarada = None
     origem = "nenhuma"
-    if config.gemini_api_key and config.gemini_api_key.strip():
+
+    if config.gemini_api_key and config.gemini_api_key.strip(" \t\r\n'\""):
         origem = "banco"
-        k = config.gemini_api_key.strip()
+        k = config.gemini_api_key.strip(" \t\r\n'\"")
         mascarada = f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "******"
-    elif os.getenv("GEMINI_API_KEY"):
-        origem = "env"
-        k = os.getenv("GEMINI_API_KEY").strip()
-        mascarada = f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "******"
+    else:
+        for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "GOOGLE_GENAI_API_KEY"]:
+            env_val = os.getenv(env_var)
+            if env_val and env_val.strip(" \t\r\n'\""):
+                origem = "env"
+                k = env_val.strip(" \t\r\n'\"")
+                mascarada = f"{k[:6]}...{k[-4:]}" if len(k) > 10 else "******"
+                break
 
     return {
         "configurada": configurada,
         "chave_mascarada": mascarada,
         "origem": origem,
-        "modelo": "Google Gemini (Flash Lite)"
+        "modelo": "Google Gemini (2.5 Flash)"
     }
 
 @router.post("/config-chave")
@@ -674,18 +682,22 @@ async def configurar_chave_gemini(payload: dict = Body(...), db: Session = Depen
         config = ConfiguracaoPainelProva(id=1)
         db.add(config)
 
-    chave_raw = payload.get("api_key", "").strip()
-    config.gemini_api_key = chave_raw if chave_raw else None
+    chave_raw = payload.get("api_key", "").strip() if payload.get("api_key") else ""
+    chave_limpa = chave_raw.strip(" \t\r\n'\"")
+    config.gemini_api_key = chave_limpa if chave_limpa else None
     config.ultimo_insight_ia = None  # Limpa cache para forçar análise nova
     db.commit()
     db.refresh(config)
 
-    # Gera nova análise com a chave configurada
-    dados_estudo = calcular_dados_estudo(db)
+    # Identifica chave ativa (seja salva no banco ou vinda do Render Env)
     chave_ativa = obter_chave_gemini(config)
+    dados_estudo = calcular_dados_estudo(db)
     insight = None
     if chave_ativa:
-        insight = await tentar_gerar_com_gemini(dados_estudo, chave_ativa)
+        try:
+            insight = await tentar_gerar_com_gemini(dados_estudo, chave_ativa)
+        except Exception as e:
+            print(f"[IA INSIGHTS] Falha controlada ao gerar insight na configuração de chave: {e}")
 
     if not insight:
         insight = gerar_insight_heuristico(dados_estudo)
@@ -694,9 +706,12 @@ async def configurar_chave_gemini(payload: dict = Body(...), db: Session = Depen
     config.data_insight_ia = datetime.now()
     db.commit()
 
+    origem_resp = "banco" if config.gemini_api_key else ("env" if chave_ativa else "nenhuma")
+
     return {
         "sucesso": True,
         "configurada": bool(chave_ativa),
+        "origem": origem_resp,
         "insight": insight
     }
 
@@ -709,23 +724,21 @@ async def obter_insights_ia(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(config)
 
-    chave_ativa = obter_chave_gemini(config)
-
     # Retorno instantâneo do último insight em cache (< 2ms) para nunca travar a aplicação
     if config.ultimo_insight_ia:
         try:
-            cached = json.loads(config.ultimo_insight_ia)
-            # Se o cache atual for heurístico mas agora há uma chave Gemini ativa,
-            # tenta gerar com Gemini para atualizar o painel automaticamente!
-            if not ("Heurístico" in str(cached.get("modelo_origem", "")) and chave_ativa):
-                return cached
+            return json.loads(config.ultimo_insight_ia)
         except Exception:
             pass
 
     dados_estudo = calcular_dados_estudo(db)
+    chave_ativa = obter_chave_gemini(config)
     insight = None
     if chave_ativa:
-        insight = await tentar_gerar_com_gemini(dados_estudo, chave_ativa)
+        try:
+            insight = await tentar_gerar_com_gemini(dados_estudo, chave_ativa)
+        except Exception as e:
+            print(f"[IA INSIGHTS] Falha controlada ao gerar insight: {e}")
 
     if not insight:
         insight = gerar_insight_heuristico(dados_estudo)

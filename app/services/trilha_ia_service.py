@@ -573,11 +573,11 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO NO FORMATO:
 }}"""
 
     modelos_rest = [
-        "gemini-3.5-flash-lite",
-        "gemini-flash-lite-latest",
-        "gemini-3.8-flash"
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash"
     ]
-    async with httpx.AsyncClient(timeout=20.0) as http_client:
+    async with httpx.AsyncClient(timeout=12.0) as http_client:
         for modelo in modelos_rest:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
@@ -684,11 +684,11 @@ Retorne ESTRITAMENTE um JSON no seguinte formato:
 }}"""
 
     modelos_rest = [
-        "gemini-3.5-flash-lite",
-        "gemini-flash-lite-latest",
-        "gemini-3.8-flash"
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash"
     ]
-    async with httpx.AsyncClient(timeout=timeout_segundos) as http_client:
+    async with httpx.AsyncClient(timeout=min(15.0, timeout_segundos)) as http_client:
         for modelo in modelos_rest:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
