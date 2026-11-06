@@ -3865,7 +3865,8 @@ const app = createApp({
                         mostrarAlerta('Sincronização com o TEC Concursos concluída!', 'sucesso');
                     }
                 } else {
-                    mostrarAlerta('Erro ao reconciliar tópicos com o TEC Concursos.', 'erro');
+                    const err = await res.json().catch(() => ({}));
+                    mostrarAlerta(err.detail || 'Erro ao reconciliar tópicos com o TEC Concursos.', 'erro');
                 }
             } catch (e) {
                 console.error(e);

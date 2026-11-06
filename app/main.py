@@ -142,6 +142,16 @@ def auto_upgrade_db():
     except Exception as e_row:
         print(f"[AUTO-UPGRADE] Aviso ao verificar linha 1 em configuracao_painel_prova: {e_row}")
 
+    # 4. Garante que os nós de taxonomia e vínculos do TEC estejam carregados a partir do seed embutido
+    try:
+        from app.database import SessionLocal
+        from app.services.tec_seed_service import carregar_seed_tec_taxonomia, carregar_seed_tec_vinculos
+        with SessionLocal() as db_session:
+            carregar_seed_tec_taxonomia(db_session)
+            carregar_seed_tec_vinculos(db_session)
+    except Exception as e_seed:
+        print(f"[AUTO-UPGRADE] Aviso ao carregar seeds do TEC: {e_seed}")
+
 auto_upgrade_db()
 
 

@@ -128,3 +128,15 @@ def test_dois_comportamentos_link_tec():
     assert vinculo_com_caderno["caderno_id"] == "107798461"
     assert vinculo_com_caderno["tem_caderno_gerado"] is True
     assert vinculo_com_caderno["url_tec"] == "https://www.tecconcursos.com.br/questoes/cadernos/107798461"
+
+
+def test_reconciliar_edital_endpoint():
+    resp = client.post("/api/tec/reconciliar/1?usar_ia=false")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "mensagem" in data
+    assert "matching" in data
+    m = data["matching"]
+    assert m["total_topicos"] > 0
+    assert m["alta_confianca_85"] > 0
+

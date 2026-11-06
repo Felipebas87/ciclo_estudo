@@ -500,7 +500,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO NO FORMATO:
   ]
 }}"""
 
-    modelos = ["gemini-3.5-flash-lite", "gemini-flash-lite-latest", "gemini-3.8-flash"]
+    modelos = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
     ids_validos = {c["id"] for c in candidatos_tec}
 
     async with httpx.AsyncClient(timeout=timeout_segundos) as client:
@@ -556,7 +556,11 @@ async def executar_matching_edital(
 
     todos_nos_db = db.query(TecTaxonomia).filter(TecTaxonomia.ativo == True).all()
     if not todos_nos_db:
-        raise ValueError("A tabela `tec_taxonomia` está vazia. Execute a sincronização da árvore do TEC primeiro.")
+        from app.services.tec_seed_service import carregar_seed_tec_taxonomia
+        carregar_seed_tec_taxonomia(db)
+        todos_nos_db = db.query(TecTaxonomia).filter(TecTaxonomia.ativo == True).all()
+        if not todos_nos_db:
+            raise ValueError("A tabela `tec_taxonomia` está vazia. Execute a sincronização da árvore do TEC primeiro.")
 
     catalogo_global = _preparar_catalogo_nos_tec(todos_nos_db)
     # Agrupa por slug de matéria (primeiro segmento do slug_url)

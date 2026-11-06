@@ -308,7 +308,11 @@ async def reconciliar_edital_endpoint(
     total_nos = db.query(func.count(TecTaxonomia.id)).scalar() or 0
     resumo_sync = None
     if total_nos == 0:
-        resumo_sync = await sincronizar_taxonomia_tec(db, delay_entre_requisicoes=0.15)
+        from app.services.tec_seed_service import carregar_seed_tec_taxonomia
+        carregar_seed_tec_taxonomia(db)
+        total_nos = db.query(func.count(TecTaxonomia.id)).scalar() or 0
+        if total_nos == 0:
+            resumo_sync = await sincronizar_taxonomia_tec(db, delay_entre_requisicoes=0.15)
 
     try:
         resumo_match = await executar_matching_edital(
