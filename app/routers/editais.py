@@ -1,11 +1,12 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from fastapi.responses import PlainTextResponse
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 from app.database import get_db
 from app.models.edital import Edital
 from app.models.disciplina import Disciplina
 from app.models.topico import Topico
+from app.models.tec_taxonomia import TopicoEstudoTecDePara
 from app.schemas.edital import (
     EditalResponse,
     EditalCreate,
@@ -21,7 +22,17 @@ router = APIRouter(prefix="/api/editais", tags=["Editais"])
 
 @router.get("", response_model=List[EditalResponse])
 def listar_editais(db: Session = Depends(get_db)):
-    editais = db.query(Edital).order_by(Edital.data_criacao.desc()).all()
+    editais = (
+        db.query(Edital)
+        .options(
+            selectinload(Edital.disciplinas)
+            .selectinload(Disciplina.topicos)
+            .joinedload(Topico.vinculo_tec)
+            .joinedload(TopicoEstudoTecDePara.tec_taxonomia)
+        )
+        .order_by(Edital.data_criacao.desc())
+        .all()
+    )
     for ed in editais:
         if ed.disciplinas:
             ed.disciplinas.sort(key=lambda d: d.id)
@@ -29,7 +40,17 @@ def listar_editais(db: Session = Depends(get_db)):
 
 @router.get("/{edital_id}", response_model=EditalResponse)
 def obter_edital(edital_id: int, db: Session = Depends(get_db)):
-    edital = db.query(Edital).filter(Edital.id == edital_id).first()
+    edital = (
+        db.query(Edital)
+        .options(
+            selectinload(Edital.disciplinas)
+            .selectinload(Disciplina.topicos)
+            .joinedload(Topico.vinculo_tec)
+            .joinedload(TopicoEstudoTecDePara.tec_taxonomia)
+        )
+        .filter(Edital.id == edital_id)
+        .first()
+    )
     if not edital:
         raise HTTPException(status_code=404, detail="Edital não encontrado")
     if edital.disciplinas:

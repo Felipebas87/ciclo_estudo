@@ -1,9 +1,12 @@
 from typing import List, Dict, Any
 from datetime import date, timedelta
-from sqlalchemy.orm import Session
+from collections import defaultdict
+from sqlalchemy.orm import Session, selectinload, joinedload
 from sqlalchemy import func
 from app.models.edital import Edital
 from app.models.disciplina import Disciplina
+from app.models.topico import Topico
+from app.models.tec_taxonomia import TopicoEstudoTecDePara
 from app.models.sessao import SessaoEstudo
 from app.models.ciclo import CicloEstudos
 
@@ -11,7 +14,12 @@ def get_matriz_semanal(db: Session, edital_id: int) -> Dict[str, Any]:
     """
     Retorna os dados agrupados por disciplina e por semana (Matriz Semanal).
     """
-    edital = db.query(Edital).filter(Edital.id == edital_id).first()
+    edital = (
+        db.query(Edital)
+        .options(selectinload(Edital.disciplinas))
+        .filter(Edital.id == edital_id)
+        .first()
+    )
     if not edital:
         return {}
 
@@ -99,7 +107,12 @@ def get_calendario_estudos(db: Session, edital_id: int, dias: int = 30) -> Dict[
     from app.models.sessao import SessaoEstudo
     from app.models.disciplina import Disciplina
 
-    edital = db.query(Edital).filter(Edital.id == edital_id).first()
+    edital = (
+        db.query(Edital)
+        .options(selectinload(Edital.disciplinas))
+        .filter(Edital.id == edital_id)
+        .first()
+    )
     if not edital:
         return {}
 
@@ -130,7 +143,12 @@ def get_calendario_estudos(db: Session, edital_id: int, dias: int = 30) -> Dict[
     PALETTE = ["#3b82f6", "#10b981", "#8b5cf6", "#f59e0b", "#ec4899", "#14b8a6", "#f43f5e"]
     
     from app.models.ciclo import CicloEstudos
-    ciclo_ativo = db.query(CicloEstudos).filter(CicloEstudos.edital_id == edital_id, CicloEstudos.ativo == True).first()
+    ciclo_ativo = (
+        db.query(CicloEstudos)
+        .options(selectinload(CicloEstudos.blocos))
+        .filter(CicloEstudos.edital_id == edital_id, CicloEstudos.ativo == True)
+        .first()
+    )
     
     disc_ordem = {}
     if ciclo_ativo and ciclo_ativo.blocos:
@@ -272,11 +290,23 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
     """
     Retorna os dados para visualização de Edital Verticalizado Granular,
     já ordenando as disciplinas e tópicos segundo a Trilha de Aprendizado & Pareto 80/20.
+    Otimizado com eager loading completo e agrupamento em memória O(N) sem N+1 queries.
     """
     import json
     from app.services.trilha_ia_service import obter_proximo_topico_trilha_disciplina
+    from app.services.tec_matching_service import montar_dados_vinculo_topico
 
-    edital = db.query(Edital).filter(Edital.id == edital_id).first()
+    edital = (
+        db.query(Edital)
+        .options(
+            selectinload(Edital.disciplinas)
+            .selectinload(Disciplina.topicos)
+            .joinedload(Topico.vinculo_tec)
+            .joinedload(TopicoEstudoTecDePara.tec_taxonomia)
+        )
+        .filter(Edital.id == edital_id)
+        .first()
+    )
     if not edital:
         return {}
 
@@ -287,6 +317,8 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
         except Exception:
             resumo_meta = {"resumo_estrategico": edital.ia_trilha_resumo}
 
+    banca_ativa = getattr(edital, "ia_trilha_banca", None) or resumo_meta.get("banca", "Cebraspe")
+
     resultado: Dict[str, Any] = {
         "BASICOS": [],
         "ESPECIFICOS": [],
@@ -294,7 +326,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
         "resumo_basicos": {},
         "resumo_especificos": {},
         "ia_trilha_analisada": bool(getattr(edital, "ia_trilha_analisada", False)),
-        "ia_trilha_banca": getattr(edital, "ia_trilha_banca", None) or resumo_meta.get("banca", "Cebraspe"),
+        "ia_trilha_banca": banca_ativa,
         "ia_trilha_area": resumo_meta.get("area_concurso", "Fiscal"),
         "parametros_prova": resumo_meta,
         "ia_trilha_data": edital.ia_trilha_data.isoformat() if getattr(edital, "ia_trilha_data", None) else None,
@@ -302,6 +334,20 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
         "ia_trilha_modelo": resumo_meta.get("modelo_origem", "Google Gemini"),
         "metricas_pareto": {}
     }
+
+    # Carrega todas as sessões do edital em uma única consulta SQL
+    todas_sessoes = (
+        db.query(SessaoEstudo)
+        .join(Disciplina, SessaoEstudo.disciplina_id == Disciplina.id)
+        .filter(Disciplina.edital_id == edital_id)
+        .all()
+    )
+    sessoes_por_disc: Dict[int, List[SessaoEstudo]] = defaultdict(list)
+    sessoes_por_topico: Dict[int, List[SessaoEstudo]] = defaultdict(list)
+    for s in todas_sessoes:
+        sessoes_por_disc[s.disciplina_id].append(s)
+        if s.topico_id is not None:
+            sessoes_por_topico[s.topico_id].append(s)
 
     global_topicos = 0
     global_vistos = 0
@@ -321,7 +367,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
         disciplinas_grupo.sort(key=lambda d: d.id)
         
         for disc in disciplinas_grupo:
-            sessoes_disc = db.query(SessaoEstudo).filter(SessaoEstudo.disciplina_id == disc.id).all()
+            sessoes_disc = sessoes_por_disc.get(disc.id, [])
             t_certas = sum(s.qtd_acertos for s in sessoes_disc)
             t_resolvidas = sum(s.qtd_questoes_total for s in sessoes_disc)
             t_revisoes_anki = sum(1 for s in sessoes_disc if s.is_revisao_anki)
@@ -332,7 +378,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             topicos_vistos_ids = set()
             topicos_ordenados = sorted(disc.topicos, key=lambda x: (x.ordem if x.ordem is not None else 0, x.id))
             for t in topicos_ordenados:
-                s_top = [s for s in sessoes_disc if s.topico_id == t.id]
+                s_top = sessoes_por_topico.get(t.id, [])
                 c = sum(s.qtd_acertos for s in s_top)
                 r = sum(s.qtd_questoes_total for s in s_top)
                 revs_anki = sum(1 for s in s_top if s.is_revisao_anki)
@@ -360,7 +406,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                     "mais_cobrado": bool(getattr(t, "mais_cobrado", False)),
                     "prioridade": getattr(t, "prioridade", None),
                     "visto": visto,
-                    "tec_vinculo": getattr(t, "tec_vinculo", None)
+                    "tec_vinculo": montar_dados_vinculo_topico(t, t.vinculo_tec, banca_nome=banca_ativa)
                 })
                 
             total_topicos += len(disc.topicos)
@@ -369,7 +415,7 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             resolvidas += t_resolvidas
             
             cobertura_perc = round((disc_topicos_vistos / len(disc.topicos) * 100), 1) if len(disc.topicos) > 0 else 0
-            prox_topico = obter_proximo_topico_trilha_disciplina(disc, topicos_vistos_ids)
+            prox_topico = obter_proximo_topico_trilha_disciplina(disc, topicos_vistos_ids, banca_nome=banca_ativa)
 
             d_mc = sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False))
             d_p1 = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 1)

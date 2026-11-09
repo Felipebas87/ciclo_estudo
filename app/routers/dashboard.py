@@ -34,14 +34,20 @@ def get_dashboard_geral(db: Session = Depends(get_db)):
         "percentual_acerto_geral": perc
     }
 
-    # Rendimento por Disciplina
+    # Rendimento por Disciplina (O(N) agrupamento)
+    from collections import defaultdict
+    sessoes_por_disc = defaultdict(list)
+    for s in sessoes:
+        sessoes_por_disc[s.disciplina_id].append(s)
+
     rendimento_disciplinas = []
     disciplinas = db.query(Disciplina).all()
     for d in disciplinas:
         if d.categoria == 'REVISAO_ANKI':
             continue
-        sd = [s for s in sessoes if s.disciplina_id == d.id]
-        if not sd: continue
+        sd = sessoes_por_disc.get(d.id)
+        if not sd:
+            continue
         t = sum((s.tempo_estudado_minutos or 0) for s in sd)
         q = sum((s.qtd_questoes_total or 0) for s in sd)
         a = sum((s.qtd_acertos or 0) for s in sd)

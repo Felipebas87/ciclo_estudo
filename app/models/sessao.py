@@ -10,12 +10,12 @@ class SessaoEstudo(Base):
     __tablename__ = "sessoes_estudo"
 
     id = Column(Integer, primary_key=True, index=True)
-    ciclo_id = Column(Integer, ForeignKey("ciclos_estudo.id", ondelete="SET NULL"), nullable=True)
-    bloco_ciclo_id = Column(Integer, ForeignKey("blocos_ciclo.id", ondelete="SET NULL"), nullable=True)
-    disciplina_id = Column(Integer, ForeignKey("disciplinas.id", ondelete="CASCADE"), nullable=False)
-    topico_id = Column(Integer, ForeignKey("topicos.id", ondelete="SET NULL"), nullable=True)
+    ciclo_id = Column(Integer, ForeignKey("ciclos_estudo.id", ondelete="SET NULL"), nullable=True, index=True)
+    bloco_ciclo_id = Column(Integer, ForeignKey("blocos_ciclo.id", ondelete="SET NULL"), nullable=True, index=True)
+    disciplina_id = Column(Integer, ForeignKey("disciplinas.id", ondelete="CASCADE"), nullable=False, index=True)
+    topico_id = Column(Integer, ForeignKey("topicos.id", ondelete="SET NULL"), nullable=True, index=True)
     
-    data = Column(Date, default=date.today, nullable=False)
+    data = Column(Date, default=date.today, nullable=False, index=True)
     data_criacao = Column(DateTime, default=utc_now)
     tempo_estudado_minutos = Column(Integer, default=60)
     qtd_questoes_total = Column(Integer, default=0)

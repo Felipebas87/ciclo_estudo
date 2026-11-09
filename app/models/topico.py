@@ -6,7 +6,7 @@ class Topico(Base):
     __tablename__ = "topicos"
 
     id = Column(Integer, primary_key=True, index=True)
-    disciplina_id = Column(Integer, ForeignKey("disciplinas.id", ondelete="CASCADE"), nullable=False)
+    disciplina_id = Column(Integer, ForeignKey("disciplinas.id", ondelete="CASCADE"), nullable=False, index=True)
     titulo = Column(Text, nullable=False)
     ordem = Column(Integer, default=0)
     concluido = Column(Boolean, default=False)

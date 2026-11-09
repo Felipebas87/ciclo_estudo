@@ -720,30 +720,51 @@ async def executar_matching_edital(
     return resumo
 
 
+_BANCA_CONFIG_CACHE: Dict[str, Any] = {"valor": None, "ts": 0.0}
+
+
+def invalidar_cache_banca_ativa() -> None:
+    """Invalida o cache em memória da banca ativa do painel de prova."""
+    _BANCA_CONFIG_CACHE["ts"] = 0.0
+
+
 def _obter_banca_ativa_para_topico(topico: Topico) -> Optional[str]:
     """
     Recupera o nome da banca ativa a partir do edital vinculado ao tópico
-    ou da configuração ativa do painel de provas.
+    ou da configuração ativa do painel de provas (com cache em memória para evitar N+1 conexões).
     """
     try:
-        disc = getattr(topico, "disciplina", None)
-        if disc and getattr(disc, "edital", None):
-            banca = disc.edital.ia_trilha_banca
-            if banca and str(banca).strip():
-                return str(banca).strip()
+        from sqlalchemy import inspect as sa_inspect
+        inst = sa_inspect(topico)
+        # Só acessa relacionamento se já estiver carregado em memória para evitar lazy load N+1
+        if "disciplina" in inst.dict:
+            disc = inst.dict["disciplina"]
+            if disc is not None:
+                disc_inst = sa_inspect(disc)
+                if "edital" in disc_inst.dict and disc_inst.dict["edital"] is not None:
+                    banca = disc_inst.dict["edital"].ia_trilha_banca
+                    if banca and str(banca).strip():
+                        return str(banca).strip()
     except Exception:
         pass
+
+    import time
+    agora = time.monotonic()
+    if (agora - float(_BANCA_CONFIG_CACHE.get("ts") or 0.0)) < 60.0 and _BANCA_CONFIG_CACHE.get("ts", 0.0) > 0:
+        return _BANCA_CONFIG_CACHE.get("valor")
 
     try:
         from app.database import SessionLocal
         with SessionLocal() as db_session:
             cfg = db_session.query(ConfiguracaoPainelProva).first()
-            if cfg and cfg.banca and str(cfg.banca).strip():
-                return str(cfg.banca).strip()
+            val = str(cfg.banca).strip() if (cfg and cfg.banca and str(cfg.banca).strip()) else None
+            _BANCA_CONFIG_CACHE["valor"] = val
+            _BANCA_CONFIG_CACHE["ts"] = agora
+            return val
     except Exception:
         pass
 
-    return None
+    return _BANCA_CONFIG_CACHE.get("valor")
 
 
 def montar_dados_vinculo_topico(

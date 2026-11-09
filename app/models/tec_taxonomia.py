@@ -68,4 +68,4 @@ class TopicoEstudoTecDePara(Base):
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
     topico = relationship("Topico", back_populates="vinculo_tec")
-    tec_taxonomia = relationship("TecTaxonomia", back_populates="vinculos_topicos")
+    tec_taxonomia = relationship("TecTaxonomia", back_populates="vinculos_topicos", lazy="joined")

@@ -31,6 +31,11 @@ def salvar_configuracao_prova(dados: ConfiguracaoPainelProvaBase, db: Session = 
             
     db.commit()
     db.refresh(config)
+    try:
+        from app.services.tec_matching_service import invalidar_cache_banca_ativa
+        invalidar_cache_banca_ativa()
+    except Exception:
+        pass
     return config
 
 @router.post("/marcar-alerta", response_model=ConfiguracaoPainelProvaResponse)
@@ -65,6 +70,11 @@ def marcar_alerta_visto(payload: dict, db: Session = Depends(get_db)):
     config.marcos_alertados = json.dumps(marcos)
     db.commit()
     db.refresh(config)
+    try:
+        from app.services.tec_matching_service import invalidar_cache_banca_ativa
+        invalidar_cache_banca_ativa()
+    except Exception:
+        pass
     return config
 
 @router.post("/resetar-alertas", response_model=ConfiguracaoPainelProvaResponse)
@@ -76,4 +86,9 @@ def resetar_alertas_vistos(db: Session = Depends(get_db)):
     config.marcos_alertados = "{}"
     db.commit()
     db.refresh(config)
+    try:
+        from app.services.tec_matching_service import invalidar_cache_banca_ativa
+        invalidar_cache_banca_ativa()
+    except Exception:
+        pass
     return config

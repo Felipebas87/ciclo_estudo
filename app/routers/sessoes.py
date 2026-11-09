@@ -1,7 +1,7 @@
 from typing import List, Optional
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 from app.database import get_db
 from app.models.sessao import SessaoEstudo
 from app.models.ciclo import CicloEstudos, BlocoCiclo
@@ -27,7 +27,12 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
     RF04 & RF05: Registro de Check-in de estudo e resolução de questões.
     Calcula percentual de acerto automaticamente e avança a esteira se solicitado.
     """
-    disc = db.query(Disciplina).filter(Disciplina.id == dados.disciplina_id).first()
+    disc = (
+        db.query(Disciplina)
+        .options(joinedload(Disciplina.edital))
+        .filter(Disciplina.id == dados.disciplina_id)
+        .first()
+    )
     if not disc:
         raise HTTPException(status_code=404, detail="Disciplina nao encontrada")
     if disc.edital.encerrado:
@@ -47,21 +52,32 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
 
     perc_acerto = round((acertos / total_q * 100), 2) if total_q > 0 else 0.0
 
-    # Inferir o ciclo ativo e bloco associado
+    # Inferir o ciclo ativo e bloco associado em consulta única com eager loading
     ciclo_id_val = None
     volta_ciclo_val = 0
     bloco_alvo = None
+    ciclo_ativo = None
 
     if dados.bloco_ciclo_id:
-        bloco_alvo = db.query(BlocoCiclo).filter(BlocoCiclo.id == dados.bloco_ciclo_id).first()
+        bloco_alvo = (
+            db.query(BlocoCiclo)
+            .options(joinedload(BlocoCiclo.ciclo).selectinload(CicloEstudos.blocos))
+            .filter(BlocoCiclo.id == dados.bloco_ciclo_id)
+            .first()
+        )
         if bloco_alvo:
             ciclo_id_val = bloco_alvo.ciclo_id
-            ciclo_ativo = db.query(CicloEstudos).filter(CicloEstudos.id == ciclo_id_val).first()
+            ciclo_ativo = bloco_alvo.ciclo
             if ciclo_ativo:
                 volta_ciclo_val = ciclo_ativo.voltas_completas
     else:
         # Se nao passou bloco, pega o ciclo ativo do edital da disciplina
-        ciclo_ativo = db.query(CicloEstudos).filter(CicloEstudos.edital_id == disc.edital_id, CicloEstudos.ativo == True).first()
+        ciclo_ativo = (
+            db.query(CicloEstudos)
+            .options(selectinload(CicloEstudos.blocos))
+            .filter(CicloEstudos.edital_id == disc.edital_id, CicloEstudos.ativo == True)
+            .first()
+        )
         if ciclo_ativo:
             ciclo_id_val = ciclo_ativo.id
             volta_ciclo_val = ciclo_ativo.voltas_completas
@@ -88,14 +104,18 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
     )
     db.add(sessao)
 
-    # Marca bloco como concluído e avança o ciclo da esteira
+    # Marca bloco como concluído e avança o ciclo da esteira reutilizando o ciclo já carregado
     if dados.avancar_ciclo:
-        ciclo_para_avancar = None
         if bloco_alvo:
             bloco_alvo.concluido = True
-            ciclo_para_avancar = db.query(CicloEstudos).filter(CicloEstudos.id == bloco_alvo.ciclo_id).first()
-        elif ciclo_id_val:
-            ciclo_para_avancar = db.query(CicloEstudos).filter(CicloEstudos.id == ciclo_id_val).first()
+        ciclo_para_avancar = ciclo_ativo
+        if not ciclo_para_avancar and ciclo_id_val:
+            ciclo_para_avancar = (
+                db.query(CicloEstudos)
+                .options(selectinload(CicloEstudos.blocos))
+                .filter(CicloEstudos.id == ciclo_id_val)
+                .first()
+            )
 
         if ciclo_para_avancar and ciclo_para_avancar.blocos and len(ciclo_para_avancar.blocos) > 0:
             total_blocos = len(ciclo_para_avancar.blocos)

@@ -4,6 +4,7 @@ from typing import Optional, List
 from pathlib import Path
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
@@ -142,6 +143,26 @@ def auto_upgrade_db():
     except Exception as e_row:
         print(f"[AUTO-UPGRADE] Aviso ao verificar linha 1 em configuracao_painel_prova: {e_row}")
 
+    # 3.1. Garante índices de performance para PostgreSQL e SQLite em chaves estrangeiras e colunas de busca
+    indices_performance = [
+        "CREATE INDEX IF NOT EXISTS ix_disciplinas_edital_id ON disciplinas (edital_id);",
+        "CREATE INDEX IF NOT EXISTS ix_topicos_disciplina_id ON topicos (disciplina_id);",
+        "CREATE INDEX IF NOT EXISTS ix_sessoes_estudo_disciplina_id ON sessoes_estudo (disciplina_id);",
+        "CREATE INDEX IF NOT EXISTS ix_sessoes_estudo_topico_id ON sessoes_estudo (topico_id);",
+        "CREATE INDEX IF NOT EXISTS ix_sessoes_estudo_ciclo_id ON sessoes_estudo (ciclo_id);",
+        "CREATE INDEX IF NOT EXISTS ix_sessoes_estudo_bloco_ciclo_id ON sessoes_estudo (bloco_ciclo_id);",
+        "CREATE INDEX IF NOT EXISTS ix_sessoes_estudo_data ON sessoes_estudo (data);",
+        "CREATE INDEX IF NOT EXISTS ix_blocos_ciclo_ciclo_id ON blocos_ciclo (ciclo_id);",
+        "CREATE INDEX IF NOT EXISTS ix_blocos_ciclo_disciplina_id ON blocos_ciclo (disciplina_id);",
+        "CREATE INDEX IF NOT EXISTS ix_ciclos_estudo_edital_ativo ON ciclos_estudo (edital_id, ativo);"
+    ]
+    for sql_idx in indices_performance:
+        try:
+            with engine.begin() as conn:
+                conn.execute(text(sql_idx))
+        except Exception as e_idx:
+            print(f"[AUTO-UPGRADE] Aviso ao criar índice ({sql_idx}): {e_idx}")
+
     # 4. Garante que os nós de taxonomia e vínculos do TEC estejam carregados a partir do seed embutido
     try:
         from app.database import SessionLocal
@@ -160,6 +181,9 @@ app = FastAPI(
     description="Planejamento, execução e monitoramento de estudos para concursos públicos",
     version="1.0.0"
 )
+
+# Habilita compressão GZip para payloads JSON e assets estáticos
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Habilita CORS
 app.add_middleware(

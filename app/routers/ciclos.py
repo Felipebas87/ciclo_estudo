@@ -1,15 +1,26 @@
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload, joinedload
 from app.database import get_db
 from app.models.ciclo import CicloEstudos, BlocoCiclo
 from app.models.sessao import SessaoEstudo
 from app.models.disciplina import Disciplina
+from app.models.topico import Topico
+from app.models.tec_taxonomia import TopicoEstudoTecDePara
 from app.schemas.ciclo import CicloResponse, CicloGerarRequest, AvancarCicloResponse, BlocoCicloResponse
 from app.services.ciclo_service import gerar_ciclo_para_edital
 from app.services.trilha_ia_service import obter_proximo_topico_trilha_disciplina
 
 router = APIRouter(prefix="/api/ciclos", tags=["Ciclos de Estudo"])
+
+def _ciclo_eager_options():
+    return (
+        selectinload(CicloEstudos.blocos)
+        .joinedload(BlocoCiclo.disciplina)
+        .selectinload(Disciplina.topicos)
+        .joinedload(Topico.vinculo_tec)
+        .joinedload(TopicoEstudoTecDePara.tec_taxonomia)
+    )
 
 def _enriquecer_ciclo_com_topicos_trilha(db: Session, ciclo: Optional[CicloEstudos]) -> Optional[CicloEstudos]:
     if not ciclo or not ciclo.blocos:
@@ -30,7 +41,12 @@ def _enriquecer_ciclo_com_topicos_trilha(db: Session, ciclo: Optional[CicloEstud
 
 @router.get("", response_model=List[CicloResponse])
 def listar_ciclos(db: Session = Depends(get_db)):
-    ciclos = db.query(CicloEstudos).order_by(CicloEstudos.data_criacao.desc()).all()
+    ciclos = (
+        db.query(CicloEstudos)
+        .options(_ciclo_eager_options())
+        .order_by(CicloEstudos.data_criacao.desc())
+        .all()
+    )
     for c in ciclos:
         _enriquecer_ciclo_com_topicos_trilha(db, c)
     return ciclos
@@ -38,12 +54,22 @@ def listar_ciclos(db: Session = Depends(get_db)):
 @router.get("/ativo", response_model=Optional[CicloResponse])
 def obter_ciclo_ativo(db: Session = Depends(get_db)):
     """Retorna o ciclo de estudos atualmente ativo já com o próximo tópico da Trilha IA apontado em cada bloco"""
-    ciclo = db.query(CicloEstudos).filter(CicloEstudos.ativo == True).first()
+    ciclo = (
+        db.query(CicloEstudos)
+        .options(_ciclo_eager_options())
+        .filter(CicloEstudos.ativo == True)
+        .first()
+    )
     return _enriquecer_ciclo_com_topicos_trilha(db, ciclo)
 
 @router.get("/{ciclo_id}", response_model=CicloResponse)
 def obter_ciclo(ciclo_id: int, db: Session = Depends(get_db)):
-    ciclo = db.query(CicloEstudos).filter(CicloEstudos.id == ciclo_id).first()
+    ciclo = (
+        db.query(CicloEstudos)
+        .options(_ciclo_eager_options())
+        .filter(CicloEstudos.id == ciclo_id)
+        .first()
+    )
     if not ciclo:
         raise HTTPException(status_code=404, detail="Ciclo não encontrado")
     return _enriquecer_ciclo_com_topicos_trilha(db, ciclo)
@@ -72,7 +98,12 @@ def avancar_bloco(ciclo_id: int, db: Session = Depends(get_db)):
     """
     Avança a esteira circular do ciclo para o próximo bloco.
     """
-    ciclo = db.query(CicloEstudos).filter(CicloEstudos.id == ciclo_id).first()
+    ciclo = (
+        db.query(CicloEstudos)
+        .options(_ciclo_eager_options())
+        .filter(CicloEstudos.id == ciclo_id)
+        .first()
+    )
     if not ciclo:
         raise HTTPException(status_code=404, detail="Ciclo não encontrado")
 
@@ -86,7 +117,6 @@ def avancar_bloco(ciclo_id: int, db: Session = Depends(get_db)):
         ciclo.voltas_completas += 1
     ciclo.bloco_atual_index = novo_index
     db.commit()
-    db.refresh(ciclo)
     _enriquecer_ciclo_com_topicos_trilha(db, ciclo)
 
     bloco_atual = ciclo.blocos[novo_index] if novo_index < total_blocos else None

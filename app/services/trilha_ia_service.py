@@ -726,7 +726,8 @@ Retorne ESTRITAMENTE um JSON no seguinte formato:
 
 def obter_proximo_topico_trilha_disciplina(
     disc: Disciplina,
-    topicos_vistos_ids: Optional[set] = None
+    topicos_vistos_ids: Optional[set] = None,
+    banca_nome: Optional[str] = None
 ) -> Optional[Dict[str, Any]]:
     """
     Retorna o próximo tópico apontado pela Trilha de Aprendizado & Pareto para uma disciplina.
@@ -767,6 +768,7 @@ def obter_proximo_topico_trilha_disciplina(
     if not escolhido:
         return None
 
+    from app.services.tec_matching_service import montar_dados_vinculo_topico
     return {
         "id": escolhido.id,
         "titulo": escolhido.titulo,
@@ -777,7 +779,7 @@ def obter_proximo_topico_trilha_disciplina(
         "motivo_ia": escolhido.motivo_ia,
         "concluido": bool(escolhido.concluido),
         "visto": esta_concluido_ou_visto(escolhido),
-        "tec_vinculo": getattr(escolhido, "tec_vinculo", None)
+        "tec_vinculo": montar_dados_vinculo_topico(escolhido, getattr(escolhido, "vinculo_tec", None), banca_nome=banca_nome)
     }
 
 

@@ -6,7 +6,7 @@ class Disciplina(Base):
     __tablename__ = "disciplinas"
 
     id = Column(Integer, primary_key=True, index=True)
-    edital_id = Column(Integer, ForeignKey("editais.id", ondelete="CASCADE"), nullable=False)
+    edital_id = Column(Integer, ForeignKey("editais.id", ondelete="CASCADE"), nullable=False, index=True)
     nome = Column(String(150), nullable=False)
     categoria = Column(String(50), default="TEORICA_DIREITO")  # EXATAS_LOGICA ou TEORICA_DIREITO
     grupo_conhecimento = Column(String(50), default="BASICOS")  # BASICOS ou ESPECIFICOS

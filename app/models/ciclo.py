@@ -10,12 +10,12 @@ class CicloEstudos(Base):
     __tablename__ = "ciclos_estudo"
 
     id = Column(Integer, primary_key=True, index=True)
-    edital_id = Column(Integer, ForeignKey("editais.id", ondelete="CASCADE"), nullable=False)
+    edital_id = Column(Integer, ForeignKey("editais.id", ondelete="CASCADE"), nullable=False, index=True)
     nome = Column(String(150), nullable=False)
     carga_horaria_semanal = Column(Float, default=20.0)
     duracao_bloco_minutos = Column(Integer, default=60)
     bloco_atual_index = Column(Integer, default=0)
-    ativo = Column(Boolean, default=True)
+    ativo = Column(Boolean, default=True, index=True)
     numero_ciclo = Column(Integer, default=1)
     cor_hex = Column(String(20), default="#10b981")
     data_criacao = Column(DateTime, default=utc_now)
@@ -29,8 +29,8 @@ class BlocoCiclo(Base):
     __tablename__ = "blocos_ciclo"
 
     id = Column(Integer, primary_key=True, index=True)
-    ciclo_id = Column(Integer, ForeignKey("ciclos_estudo.id", ondelete="CASCADE"), nullable=False)
-    disciplina_id = Column(Integer, ForeignKey("disciplinas.id", ondelete="CASCADE"), nullable=False)
+    ciclo_id = Column(Integer, ForeignKey("ciclos_estudo.id", ondelete="CASCADE"), nullable=False, index=True)
+    disciplina_id = Column(Integer, ForeignKey("disciplinas.id", ondelete="CASCADE"), nullable=False, index=True)
     ordem = Column(Integer, nullable=False)
     duracao_minutos = Column(Integer, default=60)
     concluido = Column(Boolean, default=False)

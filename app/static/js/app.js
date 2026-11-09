@@ -1199,6 +1199,12 @@ const app = createApp({
                 }
             }
 
+            // Se o edital verticalizado ainda estiver carregando, usa o próximo tópico já calculado no bloco do ciclo ativo
+            if ((!topicos || topicos.length === 0) && cicloAtivo.value && cicloAtivo.value.blocos) {
+                const blocoDisc = cicloAtivo.value.blocos.find(b => Number(b.disciplina_id) === numId);
+                if (blocoDisc && blocoDisc.proximo_topico) return blocoDisc.proximo_topico;
+            }
+
             if (!topicos || topicos.length === 0) {
                 const d = (todasDisciplinas.value || []).find(x => Number(x.id) === numId);
                 if (d && d.topicos && d.topicos.length > 0) topicos = d.topicos;
@@ -1216,15 +1222,16 @@ const app = createApp({
                 }
             }
 
-            if ((!topicos || topicos.length === 0) && cicloAtivo.value && cicloAtivo.value.blocos) {
-                const blocoDisc = cicloAtivo.value.blocos.find(b => Number(b.disciplina_id) === numId);
-                if (blocoDisc && blocoDisc.proximo_topico) return blocoDisc.proximo_topico;
-            }
-
             if (!topicos || topicos.length === 0) return null;
 
+            const vistosIds = new Set(
+                (sessoes.value || [])
+                    .filter(s => s && s.topico_id != null)
+                    .map(s => Number(s.topico_id))
+            );
+
             const ordenados = ordenarTopicosPorTrilha(topicos);
-            const pendentes = ordenados.filter(t => !t.visto && !t.concluido);
+            const pendentes = ordenados.filter(t => !t.visto && !t.concluido && !vistosIds.has(Number(t.id)));
             const pool = pendentes.length > 0 ? pendentes : ordenados;
 
             return pool[0] || null;
@@ -1728,12 +1735,27 @@ const app = createApp({
             }
         };
 
+        async function atualizarDadosCicloESessoes() {
+            const targetEditalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+            const [rCiclo, rSess] = await Promise.all([
+                fetch('/api/ciclos/ativo'),
+                fetch('/api/sessoes?limite=100'),
+                targetEditalId ? carregarDashboardData(targetEditalId) : Promise.resolve()
+            ]);
+            if (rCiclo && rCiclo.ok) cicloAtivo.value = await rCiclo.json();
+            if (rSess && rSess.ok) sessoes.value = await rSess.json();
+        }
+
         async function loadAllData() {
             carregandoDados.value = true;
             try {
-                await carregarDadosProvaServidor();
+                const [, rEd, rCiclo, rSess] = await Promise.all([
+                    carregarDadosProvaServidor(),
+                    fetch('/api/editais'),
+                    fetch('/api/ciclos/ativo'),
+                    fetch('/api/sessoes?limite=100')
+                ]);
 
-                const rEd = await fetch('/api/editais');
                 if (rEd.ok) {
                     editais.value = await rEd.json();
                     if (editais.value.length === 0) {
@@ -1745,27 +1767,23 @@ const app = createApp({
                     }
                 }
 
-                const [rCiclo, rSess] = await Promise.all([
-                    fetch('/api/ciclos/ativo'),
-                    fetch('/api/sessoes?limite=100')
-                ]);
-
                 if (rCiclo.ok) cicloAtivo.value = await rCiclo.json();
                 if (rSess.ok) sessoes.value = await rSess.json();
-
-                await Promise.all([
-                    carregarResultadosAvulsos(),
-                    carregarResultadosEncerrados()
-                ]);
-
-                const targetEditalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
-                if (targetEditalId) {
-                    await carregarDashboardData(targetEditalId);
-                }
 
                 if (abaAtiva.value === 'ciclo') {
                     renderDonut();
                     scrollToCurrentBlock();
+                }
+
+                const targetEditalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+                await Promise.all([
+                    targetEditalId ? carregarDashboardData(targetEditalId) : Promise.resolve(),
+                    carregarResultadosAvulsos(),
+                    carregarResultadosEncerrados()
+                ]);
+
+                if (abaAtiva.value === 'ciclo') {
+                    renderDonut();
                 }
 
                 // Carrega status da IA e insights em segundo plano sem travar a inicialização do app
@@ -1981,7 +1999,7 @@ const app = createApp({
                 const oldVoltas = cicloAtivo.value.voltas_completas;
                 const res = await fetch(`/api/ciclos/${cicloAtivo.value.id}/avancar`, { method: 'POST' });
                 if (res.ok) {
-                    await loadAllData();
+                    await atualizarDadosCicloESessoes();
                     if (cicloAtivo.value.voltas_completas > oldVoltas) {
                         triggerConfetti();
                         mostrarAlerta('Parabéns! Você completou mais um giro completo no ciclo!', 'sucesso');
@@ -1989,6 +2007,10 @@ const app = createApp({
                         mostrarAlerta('Bloco avançado na fila.', 'sucesso');
                     }
                     resetTimer();
+                    if (abaAtiva.value === 'ciclo') {
+                        renderDonut();
+                        scrollToCurrentBlock();
+                    }
                 }
             } catch (e) {
                 mostrarAlerta('Erro ao avançar bloco.', 'erro');
@@ -2153,10 +2175,11 @@ const app = createApp({
             }
 
             modalCheckinAberto.value = false;
+            salvandoSessao.value = false;
             resetTimer();
 
             try {
-                await loadAllData();
+                await atualizarDadosCicloESessoes();
 
                 let newPerc = 0;
                 if (cicloAtivo.value && editais.value) {
@@ -2182,8 +2205,6 @@ const app = createApp({
             } catch (uiErr) {
                 console.error('Erro pós-salvamento na interface:', uiErr);
                 mostrarAlerta('Sessão registrada com sucesso!', 'sucesso');
-            } finally {
-                salvandoSessao.value = false;
             }
         }
 
