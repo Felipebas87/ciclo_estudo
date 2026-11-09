@@ -154,7 +154,7 @@ def diagnostico_arvore_tec(
 def listar_materias_tec(db: Session = Depends(get_db)):
     """Lista todas as disciplinas/matérias (Nível 1) sincronizadas na árvore do TEC Concursos."""
     total_materias = db.query(func.count(TecTaxonomia.id)).filter(TecTaxonomia.is_materia == True).scalar() or 0
-    if total_materias < 28:
+    if total_materias < 20:
         try:
             from app.services.tec_seed_service import carregar_seed_tec_taxonomia
             carregar_seed_tec_taxonomia(db)

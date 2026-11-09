@@ -37,13 +37,16 @@ def extrair_id_caderno(url_ou_id: str) -> Optional[str]:
     if not url_ou_id:
         return None
     s = str(url_ou_id).strip()
-    match = re.search(r"/cadernos/(\d+)", s)
+    match = re.search(r"cadernos[/?#&]+(\d+)", s, re.IGNORECASE)
     if match:
         return match.group(1)
-    match_digits = re.search(r"^\d+$", s)
+    match_slash = re.search(r"/cadernos/(\d+)", s, re.IGNORECASE)
+    if match_slash:
+        return match_slash.group(1)
+    match_digits = re.search(r"^\s*#?\s*(\d+)\s*$", s)
     if match_digits:
-        return match_digits.group(0)
-    match_any = re.search(r"(\d{6,})", s)
+        return match_digits.group(1)
+    match_any = re.search(r"(\d{5,})", s)
     if match_any:
         return match_any.group(1)
     return None
@@ -235,7 +238,13 @@ def associar_caderno_manualmente(
 
         if not vinculo:
             tec_raiz = db.query(TecTaxonomia).first()
-            tec_tax_id = tec_raiz.id if tec_raiz else 1
+            if not tec_raiz:
+                from app.services.tec_seed_service import carregar_seed_tec_taxonomia
+                carregar_seed_tec_taxonomia(db)
+                tec_raiz = db.query(TecTaxonomia).first()
+            tec_tax_id = tec_raiz.id if tec_raiz else None
+            if not tec_tax_id:
+                raise ValueError("Taxonomia do TEC não inicializada no banco de dados.")
             vinculo = TopicoEstudoTecDePara(
                 topico_id=topico_id,
                 tec_taxonomia_id=tec_tax_id,

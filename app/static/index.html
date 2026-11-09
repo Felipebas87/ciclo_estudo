@@ -3857,7 +3857,7 @@
                                 <div class="flex items-center gap-2">
                                     <i class="fa-solid fa-folder-open text-blue-500 text-sm"></i>
                                     <span class="text-xs font-extrabold text-slate-800 dark:text-white">Caderno de Questões no TEC:</span>
-                                    <span v-if="vinculoTecAtualModal.caderno_id" class="px-2 py-0.5 rounded text-[10.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
+                                    <span v-if="vinculoTecAtualModal && vinculoTecAtualModal.caderno_id" class="px-2 py-0.5 rounded text-[10.5px] font-bold bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 flex items-center gap-1">
                                         <i class="fa-solid fa-circle-check text-[10px]"></i>
                                         <span>Caderno #{{ vinculoTecAtualModal.caderno_id }} Ativo</span>
                                     </span>
@@ -3865,7 +3865,7 @@
                                         Padrão: Link Direto da Matéria + Banca
                                     </span>
                                 </div>
-                                <button v-if="vinculoTecAtualModal.caderno_id"
+                                <button v-if="vinculoTecAtualModal && vinculoTecAtualModal.caderno_id"
                                     type="button"
                                     @click="desvincularCadernoManualTec"
                                     class="text-[11px] text-rose-500 hover:text-rose-600 dark:text-rose-400 hover:underline font-semibold flex items-center gap-1 cursor-pointer"
@@ -3876,7 +3876,8 @@
                             </div>
 
                             <!-- Atalho para Copiar Termo do Assunto e Banca -->
-                            <div class="p-2.5 rounded-lg bg-white/80 dark:bg-[#0E1726] border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
+                            <div v-if="vinculoTecAtualModal && vinculoTecAtualModal.nome_assunto_tec"
+                                class="p-2.5 rounded-lg bg-white/80 dark:bg-[#0E1726] border border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-xs">
                                 <div class="flex items-center gap-1.5 flex-wrap">
                                     <span class="text-slate-500 dark:text-slate-400 font-medium">Assunto no TEC:</span>
                                     <button type="button"
@@ -3889,7 +3890,7 @@
                                 </div>
                                 <div class="flex items-center gap-1.5 text-slate-400">
                                     <span>Banca:</span>
-                                    <strong class="text-amber-500 dark:text-amber-400">{{ vinculoTecAtualModal.banca_nome || 'Cebraspe' }}</strong>
+                                    <strong class="text-amber-500 dark:text-amber-400">{{ (vinculoTecAtualModal && vinculoTecAtualModal.banca_nome) || 'Cebraspe' }}</strong>
                                 </div>
                             </div>
 
@@ -3898,20 +3899,21 @@
                                 <div class="flex items-center gap-1.5 flex-1 min-w-[280px]">
                                     <input type="text"
                                         v-model="inputCadernoManual"
-                                        :placeholder="vinculoTecAtualModal.caderno_id ? ('Substituir Caderno #' + vinculoTecAtualModal.caderno_id) : 'Cole o ID ou link do caderno (ex: 107798461)'"
+                                        :placeholder="(vinculoTecAtualModal && vinculoTecAtualModal.caderno_id) ? ('Substituir Caderno #' + vinculoTecAtualModal.caderno_id) : 'Cole o ID ou link do caderno (ex: 107798461)'"
                                         class="flex-1 px-3 py-2 rounded-xl bg-white dark:bg-[#0B111E] border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white text-xs outline-none focus:border-blue-500"
                                         @keyup.enter="associarCadernoManualTec">
                                     <button type="button"
                                         @click="associarCadernoManualTec"
-                                        :disabled="carregandoModalTec"
-                                        class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 shadow-xs">
-                                        <i class="fa-solid fa-link text-[10px]"></i>
-                                        <span>{{ vinculoTecAtualModal.caderno_id ? 'Atualizar Caderno' : 'Vincular Caderno' }}</span>
+                                        :disabled="!inputCadernoManual || !inputCadernoManual.trim() || salvandoCadernoManual"
+                                        class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-xs transition-all"
+                                        :title="(!inputCadernoManual || !inputCadernoManual.trim()) ? 'Cole o link ou ID do caderno para habilitar' : 'Salvar vínculo do caderno'">
+                                        <i class="fa-solid" :class="salvandoCadernoManual ? 'fa-spinner fa-spin' : 'fa-link text-[10px]'"></i>
+                                        <span>{{ salvandoCadernoManual ? 'Salvando...' : ((vinculoTecAtualModal && vinculoTecAtualModal.caderno_id) ? 'Salvar Caderno' : 'Vincular Caderno') }}</span>
                                     </button>
                                 </div>
                             </div>
                             <div class="text-[11px] text-slate-500 dark:text-slate-400">
-                                💡 <strong>Sem caderno vinculado:</strong> o botão abre direto a matéria no TEC com a banca filtrada.
+                                💡 <strong>Sem caderno vinculado:</strong> o botão abre direto a matéria no TEC com a banca filtrada.<br>
                                 <strong>Com caderno inserido:</strong> abre o caderno personalizado do TEC.
                             </div>
                         </div>

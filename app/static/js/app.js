@@ -3571,6 +3571,7 @@ const app = createApp({
         const gerandoCadernoTec = ref(false);
         const autenticandoTec = ref(false);
         const inputCadernoManual = ref('');
+        const salvandoCadernoManual = ref(false);
 
         const limparNumeracaoTituloFront = (titulo) => {
             if (!titulo) return '';
@@ -3686,11 +3687,12 @@ const app = createApp({
                 disciplina_id: topico.disciplina_id,
                 disciplina_nome: nomeDisc
             };
-            vinculoTecAtualModal.value = topico.tec_vinculo || null;
+            vinculoTecAtualModal.value = topico.tec_vinculo ? { ...topico.tec_vinculo } : { vinculado: false };
             sugestoesTecModal.value = [];
             resultadosArvoreTecModal.value = [];
             buscaArvoreTecQuery.value = '';
             filtroMateriaTecId.value = '';
+            inputCadernoManual.value = '';
             modalVinculoTecAberto.value = true;
             carregandoModalTec.value = true;
 
@@ -3700,9 +3702,9 @@ const app = createApp({
                     fetch(`/api/tec/topico/${topico.id}/link?incluir_sugestoes=true`),
                     buscarNaArvoreTecModal()
                 ]);
-                if (resLink.ok) {
+                if (resLink && resLink.ok) {
                     const data = await resLink.json();
-                    vinculoTecAtualModal.value = data.vinculo;
+                    vinculoTecAtualModal.value = data.vinculo || { vinculado: false };
                     sugestoesTecModal.value = data.sugestoes || [];
                     if (data.topico && data.topico.disciplina_nome && !topicoEmVinculacaoTec.value.disciplina_nome) {
                         topicoEmVinculacaoTec.value.disciplina_nome = data.topico.disciplina_nome;
@@ -3792,7 +3794,7 @@ const app = createApp({
                 mostrarAlerta('Informe o número ou a URL do caderno (ex: 107798461).', 'alerta');
                 return;
             }
-            carregandoModalTec.value = true;
+            salvandoCadernoManual.value = true;
             try {
                 const res = await fetch(`/api/tec/topico/${topicoEmVinculacaoTec.value.id}/associar-caderno`, {
                     method: 'POST',
@@ -3805,7 +3807,7 @@ const app = createApp({
                 const data = await res.json();
                 if (res.ok && data.sucesso) {
                     mostrarAlerta(data.mensagem || 'Caderno associado com sucesso!', 'sucesso');
-                    vinculoTecAtualModal.value = data.vinculo;
+                    vinculoTecAtualModal.value = data.vinculo || { vinculado: true, caderno_id: data.caderno_id };
                     atualizarVinculoTopicoLocal(topicoEmVinculacaoTec.value.id, data.vinculo);
                     inputCadernoManual.value = '';
                 } else {
@@ -3814,7 +3816,7 @@ const app = createApp({
             } catch (e) {
                 mostrarAlerta('Erro ao associar caderno: ' + e.message, 'erro');
             } finally {
-                carregandoModalTec.value = false;
+                salvandoCadernoManual.value = false;
             }
         };
 
@@ -4089,6 +4091,7 @@ const app = createApp({
             gerandoCadernoTec,
             autenticandoTec,
             inputCadernoManual,
+            salvandoCadernoManual,
             associarCadernoManualTec,
             desvincularCadernoManualTec,
             copiarTextoTec,
