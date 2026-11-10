@@ -1158,6 +1158,43 @@ const app = createApp({
                 (editalVerticalizadoData.value.BASICOS || []).forEach(d => atualizarEmLista(d.topicos));
                 (editalVerticalizadoData.value.ESPECIFICOS || []).forEach(d => atualizarEmLista(d.topicos));
                 (editalVerticalizadoData.value.TRILHA_COMPLETA || []).forEach(d => atualizarEmLista(d.topicos));
+
+                // Recalcula as métricas de Pareto e prioridades em tempo real no estado local
+                if (editalVerticalizadoData.value.metricas_pareto) {
+                    const todasDiscs = [
+                        ...(editalVerticalizadoData.value.BASICOS || []),
+                        ...(editalVerticalizadoData.value.ESPECIFICOS || [])
+                    ];
+                    let totTop = 0, totVistos = 0;
+                    let mc = 0, mcV = 0, p1 = 0, p1V = 0, p2 = 0, p2V = 0, p3 = 0, p3V = 0;
+                    for (const d of todasDiscs) {
+                        for (const t of (d.topicos || [])) {
+                            totTop++;
+                            const isVisto = Boolean(t.visto || t.concluido);
+                            if (isVisto) totVistos++;
+                            if (t.mais_cobrado) { mc++; if (isVisto) mcV++; }
+                            if (t.prioridade === 1) { p1++; if (isVisto) p1V++; }
+                            if (t.prioridade === 2) { p2++; if (isVisto) p2V++; }
+                            if (t.prioridade === 3) { p3++; if (isVisto) p3V++; }
+                        }
+                    }
+                    const mp = editalVerticalizadoData.value.metricas_pareto;
+                    mp.total_topicos = totTop;
+                    mp.topicos_vistos = totVistos;
+                    mp.total_mais_cobrados = mc;
+                    mp.perc_mais_cobrados = totTop > 0 ? Number((mc / totTop * 100).toFixed(1)) : 0;
+                    mp.vistos_mais_cobrados = mcV;
+                    mp.total_p1 = p1;
+                    mp.perc_p1 = totTop > 0 ? Number((p1 / totTop * 100).toFixed(1)) : 0;
+                    mp.vistos_p1 = p1V;
+                    mp.total_p2 = p2;
+                    mp.perc_p2 = totTop > 0 ? Number((p2 / totTop * 100).toFixed(1)) : 0;
+                    mp.vistos_p2 = p2V;
+                    mp.total_p3 = p3;
+                    mp.perc_p3 = totTop > 0 ? Number((p3 / totTop * 100).toFixed(1)) : 0;
+                    mp.vistos_p3 = p3V;
+                    mp.total_nucleo_pareto = p1 + p2;
+                }
             }
         };
 

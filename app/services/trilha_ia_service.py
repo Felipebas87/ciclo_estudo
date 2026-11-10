@@ -1272,6 +1272,11 @@ def montar_resumo_retorno_trilha(
     )
     topicos_vistos_ids = set(s.topico_id for s in sessoes if s.topico_id is not None)
 
+    vistos_mais_cobrados = sum(1 for t in todos_topicos if t.mais_cobrado and (t.id in topicos_vistos_ids or bool(t.concluido)))
+    vistos_p1 = sum(1 for t in todos_topicos if t.prioridade == 1 and (t.id in topicos_vistos_ids or bool(t.concluido)))
+    vistos_p2 = sum(1 for t in todos_topicos if t.prioridade == 2 and (t.id in topicos_vistos_ids or bool(t.concluido)))
+    vistos_p3 = sum(1 for t in todos_topicos if t.prioridade == 3 and (t.id in topicos_vistos_ids or bool(t.concluido)))
+
     trilha_disciplinas = []
     for d in disciplinas_ordenadas:
         prox = obter_proximo_topico_trilha_disciplina(d, topicos_vistos_ids)
@@ -1320,9 +1325,16 @@ def montar_resumo_retorno_trilha(
             "total_topicos": total_topicos,
             "total_mais_cobrados": total_mais_cobrados,
             "perc_mais_cobrados": round(total_mais_cobrados / total_topicos * 100, 1) if total_topicos > 0 else 0.0,
+            "vistos_mais_cobrados": vistos_mais_cobrados,
             "total_p1": total_p1,
+            "perc_p1": round(total_p1 / total_topicos * 100, 1) if total_topicos > 0 else 0.0,
+            "vistos_p1": vistos_p1,
             "total_p2": total_p2,
+            "perc_p2": round(total_p2 / total_topicos * 100, 1) if total_topicos > 0 else 0.0,
+            "vistos_p2": vistos_p2,
             "total_p3": total_p3,
+            "perc_p3": round(total_p3 / total_topicos * 100, 1) if total_topicos > 0 else 0.0,
+            "vistos_p3": vistos_p3,
             "total_prioritarios": total_prioritarios
         },
         "trilha_disciplinas": trilha_disciplinas

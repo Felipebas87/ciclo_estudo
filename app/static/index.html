@@ -1341,9 +1341,11 @@
                                         <div class="text-[11px] font-bold text-amber-700 dark:text-amber-300 uppercase flex items-center gap-1">
                                             <i class="fa-solid fa-fire text-amber-500"></i> Mais Cobrados (Pareto)
                                         </div>
-                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1">
-                                            {{ editalVerticalizadoData.metricas_pareto.total_mais_cobrados || 0 }}
+                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1 flex flex-wrap items-baseline gap-1">
+                                            <span>{{ editalVerticalizadoData.metricas_pareto.total_mais_cobrados || 0 }}</span>
                                             <span class="text-xs font-bold text-amber-600 dark:text-amber-400">({{ editalVerticalizadoData.metricas_pareto.perc_mais_cobrados || 0 }}%)</span>
+                                            <span class="text-xs font-bold text-slate-400 dark:text-slate-500">/</span>
+                                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ editalVerticalizadoData.metricas_pareto.vistos_mais_cobrados || 0 }} estudados</span>
                                         </div>
                                         <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-0.5">Concentram ~80% das questões da banca</p>
                                     </div>
@@ -1351,8 +1353,11 @@
                                         <div class="text-[11px] font-bold text-rose-700 dark:text-rose-300 uppercase flex items-center gap-1">
                                             <i class="fa-solid fa-bolt text-rose-500"></i> Prioridade P1 (Alta)
                                         </div>
-                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1">
-                                            {{ editalVerticalizadoData.metricas_pareto.total_p1 || 0 }} <span class="text-xs font-bold text-rose-600 dark:text-rose-400">tópicos</span>
+                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1 flex flex-wrap items-baseline gap-1">
+                                            <span>{{ editalVerticalizadoData.metricas_pareto.total_p1 || 0 }}</span>
+                                            <span class="text-xs font-bold text-rose-600 dark:text-rose-400">({{ editalVerticalizadoData.metricas_pareto.perc_p1 || 0 }}%)</span>
+                                            <span class="text-xs font-bold text-slate-400 dark:text-slate-500">/</span>
+                                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ editalVerticalizadoData.metricas_pareto.vistos_p1 || 0 }} estudados</span>
                                         </div>
                                         <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-0.5">Pré-requisitos base + Topo de incidência</p>
                                     </div>
@@ -1360,8 +1365,11 @@
                                         <div class="text-[11px] font-bold text-amber-700 dark:text-amber-200 uppercase flex items-center gap-1">
                                             <span>⭐ Prioridade P2 (Média)</span>
                                         </div>
-                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1">
-                                            {{ editalVerticalizadoData.metricas_pareto.total_p2 || 0 }} <span class="text-xs font-bold text-amber-600 dark:text-amber-300">tópicos</span>
+                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1 flex flex-wrap items-baseline gap-1">
+                                            <span>{{ editalVerticalizadoData.metricas_pareto.total_p2 || 0 }}</span>
+                                            <span class="text-xs font-bold text-amber-600 dark:text-amber-300">({{ editalVerticalizadoData.metricas_pareto.perc_p2 || 0 }}%)</span>
+                                            <span class="text-xs font-bold text-slate-400 dark:text-slate-500">/</span>
+                                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ editalVerticalizadoData.metricas_pareto.vistos_p2 || 0 }} estudados</span>
                                         </div>
                                         <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-0.5">Consolidação intermediária pós-P1</p>
                                     </div>
@@ -1369,8 +1377,11 @@
                                         <div class="text-[11px] font-bold text-sky-700 dark:text-sky-300 uppercase flex items-center gap-1">
                                             <span>🔹 Prioridade P3 (Baixa)</span>
                                         </div>
-                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1">
-                                            {{ editalVerticalizadoData.metricas_pareto.total_p3 || 0 }} <span class="text-xs font-bold text-sky-600 dark:text-sky-400">tópicos</span>
+                                        <div class="text-xl font-black text-slate-900 dark:text-white mt-1 flex flex-wrap items-baseline gap-1">
+                                            <span>{{ editalVerticalizadoData.metricas_pareto.total_p3 || 0 }}</span>
+                                            <span class="text-xs font-bold text-sky-600 dark:text-sky-400">({{ editalVerticalizadoData.metricas_pareto.perc_p3 || 0 }}%)</span>
+                                            <span class="text-xs font-bold text-slate-400 dark:text-slate-500">/</span>
+                                            <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">{{ editalVerticalizadoData.metricas_pareto.vistos_p3 || 0 }} estudados</span>
                                         </div>
                                         <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-0.5">Complementares e revisão rápida</p>
                                     </div>

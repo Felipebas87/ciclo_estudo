@@ -352,9 +352,13 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
     global_topicos = 0
     global_vistos = 0
     global_mc = 0
+    global_mc_vistos = 0
     global_p1 = 0
+    global_p1_vistos = 0
     global_p2 = 0
+    global_p2_vistos = 0
     global_p3 = 0
+    global_p3_vistos = 0
 
     for grupo in ["BASICOS", "ESPECIFICOS"]:
         total_topicos = 0
@@ -418,16 +422,24 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             prox_topico = obter_proximo_topico_trilha_disciplina(disc, topicos_vistos_ids, banca_nome=banca_ativa)
 
             d_mc = sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False))
+            d_mc_vistos = sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False) and (t.id in topicos_vistos_ids or bool(t.concluido)))
             d_p1 = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 1)
+            d_p1_vistos = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 1 and (t.id in topicos_vistos_ids or bool(t.concluido)))
             d_p2 = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 2)
+            d_p2_vistos = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 2 and (t.id in topicos_vistos_ids or bool(t.concluido)))
             d_p3 = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 3)
+            d_p3_vistos = sum(1 for t in disc.topicos if getattr(t, "prioridade", None) == 3 and (t.id in topicos_vistos_ids or bool(t.concluido)))
 
             global_topicos += len(disc.topicos)
             global_vistos += disc_topicos_vistos
             global_mc += d_mc
+            global_mc_vistos += d_mc_vistos
             global_p1 += d_p1
+            global_p1_vistos += d_p1_vistos
             global_p2 += d_p2
+            global_p2_vistos += d_p2_vistos
             global_p3 += d_p3
+            global_p3_vistos += d_p3_vistos
 
             disc_payload = {
                 "id": disc.id,
@@ -477,9 +489,16 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
         "topicos_vistos": global_vistos,
         "total_mais_cobrados": global_mc,
         "perc_mais_cobrados": round((global_mc / global_topicos * 100), 1) if global_topicos > 0 else 0.0,
+        "vistos_mais_cobrados": global_mc_vistos,
         "total_p1": global_p1,
+        "perc_p1": round((global_p1 / global_topicos * 100), 1) if global_topicos > 0 else 0.0,
+        "vistos_p1": global_p1_vistos,
         "total_p2": global_p2,
+        "perc_p2": round((global_p2 / global_topicos * 100), 1) if global_topicos > 0 else 0.0,
+        "vistos_p2": global_p2_vistos,
         "total_p3": global_p3,
+        "perc_p3": round((global_p3 / global_topicos * 100), 1) if global_topicos > 0 else 0.0,
+        "vistos_p3": global_p3_vistos,
         "total_nucleo_pareto": global_p1 + global_p2
     }
 
