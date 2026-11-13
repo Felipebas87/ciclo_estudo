@@ -443,13 +443,28 @@
                             <span class="flex-1 text-left">Constância &amp; Dias</span>
                         </button>
 
-                        <!-- 7. Resultados & Raio-X -->
-                        <button @click="navegarPara('resultados')"
-                            :class="abaAtiva === 'resultados' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 font-bold ring-2 ring-indigo-400/40' : 'text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-100/80 dark:hover:bg-[#1B2638] font-semibold'"
+                        <!-- 7. Mapa da Aprovação -->
+                        <button @click="navegarPara('mapa_aprovacao')"
+                            :class="abaAtiva === 'mapa_aprovacao' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold' : 'text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-100/80 dark:hover:bg-[#1B2638] font-semibold'"
                             class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-150">
-                            <i class="fa-solid fa-trophy text-base w-5 text-center" :class="abaAtiva === 'resultados' ? 'text-amber-300' : 'text-indigo-400 dark:text-[#C4B5FD]'"></i>
+                            <i class="fa-solid fa-map-location-dot text-base w-5 text-center" :class="abaAtiva === 'mapa_aprovacao' ? 'text-white' : 'text-blue-500 dark:text-[#60A5FA]'"></i>
+                            <span class="flex-1 text-left">Mapa da Aprovação</span>
+                        </button>
+
+                        <!-- 8. Gestão Temporal (Projeto) -->
+                        <button @click="navegarPara('gestao_temporal')"
+                            :class="abaAtiva === 'gestao_temporal' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold' : 'text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-100/80 dark:hover:bg-[#1B2638] font-semibold'"
+                            class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-150">
+                            <i class="fa-solid fa-diagram-project text-base w-5 text-center" :class="abaAtiva === 'gestao_temporal' ? 'text-white' : 'text-emerald-500 dark:text-[#34D399]'"></i>
+                            <span class="flex-1 text-left">Gestão Temporal</span>
+                        </button>
+
+                        <!-- 9. Resultados & Raio-X -->
+                        <button @click="navegarPara('resultados')"
+                            :class="abaAtiva === 'resultados' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold' : 'text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-100/80 dark:hover:bg-[#1B2638] font-semibold'"
+                            class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-150">
+                            <i class="fa-solid fa-trophy text-base w-5 text-center" :class="abaAtiva === 'resultados' ? 'text-white' : 'text-indigo-400 dark:text-[#C4B5FD]'"></i>
                             <span class="flex-1 text-left">Resultados &amp; Raio-X</span>
-                            <span class="text-xs font-extrabold uppercase px-2 py-0.5 rounded bg-amber-400/20 text-amber-500 dark:bg-[#FCD34D]/15 dark:text-[#FCD34D] border border-amber-400/30 dark:border-[#FCD34D]/30">NOVO</span>
                         </button>
                     </nav>
                 </div>
@@ -502,10 +517,10 @@
                         
                         <div>
                             <h2 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-[#F1F5F9] capitalize leading-tight truncate">
-                                {{ abaAtiva === 'ciclo' ? 'Ciclo de Estudos' : (abaAtiva === 'editais' ? 'Editais & Matérias' : (abaAtiva === 'verticalizado' ? 'Edital Verticalizado' : (abaAtiva === 'diario' ? 'Diário de Sessões' : (abaAtiva === 'dashboard' ? 'Performance & Dashboard' : (abaAtiva === 'heatmap' ? 'Constância de Estudos' : 'Resultados & Raio-X'))))) }}
+                                {{ abaAtiva === 'ciclo' ? 'Ciclo de Estudos' : (abaAtiva === 'editais' ? 'Editais & Matérias' : (abaAtiva === 'verticalizado' ? 'Edital Verticalizado' : (abaAtiva === 'diario' ? 'Diário de Sessões' : (abaAtiva === 'dashboard' ? 'Performance & Dashboard' : (abaAtiva === 'heatmap' ? 'Constância de Estudos' : (abaAtiva === 'mapa_aprovacao' ? 'Mapa da Aprovação' : (abaAtiva === 'gestao_temporal' ? 'Gestão Temporal (Projeto da Aprovação)' : 'Resultados & Raio-X'))))))) }}
                             </h2>
                             <p class="text-[11px] text-slate-400 dark:text-[#94A3B8] hidden sm:block">
-                                {{ abaAtiva === 'ciclo' ? 'Acompanhe a esteira de matérias e cronometre sua sessão' : (abaAtiva === 'editais' ? 'Gerencie disciplinas, pesos e cargas horárias' : (abaAtiva === 'verticalizado' ? 'Controle de tópicos estudados e revisões' : (abaAtiva === 'diario' ? 'Histórico completo de sessões cumpridas' : (abaAtiva === 'dashboard' ? 'Métricas de horas e aproveitamento geral' : (abaAtiva === 'heatmap' ? 'Visualização da frequência diária' : 'Comparativos com nota de corte e estatísticas'))))) }}
+                                {{ abaAtiva === 'ciclo' ? 'Acompanhe a esteira de matérias e cronometre sua sessão' : (abaAtiva === 'editais' ? 'Gerencie disciplinas, pesos e cargas horárias' : (abaAtiva === 'verticalizado' ? 'Controle de tópicos estudados e revisões' : (abaAtiva === 'diario' ? 'Histórico completo de sessões cumpridas' : (abaAtiva === 'dashboard' ? 'Métricas de horas e aproveitamento geral' : (abaAtiva === 'heatmap' ? 'Visualização da frequência diária' : (abaAtiva === 'mapa_aprovacao' ? 'Nota estimada na prova com margem de incerteza, pesos das disciplinas e critérios eliminatórios' : (abaAtiva === 'gestao_temporal' ? 'Gerenciamento de projeto até a prova: ritmo semanal do edital, fase de revisão e simulados' : 'Comparativos com nota de corte e estatísticas'))))))) }}
                             </p>
                         </div>
                     </div>
@@ -3012,6 +3027,1291 @@
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- ABA 8: MAPA DA APROVAÇÃO & GESTÃO TEMPORAL -->
+                <!-- ========================================== -->
+                <div v-if="abaAtiva === 'mapa_aprovacao'" class="space-y-6">
+                    <div v-if="carregandoMapaAprovacao && !mapaAprovacaoData" class="text-center py-20 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A]">
+                        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-blue-600 dark:text-[#22D3EE]"></i>
+                        <p class="text-slate-500 dark:text-[#94A3B8] mt-4 font-semibold">Cruzando edital, pesos, desempenho e gestão temporal...</p>
+                    </div>
+
+                    <div v-else-if="mapaAprovacaoData && mapaAprovacaoData.parametros_prova" class="space-y-6">
+
+                        <!-- 1. HEADER EXECUTIVO DO MAPA DA APROVAÇÃO -->
+                        <div class="bg-gradient-to-br from-[#1B2B44] via-[#223554] to-[#2B4368] text-white rounded-3xl p-5 sm:p-6 border border-[#3D5A82] shadow-xl">
+                            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-5 border-b border-white/10">
+                                <div class="space-y-1.5">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-300 border border-emerald-400/30">
+                                            <i class="fa-solid fa-map-location-dot mr-1"></i> Mapa da Aprovação
+                                        </span>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-500/20 text-purple-200 border border-purple-400/30">
+                                            <i class="fa-solid fa-landmark mr-1"></i> Banca {{ mapaAprovacaoData.parametros_prova.banca }} ({{ mapaAprovacaoData.parametros_prova.estilo_banca }})
+                                        </span>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                                            :class="mapaAprovacaoData.parametros_prova.tipo_data_prova === 'Confirmada' ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30' : 'bg-amber-500/20 text-amber-200 border border-amber-400/30'">
+                                            <i class="fa-regular fa-calendar-check mr-1"></i> Prova {{ mapaAprovacaoData.parametros_prova.tipo_data_prova }}: {{ mapaAprovacaoData.parametros_prova.data_prova_fmt }} ({{ mapaAprovacaoData.parametros_prova.dias_restantes }} dias / {{ mapaAprovacaoData.parametros_prova.semanas_restantes }} sem)
+                                        </span>
+                                    </div>
+                                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
+                                        {{ mapaAprovacaoData.parametros_prova.concurso }} — <span class="text-cyan-300 font-extrabold">{{ mapaAprovacaoData.parametros_prova.cargo }}</span>
+                                    </h2>
+                                    <p class="text-xs text-slate-300 font-medium">
+                                        Estrutura da Prova: <strong class="text-white">{{ mapaAprovacaoData.parametros_prova.total_questoes_prova }} questões</strong>
+                                        ({{ mapaAprovacaoData.parametros_prova.total_pontos_prova }} pts ponderados) &bull;
+                                        Básicos: {{ mapaAprovacaoData.parametros_prova.questoes_basicos }}q ({{ mapaAprovacaoData.parametros_prova.pontos_basicos }} pts) &bull;
+                                        Específicos: {{ mapaAprovacaoData.parametros_prova.questoes_especificos }}q ({{ mapaAprovacaoData.parametros_prova.pontos_especificos }} pts) &bull;
+                                        Meta Desejada: <strong class="text-amber-300">{{ mapaAprovacaoData.parametros_prova.nota_corte }}%</strong>
+                                    </p>
+                                </div>
+
+                                <!-- Ações do Topo & Seletor de Sub-Visões -->
+                                <div class="flex flex-wrap items-center gap-2.5">
+                                    <div class="inline-flex bg-[#111C2D]/90 p-1 rounded-2xl border border-[#3D5A82]">
+                                        <button type="button" @click="MudarSubAbaMapa('preditivo')"
+                                            :class="subAbaMapa === 'preditivo' ? 'bg-blue-600 text-white shadow-md font-extrabold' : 'text-slate-300 hover:text-white font-semibold'"
+                                            class="px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <i class="fa-solid fa-chart-line"></i>
+                                            <span>Nota Estimada &amp; Raio-X</span>
+                                        </button>
+                                        <button type="button" @click="MudarSubAbaMapa('configuracao')"
+                                            :class="subAbaMapa === 'configuracao' ? 'bg-indigo-600 text-white shadow-md font-extrabold' : 'text-slate-300 hover:text-white font-semibold'"
+                                            class="px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <i class="fa-solid fa-sliders"></i>
+                                            <span>Parâmetros &amp; Pesos</span>
+                                        </button>
+                                    </div>
+
+                                    <button type="button" @click="analisarMapaComIA()" :disabled="analisandoMapaIA"
+                                        class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60">
+                                        <i :class="analisandoMapaIA ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-wand-magic-sparkles'"></i>
+                                        <span>{{ analisandoMapaIA ? 'Analisando...' : 'Diagnóstico IA do Mapa' }}</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- FAIXA DE TRANSPARÊNCIA METODOLÓGICA (NÃO PROMETER APROVAÇÃO + MARGEM DE INCERTEZA) -->
+                            <div class="mt-4 p-3 rounded-2xl bg-[#111C2D]/80 border border-amber-400/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                                <div class="flex items-start sm:items-center gap-2.5 text-slate-200">
+                                    <i class="fa-solid fa-scale-balanced text-amber-400 text-sm mt-0.5 sm:mt-0 shrink-0"></i>
+                                    <span>
+                                        <strong class="text-amber-300 uppercase tracking-wider text-[11px]">Nota Metodológica &amp; Incerteza:</strong>
+                                        {{ mapaAprovacaoData.estimativa_nota.aviso_metodologico }}
+                                    </span>
+                                </div>
+                                <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-cyan-300 font-bold text-[11px] border border-slate-700 whitespace-nowrap shrink-0">
+                                    Confiança Amostral: {{ mapaAprovacaoData.estimativa_nota.indice_confianca_modelo }}% ({{ mapaAprovacaoData.estimativa_nota.label_confianca }})
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- 2. PAINEL DE INTELIGÊNCIA ARTIFICIAL DO MAPA DA APROVAÇÃO (SE ATIVO) -->
+                        <div v-if="mapaAprovacaoData.analise_ia"
+                            class="bg-white dark:bg-[#141D2E] rounded-3xl border border-amber-400/40 dark:border-amber-500/30 p-5 sm:p-6 shadow-md space-y-4">
+                            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-[#24324A] pb-3">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center text-base border border-amber-500/30">
+                                        <i class="fa-solid fa-brain"></i>
+                                    </span>
+                                    <div>
+                                        <h3 class="text-sm sm:text-base font-black text-slate-900 dark:text-[#F8FAFC] uppercase tracking-wide">
+                                            Parecer Estratégico IA — Mapa da Aprovação &amp; Gestão de Projeto
+                                        </h3>
+                                        <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                            Origem: <strong class="text-amber-600 dark:text-amber-400">{{ mapaAprovacaoData.analise_ia.modelo_origem }}</strong> &bull; Atualizado em {{ mapaAprovacaoData.analise_ia.timestamp }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <button type="button" @click="mostrarPainelIAMapa = !mostrarPainelIAMapa"
+                                    class="text-xs font-bold text-slate-500 dark:text-[#94A3B8] hover:text-slate-800 dark:hover:text-white px-3 py-1 rounded-lg bg-slate-100 dark:bg-[#1B2638]">
+                                    {{ mostrarPainelIAMapa ? 'Recolher' : 'Expandir' }}
+                                </button>
+                            </div>
+
+                            <div v-if="mostrarPainelIAMapa" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                <!-- Benchmark de Aprovados (IA por Prova, Carreira, Cargo e Banca) -->
+                                <div v-if="mapaAprovacaoData.analise_ia.benchmark_aprovados"
+                                    class="lg:col-span-3 p-4 rounded-2xl bg-gradient-to-r from-indigo-500/10 via-blue-500/10 to-cyan-500/10 border border-indigo-400/35 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                    <div class="space-y-1">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-400/30">
+                                                <i class="fa-solid fa-magnifying-glass-chart mr-1"></i> Benchmark Histórico IA (Prova • Carreira • Cargo • Banca)
+                                            </span>
+                                            <span class="text-xs font-extrabold text-slate-900 dark:text-white">
+                                                Faixa Típica dos Aprovados: <span class="text-indigo-600 dark:text-[#7DD3FC]">{{ mapaAprovacaoData.analise_ia.benchmark_aprovados.faixa_aprovados_perc }}</span>
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-700 dark:text-[#CBD5E1] leading-relaxed">
+                                            {{ mapaAprovacaoData.analise_ia.benchmark_aprovados.justificativa_banca_cargo }}
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-3 shrink-0">
+                                        <div class="text-right px-3 py-2 rounded-xl bg-white/80 dark:bg-[#141D2E] border border-indigo-400/30">
+                                            <span class="text-[10px] font-bold uppercase text-slate-500 dark:text-[#94A3B8] block">Acerto Bruto Necessário</span>
+                                            <span class="text-base font-black text-indigo-600 dark:text-[#22D3EE] font-mono-timer">
+                                                ~{{ mapaAprovacaoData.analise_ia.benchmark_aprovados.taxa_acerto_bruta_necessaria_perc }}%
+                                            </span>
+                                        </div>
+                                        <button type="button"
+                                            @click="aplicarBenchmarkCorteIA(mapaAprovacaoData.analise_ia.benchmark_aprovados.nota_aprovados_sugerida_perc)"
+                                            class="px-3.5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs shadow-md transition-all cursor-pointer whitespace-nowrap">
+                                            Usar {{ mapaAprovacaoData.analise_ia.benchmark_aprovados.nota_aprovados_sugerida_perc }}% como Meta
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1.5">
+                                    <div class="text-xs font-black uppercase tracking-wider text-blue-600 dark:text-[#7DD3FC]">
+                                        Nota Estimada &amp; Incerteza
+                                    </div>
+                                    <p class="text-xs text-slate-700 dark:text-[#CBD5E1] leading-relaxed" v-html="formatarTextoIA(mapaAprovacaoData.analise_ia.diagnostico_preditivo)"></p>
+                                </div>
+                                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1.5">
+                                    <div class="text-xs font-black uppercase tracking-wider text-rose-600 dark:text-[#FCA5A5]">
+                                        Gargalos &amp; Pesos da Prova
+                                    </div>
+                                    <p class="text-xs text-slate-700 dark:text-[#CBD5E1] leading-relaxed" v-html="formatarTextoIA(mapaAprovacaoData.analise_ia.analise_gargalos_pesos)"></p>
+                                </div>
+                                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1.5">
+                                    <div class="text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-[#6EE7B7]">
+                                        Gestão Temporal do Projeto
+                                    </div>
+                                    <p class="text-xs text-slate-700 dark:text-[#CBD5E1] leading-relaxed" v-html="formatarTextoIA(mapaAprovacaoData.analise_ia.parecer_gestao_temporal)"></p>
+                                </div>
+                                <div v-if="mapaAprovacaoData.analise_ia.metas_semanais_acao && mapaAprovacaoData.analise_ia.metas_semanais_acao.length"
+                                    class="lg:col-span-3 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/25">
+                                    <div class="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 mb-2 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-list-check"></i> Plano de Ação Recomendado para esta Semana:
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div v-for="(metaTxt, mIdx) in mapaAprovacaoData.analise_ia.metas_semanais_acao" :key="mIdx"
+                                            class="flex items-start gap-2 text-xs text-slate-800 dark:text-[#F1F5F9] bg-white/80 dark:bg-[#141D2E]/90 p-2.5 rounded-xl border border-amber-500/20">
+                                            <span class="w-5 h-5 rounded-full bg-amber-500 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">{{ mIdx + 1 }}</span>
+                                            <span class="leading-snug" v-html="formatarTextoIA(metaTxt)"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======================================================================= -->
+                        <!-- SUB-ABA 1: NOTA ESTIMADA, MARGEM DE INCERTEZA, RAIO-X E EVOLUÇÃO        -->
+                        <!-- ======================================================================= -->
+                        <div v-if="subAbaMapa === 'preditivo'" class="space-y-6">
+
+                            <!-- BLOCO SUPERIOR: CURVA DE DISTRIBUIÇÃO PREDITIVA + INDICADORES DA NOTA ESTIMADA -->
+                            <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+                                <!-- Coluna Esquerda (7 cols): Curva Preditiva + Evolução Temporal -->
+                                <div class="xl:col-span-7 flex flex-col gap-6">
+                                    <!-- Card Curva Preditiva de Pontuação -->
+                                    <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs">
+                                        <div class="flex flex-wrap items-start justify-between gap-3 mb-3">
+                                            <div>
+                                                <span class="text-[11px] font-black uppercase tracking-widest text-blue-600 dark:text-[#22D3EE]">
+                                                    {{ mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? 'ESTIMATIVA DE NOTA LÍQUIDA (PENALIDADE POR ERRO)' : 'DISTRIBUIÇÃO PROBABILÍSTICA DA PONTUAÇÃO' }}
+                                                </span>
+                                                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-[#F1F5F9]">
+                                                    Nota Estimada &amp; Margem de Incerteza
+                                                </h3>
+                                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    {{ mapaAprovacaoData.estimativa_nota.modo_pontuacao }} &bull; {{ mapaAprovacaoData.estimativa_nota.total_questoes_amostra }} questões &bull; cobertura {{ mapaAprovacaoData.estimativa_nota.cobertura_edital_perc }}%
+                                                </p>
+                                            </div>
+
+                                            <!-- Badge Central da Nota Estimada + Incerteza -->
+                                            <div class="flex items-center gap-3 bg-gradient-to-br from-blue-600 to-indigo-700 text-white px-4 py-2.5 rounded-2xl shadow-lg shadow-blue-600/25 border border-blue-400/30">
+                                                <div class="text-right">
+                                                    <span class="text-[10px] font-bold uppercase tracking-wider text-blue-200 block">
+                                                        Nota Estimada
+                                                    </span>
+                                                    <span class="text-2xl sm:text-3xl font-black font-mono-timer leading-none">
+                                                        {{ mapaAprovacaoData.estimativa_nota.nota_estimada_perc }}%
+                                                    </span>
+                                                    <span class="text-[11px] font-bold text-cyan-200 block mt-0.5">
+                                                        Margem provável: ≥ {{ mapaAprovacaoData.estimativa_nota.intervalo_confianca.min_perc }}% ({{ mapaAprovacaoData.estimativa_nota.nota_estimada_pontos }} / {{ mapaAprovacaoData.estimativa_nota.total_pontos_prova }} pts)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gráfico Curva Preditiva (Gaussiana com Banda de Incerteza) -->
+                                        <div class="relative h-60 w-full my-1">
+                                            <canvas id="chartMapaCurvaPreditiva"></canvas>
+                                        </div>
+
+                                        <!-- Legenda dos marcadores do gráfico -->
+                                        <div class="flex flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-[11px] font-semibold text-slate-600 dark:text-[#CBD5E1] pt-1">
+                                            <span class="inline-flex items-center gap-1.5">
+                                                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 dark:bg-cyan-400"></span>
+                                                {{ mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? 'Estimada Líquida IA' : 'Nota Estimada IA' }} ({{ mapaAprovacaoData.estimativa_nota.nota_estimada_perc }}%)
+                                            </span>
+                                            <span v-if="mapaAprovacaoData.estimativa_nota.eh_nota_liquida" class="inline-flex items-center gap-1.5">
+                                                <span class="w-2.5 h-2.5 rounded-full bg-amber-600 dark:bg-amber-400"></span>
+                                                Estimada Bruta IA ({{ mapaAprovacaoData.estimativa_nota.nota_bruta_estimada_perc }}%)
+                                            </span>
+                                            <span v-if="mapaAprovacaoData.estimativa_nota.eh_nota_liquida" class="inline-flex items-center gap-1.5">
+                                                <span class="w-2.5 h-2.5 rounded-full bg-violet-600 dark:bg-violet-400"></span>
+                                                Sua Líquida ({{ mapaAprovacaoData.estimativa_nota.nota_liquida_observada_perc }}%)
+                                            </span>
+                                            <span class="inline-flex items-center gap-1.5">
+                                                <span class="w-2.5 h-2.5 rounded-full bg-pink-600 dark:bg-pink-400"></span>
+                                                {{ mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? 'Sua Bruta' : 'Sua Nota' }} ({{ mapaAprovacaoData.estimativa_nota.taxa_bruta_simples_perc }}%)
+                                            </span>
+                                            <span class="inline-flex items-center gap-1.5">
+                                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 dark:bg-emerald-400"></span>
+                                                Meta ({{ mapaAprovacaoData.parametros_prova.nota_corte }}%)
+                                            </span>
+                                        </div>
+
+                                        <!-- Rodapé do Card: Comparação Bruta vs Líquida vs Estimada vs Ideal -->
+                                        <div class="mt-3 pt-4 border-t border-slate-100 dark:border-[#24324A] space-y-3">
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs"
+                                                :class="mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? 'xl:grid-cols-4' : 'xl:grid-cols-3'">
+                                                <div class="p-3 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/70 dark:border-[#24324A]">
+                                                    <span class="text-[10px] font-bold uppercase text-pink-600 dark:text-pink-400 block">
+                                                        {{ mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? 'Sua Nota Bruta Atual' : 'Sua Nota Atual' }}
+                                                    </span>
+                                                    <span class="text-sm font-black text-slate-800 dark:text-[#F1F5F9] font-mono-timer">
+                                                        {{ mapaAprovacaoData.estimativa_nota.taxa_bruta_simples_perc }}%
+                                                    </span>
+                                                    <span class="text-[11px] text-slate-500 dark:text-[#94A3B8] block">
+                                                        {{ mapaAprovacaoData.estimativa_nota.acertos_globais }}/{{ mapaAprovacaoData.estimativa_nota.total_questoes_amostra }} acertos ({{ mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? ('Estimada Bruta IA: ' + mapaAprovacaoData.estimativa_nota.nota_bruta_estimada_perc + '%') : ('Meta: ' + mapaAprovacaoData.parametros_prova.nota_corte + '%') }})
+                                                    </span>
+                                                </div>
+                                                <div v-if="mapaAprovacaoData.estimativa_nota.eh_nota_liquida" class="p-3 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/70 dark:border-[#24324A]">
+                                                    <span class="text-[10px] font-bold uppercase text-violet-600 dark:text-violet-400 block">Sua Nota Líquida (Bruta − Erros)</span>
+                                                    <span class="text-sm font-black text-slate-800 dark:text-[#F1F5F9] font-mono-timer">
+                                                        {{ mapaAprovacaoData.estimativa_nota.nota_liquida_observada_perc }}%
+                                                    </span>
+                                                    <span class="text-[11px] text-slate-500 dark:text-[#94A3B8] block">
+                                                        {{ mapaAprovacaoData.estimativa_nota.acertos_globais - mapaAprovacaoData.estimativa_nota.erros_globais }} líq. (Estimada IA: {{ mapaAprovacaoData.estimativa_nota.nota_estimada_perc }}%)
+                                                    </span>
+                                                </div>
+                                                <div class="p-3 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/70 dark:border-[#24324A]">
+                                                    <span class="text-[10px] font-bold uppercase text-sky-600 dark:text-cyan-400 block">
+                                                        {{ mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? 'Nota Estimada Líquida (IA)' : 'Nota Estimada (IA)' }}
+                                                    </span>
+                                                    <span class="text-sm font-black text-slate-800 dark:text-[#F1F5F9] font-mono-timer">
+                                                        {{ mapaAprovacaoData.estimativa_nota.nota_estimada_perc }}%
+                                                    </span>
+                                                    <span class="text-[11px] text-slate-500 dark:text-[#94A3B8] block">
+                                                        Margem provável: ≥ {{ mapaAprovacaoData.estimativa_nota.intervalo_confianca.min_perc }}%<template v-if="mapaAprovacaoData.estimativa_nota.eh_nota_liquida"> (Bruta: ≥ {{ mapaAprovacaoData.estimativa_nota.intervalo_confianca.bruta_min_perc }}%)</template>
+                                                    </span>
+                                                </div>
+                                                <div class="p-3 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/70 dark:border-[#24324A]">
+                                                    <span class="text-[10px] font-bold uppercase text-emerald-600 dark:text-emerald-400 block">Nota Ideal (Meta Aprovados)</span>
+                                                    <span class="text-sm font-black text-amber-600 dark:text-[#FBBF24] font-mono-timer">
+                                                        <template v-if="mapaAprovacaoData.estimativa_nota.eh_nota_liquida">
+                                                            {{ mapaAprovacaoData.parametros_prova.nota_corte }}% líq. / {{ mapaAprovacaoData.estimativa_nota.taxa_acerto_bruta_meta_perc }}% bruta
+                                                        </template>
+                                                        <template v-else>
+                                                            {{ mapaAprovacaoData.parametros_prova.nota_corte }}% ({{ mapaAprovacaoData.parametros_prova.pontos_meta_desejada }} pts)
+                                                        </template>
+                                                    </span>
+                                                    <span class="text-[11px] font-semibold block"
+                                                        :class="mapaAprovacaoData.estimativa_nota.gap_para_meta_perc <= 0 ? 'text-emerald-500' : 'text-rose-400'">
+                                                        {{ mapaAprovacaoData.estimativa_nota.gap_para_meta_perc <= 0 ? 'Na meta dos aprovados' : ('Faltam +' + mapaAprovacaoData.estimativa_nota.gap_para_meta_perc + ' p.p. (' + mapaAprovacaoData.estimativa_nota.gap_para_meta_pontos + ' pts)') }}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Barra de Maturidade Estatística -->
+                                            <div class="space-y-1">
+                                                <div class="flex justify-between text-[11px] font-bold">
+                                                    <span class="text-slate-500 dark:text-[#94A3B8]">Índice de Consolidação da Estimativa (reduz a margem de incerteza conforme avança)</span>
+                                                    <span class="text-blue-600 dark:text-[#22D3EE]">{{ mapaAprovacaoData.estimativa_nota.indice_confianca_modelo }}%</span>
+                                                </div>
+                                                <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden">
+                                                    <div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-cyan-400 transition-all duration-500"
+                                                        :style="{ width: mapaAprovacaoData.estimativa_nota.indice_confianca_modelo + '%' }"></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- GRÁFICO DE EVOLUÇÃO DA ESTIMATIVA AO LONGO DO TEMPO -->
+                                    <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs">
+                                        <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+                                            <div>
+                                                <span class="text-[11px] font-black uppercase tracking-widest text-indigo-500 dark:text-[#818CF8]">
+                                                    HISTÓRICO CONSOLIDADO
+                                                </span>
+                                                <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-[#F1F5F9]">
+                                                    Evolução da Estimativa ao Longo do Tempo (com Banda de Incerteza)
+                                                </h3>
+                                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    Acompanhe como sua nota estimada ponderada evoluiu semana a semana e como a margem de incerteza se estreita
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div class="relative h-56 w-full">
+                                            <canvas id="chartMapaEvolucaoEstimativa"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Card Direito (5 cols): Critérios Eliminatórios & Disciplinas que Comprometem -->
+                                <div class="xl:col-span-5 flex flex-col gap-6">
+                                    <!-- Subcard: Critérios Eliminatórios -->
+                                    <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs">
+                                        <div class="flex items-center justify-between mb-3">
+                                            <div>
+                                                <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base flex items-center gap-2">
+                                                    <i class="fa-solid fa-shield-halved text-indigo-500 dark:text-[#818CF8]"></i>
+                                                    Nota Mínima &amp; Critérios Eliminatórios
+                                                </h4>
+                                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">Verificação automática de pisos do edital</p>
+                                            </div>
+                                            <button type="button" @click="MudarSubAbaMapa('configuracao')"
+                                                class="text-xs font-bold text-blue-600 dark:text-[#22D3EE] hover:underline">
+                                                Editar Critérios
+                                            </button>
+                                        </div>
+
+                                        <div class="space-y-2.5">
+                                            <div v-for="(crit, cIdx) in mapaAprovacaoData.criterios_eliminatorios" :key="cIdx"
+                                                class="p-3 rounded-2xl border transition-all"
+                                                :class="crit.status === 'seguro' ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-500/30' : (crit.status === 'risco_incerteza' ? 'bg-amber-50/60 dark:bg-amber-950/25 border-amber-200 dark:border-amber-500/35' : 'bg-rose-50/60 dark:bg-rose-950/25 border-rose-200 dark:border-rose-500/35')">
+                                                <div class="flex items-center justify-between gap-2 mb-1">
+                                                    <span class="text-xs font-bold text-slate-800 dark:text-[#F1F5F9]">{{ crit.criterio }}</span>
+                                                    <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase"
+                                                        :class="crit.status === 'seguro' ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300' : (crit.status === 'risco_incerteza' ? 'bg-amber-500/20 text-amber-700 dark:text-amber-300' : 'bg-rose-500/20 text-rose-700 dark:text-rose-300')">
+                                                        {{ crit.status === 'seguro' ? '✓ Apto' : (crit.status === 'risco_incerteza' ? '⚠ Risco na Incerteza' : '🚨 Alerta Eliminatório') }}
+                                                    </span>
+                                                </div>
+                                                <p class="text-[11px] text-slate-600 dark:text-[#CBD5E1]">{{ crit.diagnostico }}</p>
+                                                <div v-if="crit.disciplinas_em_risco && crit.disciplinas_em_risco.length > 0" class="mt-2 flex flex-wrap gap-1.5">
+                                                    <span v-for="(dr, rIdx) in crit.disciplinas_em_risco.slice(0, 4)" :key="rIdx"
+                                                        :title="dr.motivo"
+                                                        class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[10px] font-bold border border-rose-500/30">
+                                                        {{ dr.disciplina }}
+                                                    </span>
+                                                    <span v-if="crit.disciplinas_em_risco.length > 4" class="text-[10px] font-bold text-rose-400">
+                                                        +{{ crit.disciplinas_em_risco.length - 4 }} mais
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Subcard: Disciplinas que Mais Comprometem a Pontuação -->
+                                    <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-rose-200 dark:border-rose-500/30 p-5 sm:p-6 shadow-xs">
+                                        <h4 class="font-extrabold text-rose-700 dark:text-[#FCA5A5] text-base mb-1 flex items-center gap-2">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                            Disciplinas que Mais Comprometem a Pontuação
+                                        </h4>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-3">
+                                            Ordenadas pelos pontos desperdiçados na nota final (Peso × Questões × Taxa de Erro)
+                                        </p>
+                                        <div class="space-y-2">
+                                            <div v-for="(garg, gIdx) in mapaAprovacaoData.gargalos_pontuacao.slice(0, 4)" :key="garg.id"
+                                                class="p-3 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] flex items-center justify-between gap-2">
+                                                <div class="min-w-0">
+                                                    <div class="text-xs font-extrabold text-slate-900 dark:text-[#F1F5F9] truncate">
+                                                        {{ gIdx + 1 }}º {{ garg.nome }}
+                                                    </div>
+                                                    <div class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                                        Representa <strong>{{ garg.representatividade_perc }}%</strong> da prova ({{ garg.qtd_questoes_prova }}q × peso {{ garg.peso_prova }}) &bull; Est: {{ garg.taxa_estimada_perc }}%
+                                                    </div>
+                                                </div>
+                                                <div class="text-right shrink-0">
+                                                    <span class="px-2.5 py-1 rounded-xl bg-rose-500/15 text-rose-600 dark:text-[#F87171] font-black text-xs border border-rose-500/30 block font-mono-timer">
+                                                        -{{ garg.pontos_perdidos_estimados }} pts
+                                                    </span>
+                                                    <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] font-semibold">
+                                                        -{{ garg.comprometimento_perc_nota_final }}% da prova
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- RAIO-X DE APROVAÇÃO: REPRESENTATIVIDADE, DESEMPENHO E META POR DISCIPLINA -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-7 shadow-xs">
+                                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-5 border-b border-slate-200 dark:border-[#24324A]">
+                                    <div>
+                                        <span class="text-[11px] font-black uppercase tracking-widest text-emerald-600 dark:text-[#34D399]">
+                                            RAIO-X DE APROVAÇÃO POR DISCIPLINA
+                                        </span>
+                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5">
+                                            Quanto Cada Disciplina Representa na Nota Final &amp; Meta Necessária
+                                        </h3>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                            Comparativo entre nota estimada (com incerteza), peso na prova e meta necessária para alcançar {{ mapaAprovacaoData.parametros_prova.nota_corte }}%
+                                        </p>
+                                    </div>
+
+                                    <!-- Placar Comparativo (Estilo Raio-X de Aprovação) -->
+                                    <div class="flex items-center gap-6 bg-slate-50 dark:bg-[#1B2638] px-5 py-3 rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                                        <div>
+                                            <span class="text-[11px] font-bold text-slate-400 dark:text-[#94A3B8] block">Nota Estimada Atual</span>
+                                            <span class="text-2xl sm:text-3xl font-black font-mono-timer"
+                                                :class="mapaAprovacaoData.estimativa_nota.nota_estimada_perc >= mapaAprovacaoData.parametros_prova.nota_corte ? 'text-emerald-500 dark:text-[#34D399]' : 'text-amber-500 dark:text-[#FBBF24]'">
+                                                {{ mapaAprovacaoData.estimativa_nota.nota_estimada_perc }}%
+                                            </span>
+                                            <span class="text-[10px] font-bold text-slate-400 dark:text-[#94A3B8] ml-1">±{{ mapaAprovacaoData.estimativa_nota.margem_incerteza_perc }}%</span>
+                                        </div>
+                                        <div class="h-8 w-px bg-slate-200 dark:bg-[#24324A]"></div>
+                                        <div>
+                                            <span class="text-[11px] font-bold text-slate-400 dark:text-[#94A3B8] block">Meta de Desempenho</span>
+                                            <span class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono-timer">
+                                                {{ mapaAprovacaoData.parametros_prova.nota_corte }}%
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Barras de Desempenho por Disciplina -->
+                                <div class="mt-6 space-y-4">
+                                    <div v-for="disc in mapaAprovacaoData.disciplinas" :key="disc.id"
+                                        class="p-4 rounded-2xl bg-slate-50/70 dark:bg-[#1B2638]/70 border border-slate-200/80 dark:border-[#24324A] hover:border-blue-400/40 transition-all">
+                                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                            <div class="flex items-center gap-2 flex-wrap">
+                                                <span class="font-extrabold text-sm text-slate-900 dark:text-[#F1F5F9]">{{ disc.nome }}</span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                    :class="disc.grupo_conhecimento === 'BASICOS' ? 'bg-blue-500/10 text-blue-600 dark:text-[#60A5FA] border-blue-500/25' : 'bg-indigo-500/10 text-indigo-600 dark:text-[#C4B5FD] border-indigo-500/25'">
+                                                    {{ disc.grupo_conhecimento === 'BASICOS' ? 'Básicos' : 'Específicos' }}
+                                                </span>
+                                                <span class="px-2 py-0.5 rounded bg-slate-200/70 dark:bg-[#141D2E] text-slate-700 dark:text-[#CBD5E1] text-[10.5px] font-bold">
+                                                    {{ disc.qtd_questoes_prova }} questões &times; Peso {{ disc.peso_prova }} = {{ disc.pontos_maximos }} pts
+                                                </span>
+                                                <span class="px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-700 dark:text-[#22D3EE] border border-cyan-500/30 text-[10.5px] font-extrabold">
+                                                    Representa {{ disc.representatividade_perc }}% da nota final
+                                                </span>
+                                            </div>
+
+                                            <div class="flex items-center gap-3 self-end sm:self-center">
+                                                <div class="text-right">
+                                                    <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8] mr-1.5">
+                                                        Meta: <strong class="text-slate-800 dark:text-white">{{ disc.meta_necessaria_perc }}%</strong> ({{ disc.questoes_certas_meta }}/{{ disc.qtd_questoes_prova }}q)
+                                                    </span>
+                                                    <span class="text-sm font-black font-mono-timer"
+                                                        :class="disc.status_cor === 'emerald' ? 'text-emerald-600 dark:text-[#34D399]' : (disc.status_cor === 'amber' ? 'text-amber-500 dark:text-[#FBBF24]' : 'text-rose-500 dark:text-[#F87171]')">
+                                                        {{ disc.taxa_estimada_perc }}%
+                                                    </span>
+                                                    <span class="text-[10.5px] text-slate-400 dark:text-[#94A3B8] font-mono-timer">
+                                                        (±{{ disc.incerteza_perc }}%)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Barra Horizontal com Marcador da Meta -->
+                                        <div class="relative w-full h-3 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden">
+                                            <!-- Faixa de incerteza sutil -->
+                                            <div class="absolute top-0 bottom-0 bg-white/15 dark:bg-white/10"
+                                                :style="{ left: disc.intervalo_min_perc + '%', width: (disc.intervalo_max_perc - disc.intervalo_min_perc) + '%' }"></div>
+                                            <!-- Barra principal da estimativa -->
+                                            <div class="h-full rounded-full transition-all duration-500"
+                                                :class="disc.status_cor === 'emerald' ? 'bg-emerald-500 dark:bg-[#34D399]' : (disc.status_cor === 'amber' ? 'bg-amber-500 dark:bg-[#FBBF24]' : 'bg-rose-500 dark:bg-[#F87171]')"
+                                                :style="{ width: Math.min(100, disc.taxa_estimada_perc) + '%' }"></div>
+                                            <!-- Marcador da Meta -->
+                                            <div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 dark:bg-white z-10"
+                                                :style="{ left: Math.min(99, disc.meta_necessaria_perc) + '%' }"
+                                                :title="'Meta: ' + disc.meta_necessaria_perc + '%'"></div>
+                                        </div>
+
+                                        <!-- Linha Inferior de Metadados da Disciplina -->
+                                        <div class="flex flex-wrap items-center justify-between gap-2 mt-2 text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                            <div class="flex flex-wrap items-center gap-3">
+                                                <span>
+                                                    Pontuação Estimada: <strong class="text-slate-700 dark:text-[#E2E8F0]">{{ disc.pontos_estimados }} / {{ disc.pontos_maximos }} pts</strong>
+                                                    (Perda atual: <strong class="text-rose-500 dark:text-[#F87171]">-{{ disc.pontos_perdidos_estimados }} pts</strong>)
+                                                </span>
+                                                <span>&bull;</span>
+                                                <span>
+                                                    Histórico Real:
+                                                    <strong v-if="disc.tem_questoes" class="text-slate-700 dark:text-[#E2E8F0]">{{ disc.taxa_observada_perc }}% ({{ disc.acertos }}/{{ disc.questoes_resolvidas }} questões)</strong>
+                                                    <strong v-else class="text-amber-500">Sem questões registradas (usando prior estatístico)</strong>
+                                                </span>
+                                            </div>
+                                            <div>
+                                                Edital coberto: <strong class="text-blue-600 dark:text-[#60A5FA]">{{ disc.cobertura_perc }}%</strong>
+                                                ({{ disc.topicos_estudados }}/{{ disc.topicos_total }} tópicos &bull; {{ disc.topicos_nao_estudados }} não estudados)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======================================================================= -->
+                        <!-- SUB-ABA 2: CONFIGURAÇÃO DE PARÂMETROS, CRITÉRIOS E PESOS DAS DISCIPLINAS -->
+                        <!-- ======================================================================= -->
+                        <div v-if="subAbaMapa === 'configuracao'" class="space-y-6">
+                            <form @submit.prevent="salvarConfiguracaoMapaAprovacao('preditivo')" class="space-y-6">
+
+                                <!-- Bloco 1: Dados do Concurso, Banca e Critérios Eliminatórios -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-[#24324A] pb-3">
+                                        <h3 class="text-base font-extrabold text-slate-900 dark:text-[#F1F5F9] flex items-center gap-2">
+                                            <i class="fa-solid fa-landmark text-blue-500"></i>
+                                            1. Concurso, Banca &amp; Critérios Eliminatórios
+                                        </h3>
+                                        <button type="submit" :disabled="salvandoMapaConfig"
+                                            class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-lg shadow-blue-600/25 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                                            <i :class="salvandoMapaConfig ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-floppy-disk'"></i>
+                                            <span>{{ salvandoMapaConfig ? 'Salvando...' : 'Salvar e Recalcular Nota' }}</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div class="sm:col-span-2">
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Concurso Pretendido</label>
+                                            <input type="text" v-model="formMapaConfig.concurso" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Cargo Alvo</label>
+                                            <input type="text" v-model="formMapaConfig.cargo"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-semibold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Banca Examinadora</label>
+                                            <input type="text" v-model="formMapaConfig.banca" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-semibold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div class="sm:col-span-2">
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Modalidade / Critério da Banca</label>
+                                            <input type="text" v-model="formMapaConfig.estilo_banca"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-semibold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-amber-600 dark:text-[#FBBF24] uppercase mb-1">Meta de Pontuação Desejada (%)</label>
+                                            <input type="number" step="0.5" min="10" max="100" v-model.number="formMapaConfig.nota_corte" required
+                                                class="w-full border border-amber-400/50 rounded-xl px-3.5 py-2 bg-amber-50/30 dark:bg-[#0E1622] text-sm font-black text-amber-700 dark:text-[#FBBF24]">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Nota Mínima Geral (%)</label>
+                                            <input type="number" step="1" min="0" max="100" v-model.number="formMapaConfig.nota_minima_geral"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Mínimo Conhec. Básicos (%)</label>
+                                            <input type="number" step="1" min="0" max="100" v-model.number="formMapaConfig.nota_minima_basicos"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Mínimo Conhec. Específicos (%)</label>
+                                            <input type="number" step="1" min="0" max="100" v-model.number="formMapaConfig.nota_minima_especificos"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Mínimo por Disciplina (%)</label>
+                                            <input type="number" step="1" min="0" max="100" v-model.number="formMapaConfig.nota_minima_disciplina"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-indigo-600 dark:text-[#C4B5FD] uppercase mb-1">Regra de Penalidade (Nota Líquida)</label>
+                                            <select v-model.number="formMapaConfig.fator_penalidade_erro"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                                <option :value="1">Cebraspe: 1 errada anula 1 certa (1.0x)</option>
+                                                <option :value="0.5">2 erradas anulam 1 certa (0.5x)</option>
+                                                <option :value="0">Sem penalidade / Nota Bruta (0.0x)</option>
+                                            </select>
+                                        </div>
+                                        <div class="sm:col-span-2 lg:col-span-4 flex items-center gap-2.5 pt-1">
+                                            <input type="checkbox" id="chkNaoZerar" v-model="formMapaConfig.nao_zerar_disciplina"
+                                                class="w-4 h-4 rounded text-blue-600">
+                                            <label for="chkNaoZerar" class="text-xs font-bold text-slate-700 dark:text-[#CBD5E1] cursor-pointer">
+                                                Critério Eliminatório: Candidato não pode zerar nenhuma disciplina da prova
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Bloco 2: Distribuição de Questões e Pesos por Disciplina -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                        <div>
+                                            <h3 class="text-base font-extrabold text-slate-900 dark:text-[#F1F5F9]">
+                                                2. Distribuição de Questões e Pesos por Disciplina
+                                            </h3>
+                                            <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                Configure quantas questões e qual o peso de cada matéria na prova para o cálculo exato de representatividade
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                                        <table class="w-full text-left text-xs border-collapse">
+                                            <thead class="bg-slate-50 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] uppercase">
+                                                <tr>
+                                                    <th class="py-3 px-4 font-bold">Disciplina</th>
+                                                    <th class="py-3 px-4 font-bold text-center">Bloco</th>
+                                                    <th class="py-3 px-4 font-bold text-center">Nº de Questões</th>
+                                                    <th class="py-3 px-4 font-bold text-center">Peso na Prova</th>
+                                                    <th class="py-3 px-4 font-bold text-center">Pontos Máximos</th>
+                                                    <th class="py-3 px-4 font-bold text-center">% na Nota Final</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100 dark:divide-[#24324A]">
+                                                <tr v-for="dConf in formMapaConfig.disciplinas" :key="dConf.id" class="hover:bg-slate-50/70 dark:hover:bg-[#1B2638]/50">
+                                                    <td class="py-2.5 px-4 font-bold text-slate-900 dark:text-[#F1F5F9]">{{ dConf.nome }}</td>
+                                                    <td class="py-2.5 px-4 text-center">
+                                                        <select v-model="dConf.grupo_conhecimento"
+                                                            class="border border-slate-300 dark:border-[#3D5A82] rounded-lg px-2 py-1 bg-white dark:bg-[#0E1622] text-xs font-bold text-slate-800 dark:text-white">
+                                                            <option value="BASICOS">Básicos</option>
+                                                            <option value="ESPECIFICOS">Específicos</option>
+                                                        </select>
+                                                    </td>
+                                                    <td class="py-2.5 px-4 text-center">
+                                                        <input type="number" min="1" max="120" v-model.number="dConf.qtd_questoes_prova"
+                                                            class="w-20 text-center border border-slate-300 dark:border-[#3D5A82] rounded-lg py-1 px-2 bg-white dark:bg-[#0E1622] font-bold text-slate-900 dark:text-white">
+                                                    </td>
+                                                    <td class="py-2.5 px-4 text-center">
+                                                        <input type="number" step="0.5" min="0.5" max="10" v-model.number="dConf.peso_prova"
+                                                            class="w-20 text-center border border-slate-300 dark:border-[#3D5A82] rounded-lg py-1 px-2 bg-white dark:bg-[#0E1622] font-bold text-slate-900 dark:text-white">
+                                                    </td>
+                                                    <td class="py-2.5 px-4 text-center font-black text-slate-800 dark:text-[#E2E8F0] font-mono-timer">
+                                                        {{ ((Number(dConf.qtd_questoes_prova) || 0) * (Number(dConf.peso_prova) || 1)).toFixed(1) }} pts
+                                                    </td>
+                                                    <td class="py-2.5 px-4 text-center font-black text-blue-600 dark:text-[#22D3EE] font-mono-timer">
+                                                        {{ calcularRepresentatividadePreview(dConf) }}%
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- ABA 9: GESTÃO TEMPORAL (PROJETO APROVAÇÃO) -->
+                <!-- ========================================== -->
+                <div v-if="abaAtiva === 'gestao_temporal'" class="space-y-6">
+                    <div v-if="carregandoMapaAprovacao && !mapaAprovacaoData" class="text-center py-20 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A]">
+                        <i class="fa-solid fa-circle-notch fa-spin text-4xl text-emerald-500"></i>
+                        <p class="text-slate-500 dark:text-[#94A3B8] mt-4 font-semibold">Calculando cronograma, ritmo semanal e fases do projeto...</p>
+                    </div>
+
+                    <div v-else-if="mapaAprovacaoData && mapaAprovacaoData.gestao_temporal" class="space-y-6">
+
+                        <!-- 1. HEADER EXECUTIVO DE GESTÃO TEMPORAL (PROJETO DA APROVAÇÃO) -->
+                        <div class="bg-gradient-to-br from-[#0F292E] via-[#13383E] to-[#1B4952] text-white rounded-3xl p-5 sm:p-6 border border-emerald-500/30 shadow-xl">
+                            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                                <div class="space-y-1.5">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/25 text-emerald-200 border border-emerald-400/40">
+                                            <i class="fa-solid fa-diagram-project mr-1"></i> Gestão Temporal • Projeto da Aprovação
+                                        </span>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold"
+                                            :class="mapaAprovacaoData.parametros_prova.tipo_data_prova === 'Confirmada' ? 'bg-cyan-500/20 text-cyan-200 border border-cyan-400/30' : 'bg-amber-500/20 text-amber-200 border border-amber-400/30'">
+                                            <i class="fa-regular fa-calendar-check mr-1"></i> Prova {{ mapaAprovacaoData.parametros_prova.tipo_data_prova }}: {{ mapaAprovacaoData.parametros_prova.data_prova_fmt }} ({{ mapaAprovacaoData.parametros_prova.dias_restantes }} dias / {{ mapaAprovacaoData.parametros_prova.semanas_restantes }} sem)
+                                        </span>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-white/10 text-slate-100 border border-white/20">
+                                            {{ mapaAprovacaoData.gestao_temporal.dias_disponiveis_semana }} dias/sem &bull; {{ mapaAprovacaoData.gestao_temporal.carga_semanal_total }}h semanais
+                                        </span>
+                                    </div>
+                                    <h2 class="text-xl sm:text-2xl font-black tracking-tight text-white">
+                                        {{ mapaAprovacaoData.parametros_prova.concurso }} — <span class="text-emerald-300 font-extrabold">Cronograma &amp; Edital</span>
+                                    </h2>
+                                    <p class="text-xs text-slate-200 font-medium">
+                                        Cobertura atual: <strong class="text-white">{{ mapaAprovacaoData.gestao_temporal.cobertura_atual_perc }}%</strong>
+                                        ({{ mapaAprovacaoData.gestao_temporal.topicos_estudados }}/{{ mapaAprovacaoData.gestao_temporal.total_topicos_edital }} tópicos) &bull;
+                                        Meta do Edital: <strong class="text-emerald-300">{{ mapaAprovacaoData.gestao_temporal.meta_conclusao_edital_perc }}%</strong> &bull;
+                                        Início da Revisão: <strong class="text-amber-300">{{ mapaAprovacaoData.gestao_temporal.fase_revisao.data_inicio_revisao_fmt }}</strong>
+                                    </p>
+                                </div>
+
+                                <!-- Seletor de Sub-Visões da Gestão Temporal -->
+                                <div class="flex flex-wrap items-center gap-2.5">
+                                    <div class="inline-flex bg-[#0A1A1D]/90 p-1 rounded-2xl border border-emerald-500/30">
+                                        <button type="button" @click="subAbaTemporal = 'projeto'"
+                                            :class="subAbaTemporal === 'projeto' ? 'bg-emerald-600 text-white shadow-md font-extrabold' : 'text-slate-300 hover:text-white font-semibold'"
+                                            class="px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <i class="fa-solid fa-list-check"></i>
+                                            <span>Cronograma &amp; Conteúdo</span>
+                                        </button>
+                                        <button type="button" @click="subAbaTemporal = 'configuracao'"
+                                            :class="subAbaTemporal === 'configuracao' ? 'bg-teal-600 text-white shadow-md font-extrabold' : 'text-slate-300 hover:text-white font-semibold'"
+                                            class="px-3.5 py-2 rounded-xl text-xs transition-all flex items-center gap-1.5 cursor-pointer">
+                                            <i class="fa-solid fa-sliders"></i>
+                                            <span>Parâmetros Temporais</span>
+                                        </button>
+                                    </div>
+
+                                    <button type="button" @click="analisarMapaComIA()" :disabled="analisandoMapaIA"
+                                        class="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black text-xs shadow-lg shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-60">
+                                        <i :class="analisandoMapaIA ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-wand-magic-sparkles'"></i>
+                                        <span>{{ analisandoMapaIA ? 'Analisando...' : 'Diagnóstico IA do Projeto' }}</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- PAINEL IA DO PROJETO TEMPORAL (SE ATIVO) -->
+                        <div v-if="mapaAprovacaoData.analise_ia"
+                            class="bg-white dark:bg-[#141D2E] rounded-3xl border border-emerald-400/40 dark:border-emerald-500/30 p-5 sm:p-6 shadow-md space-y-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-[#24324A] pb-3">
+                                <div class="flex items-center gap-2.5">
+                                    <span class="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm border border-emerald-500/30">
+                                        <i class="fa-solid fa-compass-drafting"></i>
+                                    </span>
+                                    <div>
+                                        <h3 class="text-sm font-black text-slate-900 dark:text-[#F8FAFC] uppercase tracking-wide">
+                                            Parecer de Gestão Temporal &amp; Metas Semanais
+                                        </h3>
+                                        <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                            {{ mapaAprovacaoData.analise_ia.modelo_origem }} &bull; {{ mapaAprovacaoData.analise_ia.timestamp }}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p class="text-xs text-slate-700 dark:text-[#CBD5E1] leading-relaxed" v-html="formatarTextoIA(mapaAprovacaoData.analise_ia.parecer_gestao_temporal)"></p>
+                            <div v-if="mapaAprovacaoData.analise_ia.metas_semanais_acao && mapaAprovacaoData.analise_ia.metas_semanais_acao.length"
+                                class="grid grid-cols-1 md:grid-cols-2 gap-2 pt-1">
+                                <div v-for="(metaTxt, mIdx) in mapaAprovacaoData.analise_ia.metas_semanais_acao" :key="mIdx"
+                                    class="flex items-start gap-2 text-xs text-slate-800 dark:text-[#F1F5F9] bg-slate-50 dark:bg-[#1B2638] p-2.5 rounded-xl border border-slate-200/80 dark:border-[#24324A]">
+                                    <span class="w-5 h-5 rounded-full bg-emerald-500 text-slate-950 font-black text-[10px] flex items-center justify-center shrink-0 mt-0.5">{{ mIdx + 1 }}</span>
+                                    <span class="leading-snug" v-html="formatarTextoIA(metaTxt)"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======================================================================= -->
+                        <!-- SUB-ABA 1 DA GESTÃO TEMPORAL: CRONOGRAMA, FASES & CONTEÚDO NÃO ESTUDADO -->
+                        <!-- ======================================================================= -->
+                        <div v-if="subAbaTemporal === 'projeto'" class="space-y-6">
+
+                            <!-- 4 KPIS PRINCIPAIS DE GESTÃO DE PROJETO DA APROVAÇÃO -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <!-- KPI 1: Quanto do Edital Concluir por Semana -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-[#22D3EE]">
+                                                Meta Semanal do Edital
+                                            </span>
+                                            <span class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 dark:text-[#22D3EE] flex items-center justify-center text-sm">
+                                                <i class="fa-solid fa-gauge-high"></i>
+                                            </span>
+                                        </div>
+                                        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
+                                            {{ mapaAprovacaoData.gestao_temporal.ritmo_semanal.perc_edital_por_semana_ate_revisao }}% <span class="text-sm font-bold text-slate-400">/ sem</span>
+                                        </div>
+                                        <p class="text-xs font-bold text-blue-600 dark:text-[#60A5FA] mt-1">
+                                            {{ mapaAprovacaoData.gestao_temporal.ritmo_semanal.topicos_por_semana_ate_revisao }} tópicos por semana
+                                        </p>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-3 pt-2 border-t border-slate-100 dark:border-[#24324A]">
+                                        Equivale a <strong>{{ mapaAprovacaoData.gestao_temporal.ritmo_semanal.topicos_por_dia_disponivel }} tópicos/dia</strong> nos seus {{ mapaAprovacaoData.gestao_temporal.dias_disponiveis_semana }} dias disponíveis/semana para atingir {{ mapaAprovacaoData.gestao_temporal.meta_conclusao_edital_perc }}% antes da revisão.
+                                    </p>
+                                </div>
+
+                                <!-- KPI 2: Quando Iniciar a Fase de Revisão -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-[#C4B5FD]">
+                                                Início da Fase de Revisão
+                                            </span>
+                                            <span class="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-[#C4B5FD] flex items-center justify-center text-sm">
+                                                <i class="fa-solid fa-rotate"></i>
+                                            </span>
+                                        </div>
+                                        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
+                                            {{ mapaAprovacaoData.gestao_temporal.fase_revisao.data_inicio_revisao_fmt }}
+                                        </div>
+                                        <p class="text-xs font-bold text-indigo-600 dark:text-[#C4B5FD] mt-1">
+                                            {{ mapaAprovacaoData.gestao_temporal.fase_revisao.ja_na_fase_revisao ? '🔥 Fase de Revisão Ativa Agora!' : ('Faltam ' + mapaAprovacaoData.gestao_temporal.fase_revisao.dias_ate_inicio_revisao + ' dias (' + mapaAprovacaoData.gestao_temporal.fase_revisao.semanas_ate_inicio_revisao + ' sem)') }}
+                                        </p>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-3 pt-2 border-t border-slate-100 dark:border-[#24324A]">
+                                        Janela final de <strong>{{ mapaAprovacaoData.gestao_temporal.fase_revisao.dias_antecedencia_revisao }} dias pré-prova</strong> focada em revisão intensiva e consolidação ({{ mapaAprovacaoData.gestao_temporal.fase_revisao.horas_revisao_semanal_recomendada }}h/sem de revisão contínua hoje).
+                                    </p>
+                                </div>
+
+                                <!-- KPI 3: Quanto Tempo Reservar para Simulados -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-[#FBBF24]">
+                                                Reserva para Simulados
+                                            </span>
+                                            <span class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-[#FBBF24] flex items-center justify-center text-sm">
+                                                <i class="fa-solid fa-stopwatch"></i>
+                                            </span>
+                                        </div>
+                                        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
+                                            {{ mapaAprovacaoData.gestao_temporal.reserva_simulados.horas_simulado_semana }}h <span class="text-sm font-bold text-slate-400">/ sem</span>
+                                        </div>
+                                        <p class="text-xs font-bold text-amber-600 dark:text-[#FBBF24] mt-1">
+                                            {{ mapaAprovacaoData.gestao_temporal.reserva_simulados.qtd_simulados_recomendados_ate_prova }} simulados até a prova ({{ mapaAprovacaoData.gestao_temporal.reserva_simulados.horas_totais_simulados_ate_prova }}h totais)
+                                        </p>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-3 pt-2 border-t border-slate-100 dark:border-[#24324A]">
+                                        Representa <strong>{{ mapaAprovacaoData.gestao_temporal.reserva_simulados.perc_carga_semanal_simulados }}% da sua carga semanal</strong> (aplicação cronometrada + engenharia reversa dos erros).
+                                    </p>
+                                </div>
+
+                                <!-- KPI 4: Conteúdo Ainda Não Estudado & Status do Projeto -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between">
+                                    <div>
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-[#34D399]">
+                                                Conteúdo Não Estudado
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase"
+                                                :class="mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'emerald' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300' : (mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'amber' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300' : 'bg-rose-500/20 text-rose-600 dark:text-rose-300')">
+                                                {{ mapaAprovacaoData.gestao_temporal.viabilidade_projeto.status }}
+                                            </span>
+                                        </div>
+                                        <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
+                                            {{ mapaAprovacaoData.gestao_temporal.conteudo_nao_estudado }} <span class="text-sm font-bold text-slate-400">tópicos</span>
+                                        </div>
+                                        <p class="text-xs font-bold text-rose-500 dark:text-[#FCA5A5] mt-1">
+                                            {{ mapaAprovacaoData.gestao_temporal.total_p1_pendentes }} tópicos P1 (Alta Prioridade) pendentes
+                                        </p>
+                                    </div>
+                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-3 pt-2 border-t border-slate-100 dark:border-[#24324A]">
+                                        Faltam <strong>{{ mapaAprovacaoData.gestao_temporal.topicos_restantes_meta }} tópicos</strong> para atingir sua meta de {{ mapaAprovacaoData.gestao_temporal.meta_conclusao_edital_perc }}% do edital.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- DIAGNÓSTICO DE VIABILIDADE & ORÇAMENTO SEMANAL + ROADMAP DE 4 FASES -->
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+                                <!-- Orçamento Semanal do Projeto (5 cols) -->
+                                <div class="lg:col-span-5 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base">
+                                                Alocação Semanal do Projeto ({{ mapaAprovacaoData.gestao_temporal.carga_semanal_total }}h/sem)
+                                            </h4>
+                                            <button type="button" @click="subAbaTemporal = 'configuracao'"
+                                                class="text-xs font-bold text-emerald-600 dark:text-[#34D399] hover:underline">
+                                                Ajustar Dias/Horas
+                                            </button>
+                                        </div>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-4">
+                                            Distribuição recomendada para {{ mapaAprovacaoData.gestao_temporal.dias_disponiveis_semana }} dias/semana &times; {{ mapaAprovacaoData.gestao_temporal.horas_estudo_dia }}h/dia
+                                        </p>
+
+                                        <!-- Barra Empilhada do Orçamento Semanal -->
+                                        <div class="w-full h-4 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden flex mb-4">
+                                            <div class="bg-blue-600 dark:bg-[#3B82F6] h-full"
+                                                :style="{ width: ((mapaAprovacaoData.gestao_temporal.orcamento_semanal.horas_avanco_teorico / mapaAprovacaoData.gestao_temporal.carga_semanal_total) * 100) + '%' }"
+                                                title="Avanço em Conteúdo Não Estudado"></div>
+                                            <div class="bg-emerald-500 dark:bg-[#10B981] h-full"
+                                                :style="{ width: ((mapaAprovacaoData.gestao_temporal.orcamento_semanal.horas_revisao_fixacao / mapaAprovacaoData.gestao_temporal.carga_semanal_total) * 100) + '%' }"
+                                                title="Revisão Espaçada & Questões"></div>
+                                            <div class="bg-amber-500 dark:bg-[#F59E0B] h-full"
+                                                :style="{ width: ((mapaAprovacaoData.gestao_temporal.orcamento_semanal.horas_simulados / mapaAprovacaoData.gestao_temporal.carga_semanal_total) * 100) + '%' }"
+                                                title="Simulados & Diagnóstico"></div>
+                                        </div>
+
+                                        <div class="space-y-2 text-xs">
+                                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-slate-50 dark:bg-[#1B2638]">
+                                                <span class="flex items-center gap-2 font-bold text-slate-700 dark:text-[#E2E8F0]">
+                                                    <span class="w-3 h-3 rounded-xs bg-blue-600"></span> Avanço em Conteúdo Não Estudado
+                                                </span>
+                                                <span class="font-black text-blue-600 dark:text-[#60A5FA] font-mono-timer">{{ mapaAprovacaoData.gestao_temporal.orcamento_semanal.horas_avanco_teorico }}h / sem</span>
+                                            </div>
+                                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-slate-50 dark:bg-[#1B2638]">
+                                                <span class="flex items-center gap-2 font-bold text-slate-700 dark:text-[#E2E8F0]">
+                                                    <span class="w-3 h-3 rounded-xs bg-emerald-500"></span> Revisão Ativa &amp; Baterias de Fixação
+                                                </span>
+                                                <span class="font-black text-emerald-600 dark:text-[#34D399] font-mono-timer">{{ mapaAprovacaoData.gestao_temporal.orcamento_semanal.horas_revisao_fixacao }}h / sem</span>
+                                            </div>
+                                            <div class="flex justify-between items-center p-2.5 rounded-xl bg-slate-50 dark:bg-[#1B2638]">
+                                                <span class="flex items-center gap-2 font-bold text-slate-700 dark:text-[#E2E8F0]">
+                                                    <span class="w-3 h-3 rounded-xs bg-amber-500"></span> Simulados &amp; Correção Diagnóstica
+                                                </span>
+                                                <span class="font-black text-amber-600 dark:text-[#FBBF24] font-mono-timer">{{ mapaAprovacaoData.gestao_temporal.orcamento_semanal.horas_simulados }}h / sem</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Parecer de Viabilidade do Projeto -->
+                                    <div class="p-3.5 rounded-2xl border text-xs leading-relaxed mt-auto"
+                                        :class="mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-200' : (mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'amber' ? 'bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200' : 'bg-rose-500/10 border-rose-500/30 text-rose-900 dark:text-rose-200')">
+                                        <strong class="block uppercase tracking-wider text-[10.5px] mb-1">
+                                            <i class="fa-solid fa-compass-drafting mr-1"></i> Diagnóstico de Escopo &amp; Prazo:
+                                        </strong>
+                                        {{ mapaAprovacaoData.gestao_temporal.viabilidade_projeto.resumo }}
+                                    </div>
+                                </div>
+
+                                <!-- Roadmap / Cronograma das 4 Fases do Projeto (7 cols) -->
+                                <div class="lg:col-span-7 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
+                                    <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base mb-1">
+                                        Cronograma de Fases do Projeto da Aprovação
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-4">
+                                        Transição planejada entre estudo de conteúdo inédito, revisão intensiva e sprint de simulados
+                                    </p>
+
+                                    <div class="space-y-3">
+                                        <div v-for="fase in mapaAprovacaoData.gestao_temporal.fases_projeto" :key="fase.ordem"
+                                            class="p-3.5 rounded-2xl border transition-all"
+                                            :class="fase.ativa ? 'bg-blue-50/70 dark:bg-[#1B2B44] border-blue-500/50 ring-1 ring-blue-500/30' : 'bg-slate-50 dark:bg-[#1B2638] border-slate-200/80 dark:border-[#24324A]'">
+                                            <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                                                <div class="flex items-center gap-2">
+                                                    <span class="w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center"
+                                                        :class="fase.ativa ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-[#141D2E] text-slate-600 dark:text-[#94A3B8]'">
+                                                        {{ fase.ordem }}
+                                                    </span>
+                                                    <span class="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-[#F1F5F9]">{{ fase.nome }}</span>
+                                                    <span v-if="fase.ativa" class="px-2 py-0.5 rounded-full text-[9.5px] font-black uppercase bg-emerald-500/20 text-emerald-600 dark:text-[#34D399] border border-emerald-500/30">
+                                                        Fase Atual
+                                                    </span>
+                                                </div>
+                                                <span class="text-xs font-bold text-blue-600 dark:text-[#22D3EE] font-mono-timer">{{ fase.periodo }}</span>
+                                            </div>
+                                            <p class="text-xs text-slate-600 dark:text-[#CBD5E1] mt-1">{{ fase.foco }}</p>
+                                            <div class="mt-2 text-[10.5px] font-bold text-slate-400 dark:text-[#94A3B8]">
+                                                <i class="fa-solid fa-Sliders mr-1"></i> Mix sugerido: <span class="text-slate-700 dark:text-[#E2E8F0]">{{ fase.alocacao }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- GERENCIADOR DE PROGRESSO DO EDITAL & CONTEÚDO NÃO ESTUDADO (ESTILO SYLLABUS IMAGEM 3 NO VISUAL ORBIS) -->
+                            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+                                <!-- Coluna Esquerda (4 cols): Overall Progress & Lista de Disciplinas -->
+                                <div class="lg:col-span-4 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-5">
+                                    <!-- Card Overall Progress -->
+                                    <div class="p-4 rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 dark:from-[#1B2638] dark:to-[#162234] border border-slate-200/80 dark:border-[#2D3D54]">
+                                        <div class="flex items-center justify-between mb-2">
+                                            <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8] flex items-center gap-1.5">
+                                                <i class="fa-solid fa-chart-simple text-blue-500"></i> Progresso Global do Edital
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                                Meta: {{ mapaAprovacaoData.gestao_temporal.meta_conclusao_edital_perc }}%
+                                            </span>
+                                        </div>
+
+                                        <div class="flex items-baseline gap-2 my-1">
+                                            <span class="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white font-mono-timer">
+                                                {{ mapaAprovacaoData.gestao_temporal.cobertura_atual_perc }}%
+                                            </span>
+                                            <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">Estudado</span>
+                                        </div>
+
+                                        <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden my-3 relative">
+                                            <div class="h-full rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-500"
+                                                :style="{ width: Math.min(100, mapaAprovacaoData.gestao_temporal.cobertura_atual_perc) + '%' }"></div>
+                                        </div>
+
+                                        <div class="grid grid-cols-4 gap-2 pt-2 text-center border-t border-slate-200/60 dark:border-[#24324A]">
+                                            <div>
+                                                <span class="text-sm font-black text-slate-800 dark:text-white block font-mono-timer">{{ mapaAprovacaoData.gestao_temporal.total_topicos_edital }}</span>
+                                                <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] font-bold">Total</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-sm font-black text-emerald-600 dark:text-[#34D399] block font-mono-timer">{{ mapaAprovacaoData.gestao_temporal.topicos_estudados - mapaAprovacaoData.gestao_temporal.topicos_em_andamento }}</span>
+                                                <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] font-bold">Concluídos</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-sm font-black text-amber-500 dark:text-[#FBBF24] block font-mono-timer">{{ mapaAprovacaoData.gestao_temporal.topicos_em_andamento }}</span>
+                                                <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] font-bold">Em Estudo</span>
+                                            </div>
+                                            <div>
+                                                <span class="text-sm font-black text-rose-500 dark:text-[#F87171] block font-mono-timer">{{ mapaAprovacaoData.gestao_temporal.conteudo_nao_estudado }}</span>
+                                                <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] font-bold">Pendentes</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Lista de Disciplinas Selecionáveis -->
+                                    <div class="space-y-2 max-h-[540px] overflow-y-auto pr-1">
+                                        <div v-for="(discProj, idxP) in mapaAprovacaoData.gestao_temporal.progresso_disciplinas" :key="discProj.id"
+                                            @click="selecionarDisciplinaProjeto(discProj.id)"
+                                            :class="disciplinaSelecionadaMapa?.id === discProj.id ? 'bg-blue-50/90 dark:bg-[#1E2E48] border-blue-500 dark:border-[#22D3EE] ring-1 ring-blue-500/30' : 'bg-slate-50/70 dark:bg-[#1B2638] border-slate-200/80 dark:border-[#24324A] hover:border-slate-300 dark:hover:border-[#3D5A82]'"
+                                            class="p-3.5 rounded-2xl border cursor-pointer transition-all space-y-2">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <div class="flex items-center gap-2.5 min-w-0">
+                                                    <span class="w-8 h-8 rounded-xl font-black text-xs flex items-center justify-center shrink-0"
+                                                        :class="disciplinaSelecionadaMapa?.id === discProj.id ? 'bg-blue-600 text-white' : 'bg-slate-200 dark:bg-[#141D2E] text-slate-700 dark:text-[#CBD5E1]'">
+                                                        {{ discProj.nome.substring(0, 2).toUpperCase() }}
+                                                    </span>
+                                                    <div class="min-w-0">
+                                                        <h5 class="text-xs font-extrabold text-slate-900 dark:text-[#F1F5F9] truncate">{{ discProj.nome }}</h5>
+                                                        <p class="text-[10.5px] text-slate-500 dark:text-[#94A3B8]">
+                                                            {{ discProj.topicos_nao_estudados }} não estudados de {{ discProj.topicos_total }} &bull; Ritmo: <strong>{{ discProj.ritmo_topicos_semana }} tóp/sem</strong>
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <span class="text-xs font-black font-mono-timer shrink-0"
+                                                    :class="discProj.cobertura_perc >= 80 ? 'text-emerald-500' : (discProj.cobertura_perc >= 40 ? 'text-blue-500 dark:text-[#22D3EE]' : 'text-amber-500')">
+                                                    {{ discProj.cobertura_perc }}%
+                                                </span>
+                                            </div>
+                                            <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden">
+                                                <div class="h-full rounded-full transition-all duration-300"
+                                                    :class="discProj.cobertura_perc >= 80 ? 'bg-emerald-500' : (discProj.cobertura_perc >= 40 ? 'bg-blue-500' : 'bg-amber-500')"
+                                                    :style="{ width: Math.min(100, discProj.cobertura_perc) + '%' }"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Coluna Direita (8 cols): Capítulos / Tópicos da Disciplina Selecionada -->
+                                <div class="lg:col-span-8 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs"
+                                    v-if="disciplinaSelecionadaMapa">
+                                    <!-- Cabeçalho da Disciplina Selecionada -->
+                                    <div class="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] mb-5">
+                                        <div class="flex flex-wrap items-center justify-between gap-3 mb-2">
+                                            <div>
+                                                <span class="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-[#22D3EE]">
+                                                    CONTROLE DE CONTEÚDO DA DISCIPLINA
+                                                </span>
+                                                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
+                                                    {{ disciplinaSelecionadaMapa.nome }}
+                                                </h3>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <span class="px-3 py-1 rounded-full text-xs font-extrabold bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border border-emerald-500/30">
+                                                    Peso {{ disciplinaSelecionadaMapa.peso_prova }} ({{ disciplinaSelecionadaMapa.representatividade_perc }}% da prova)
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-baseline justify-between gap-4 my-2">
+                                            <div class="flex items-baseline gap-2">
+                                                <span class="text-3xl font-black text-slate-900 dark:text-white font-mono-timer">
+                                                    {{ disciplinaSelecionadaMapa.cobertura_perc }}%
+                                                </span>
+                                                <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">Concluído / Estudado</span>
+                                            </div>
+                                            <div class="text-right">
+                                                <span class="text-sm font-black text-slate-800 dark:text-white font-mono-timer">
+                                                    {{ disciplinaSelecionadaMapa.topicos_estudados }} / {{ disciplinaSelecionadaMapa.topicos_total }}
+                                                </span>
+                                                <span class="text-xs text-slate-400 dark:text-[#94A3B8] block">Tópicos Vencidos</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden mb-3">
+                                            <div class="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                                                :style="{ width: Math.min(100, disciplinaSelecionadaMapa.cobertura_perc) + '%' }"></div>
+                                        </div>
+
+                                        <!-- Filtros Rápidos de Status do Conteúdo -->
+                                        <div class="flex flex-wrap items-center justify-between gap-2 pt-2">
+                                            <div class="flex flex-wrap gap-1.5">
+                                                <button type="button" @click="filtroTopicosMapa = 'nao_estudado'"
+                                                    :class="filtroTopicosMapa === 'nao_estudado' ? 'bg-rose-600 text-white font-extrabold' : 'bg-white dark:bg-[#141D2E] text-slate-600 dark:text-[#CBD5E1] hover:bg-slate-100'"
+                                                    class="px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer">
+                                                    Ainda Não Estudados ({{ disciplinaSelecionadaMapa.topicos_nao_estudados }})
+                                                </button>
+                                                <button type="button" @click="filtroTopicosMapa = 'todos'"
+                                                    :class="filtroTopicosMapa === 'todos' ? 'bg-blue-600 text-white font-extrabold' : 'bg-white dark:bg-[#141D2E] text-slate-600 dark:text-[#CBD5E1] hover:bg-slate-100'"
+                                                    class="px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer">
+                                                    Todos ({{ disciplinaSelecionadaMapa.topicos_total }})
+                                                </button>
+                                                <button type="button" @click="filtroTopicosMapa = 'em_andamento'"
+                                                    :class="filtroTopicosMapa === 'em_andamento' ? 'bg-amber-500 text-slate-950 font-extrabold' : 'bg-white dark:bg-[#141D2E] text-slate-600 dark:text-[#CBD5E1] hover:bg-slate-100'"
+                                                    class="px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer">
+                                                    Em Estudo ({{ disciplinaSelecionadaMapa.topicos_em_andamento }})
+                                                </button>
+                                                <button type="button" @click="filtroTopicosMapa = 'concluido'"
+                                                    :class="filtroTopicosMapa === 'concluido' ? 'bg-emerald-600 text-white font-extrabold' : 'bg-white dark:bg-[#141D2E] text-slate-600 dark:text-[#CBD5E1] hover:bg-slate-100'"
+                                                    class="px-3 py-1.5 rounded-xl text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer">
+                                                    Concluídos ({{ disciplinaSelecionadaMapa.topicos_concluidos }})
+                                                </button>
+                                            </div>
+                                            <span class="text-[11px] font-bold text-blue-600 dark:text-[#22D3EE]">
+                                                Meta semanal nesta matéria: {{ disciplinaSelecionadaMapa.ritmo_topicos_semana }} tópicos/sem
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Grade de Cards de Tópicos (Estilo Chapter Cards da Imagem 3) -->
+                                    <div v-if="topicosFiltradosDisciplinaMapa.length > 0"
+                                        class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[520px] overflow-y-auto pr-1">
+                                        <div v-for="top in topicosFiltradosDisciplinaMapa" :key="top.id"
+                                            class="rounded-2xl border p-4 flex flex-col justify-between transition-all bg-slate-50/60 dark:bg-[#1B2638]"
+                                            :class="top.status === 'concluido' ? 'border-t-4 border-t-emerald-500 border-slate-200 dark:border-[#24324A]' : (top.status === 'em_andamento' ? 'border-t-4 border-t-amber-500 border-slate-200 dark:border-[#24324A]' : 'border-t-4 border-t-rose-500 border-slate-200 dark:border-[#24324A]')">
+                                            <div>
+                                                <div class="flex items-start justify-between gap-2 mb-2">
+                                                    <div class="flex items-center gap-1.5 flex-wrap">
+                                                        <i v-if="top.status === 'concluido'" class="fa-solid fa-circle-check text-emerald-500 text-sm"></i>
+                                                        <i v-else-if="top.status === 'em_andamento'" class="fa-solid fa-hourglass-half text-amber-500 text-sm"></i>
+                                                        <i v-else class="fa-regular fa-circle text-rose-500 text-sm"></i>
+                                                        <span class="text-[10px] font-black uppercase tracking-wider"
+                                                            :class="top.status === 'concluido' ? 'text-emerald-600 dark:text-[#34D399]' : (top.status === 'em_andamento' ? 'text-amber-600 dark:text-[#FBBF24]' : 'text-rose-600 dark:text-[#F87171]')">
+                                                            {{ top.status === 'concluido' ? 'Estudado / Concluído' : (top.status === 'em_andamento' ? 'Em Andamento' : 'Ainda Não Estudado') }}
+                                                        </span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1">
+                                                        <span v-if="top.prioridade === 1" class="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-rose-500/20 text-rose-600 dark:text-rose-300 border border-rose-500/30">⚡ P1</span>
+                                                        <span v-if="top.mais_cobrado" class="px-1.5 py-0.5 rounded text-[9.5px] font-black bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/30">🔥 Top</span>
+                                                    </div>
+                                                </div>
+
+                                                <h5 class="text-xs sm:text-sm font-bold text-slate-800 dark:text-[#F1F5F9] leading-snug mb-3">
+                                                    {{ top.titulo }}
+                                                </h5>
+                                            </div>
+
+                                            <div class="pt-3 border-t border-slate-200/70 dark:border-[#24324A] flex items-center justify-between gap-2 text-xs">
+                                                <span class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                                    <template v-if="top.questoes > 0">
+                                                        <strong>{{ top.questoes }}q</strong> ({{ top.taxa_acerto }}% acerto)
+                                                    </template>
+                                                    <template v-else>
+                                                        0 questões registradas
+                                                    </template>
+                                                </span>
+
+                                                <div class="flex items-center gap-1.5">
+                                                    <button type="button" @click="alternarConcluidoTopicoNoMapa(top)"
+                                                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-all cursor-pointer"
+                                                        :class="top.concluido ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border-emerald-500/30' : 'bg-white dark:bg-[#141D2E] text-slate-700 dark:text-[#CBD5E1] border-slate-300 dark:border-[#3D5A82] hover:border-emerald-400'">
+                                                        <i :class="top.concluido ? 'fa-solid fa-check mr-1' : 'fa-regular fa-square-check mr-1'"></i>
+                                                        {{ top.concluido ? 'Concluído' : 'Marcar Visto' }}
+                                                    </button>
+                                                    <button type="button" @click="iniciarEstudoDoTopico(disciplinaSelecionadaMapa.id, top.id)"
+                                                        class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white transition-all cursor-pointer"
+                                                        title="Registrar estudo/questões neste tópico">
+                                                        <i class="fa-solid fa-plus"></i> Sessão
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div v-else class="p-10 text-center text-slate-400 dark:text-[#94A3B8] text-sm">
+                                        Nenhum tópico encontrado para o filtro selecionado nesta disciplina.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======================================================================= -->
+                        <!-- SUB-ABA 2 DA GESTÃO TEMPORAL: PARÂMETROS TEMPORAIS E PESOS              -->
+                        <!-- ======================================================================= -->
+                        <div v-if="subAbaTemporal === 'configuracao'" class="space-y-6">
+                            <form @submit.prevent="salvarConfiguracaoMapaAprovacao('projeto')" class="space-y-6">
+
+                                <!-- Bloco 1: Camada de Gestão Temporal -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-4">
+                                    <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-[#24324A] pb-3">
+                                        <h3 class="text-base font-extrabold text-slate-900 dark:text-[#F1F5F9] flex items-center gap-2">
+                                            <i class="fa-solid fa-calendar-check text-emerald-500"></i>
+                                            1. Parâmetros de Gestão Temporal (Projeto da Aprovação)
+                                        </h3>
+                                        <button type="submit" :disabled="salvandoMapaConfig"
+                                            class="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50">
+                                            <i :class="salvandoMapaConfig ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-floppy-disk'"></i>
+                                            <span>{{ salvandoMapaConfig ? 'Salvando...' : 'Salvar e Recalcular Cronograma' }}</span>
+                                        </button>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Data da Prova</label>
+                                            <input type="date" v-model="formMapaConfig.data_prova" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Status da Data da Prova</label>
+                                            <select v-model="formMapaConfig.tipo_data_prova"
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                                <option value="Confirmada">Confirmada (Edital Publicado)</option>
+                                                <option value="Prevista">Prevista / Estimada (Pré-Edital)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-emerald-600 dark:text-[#34D399] uppercase mb-1">Meta de Conclusão do Edital (%)</label>
+                                            <input type="number" step="5" min="20" max="100" v-model.number="formMapaConfig.meta_conclusao_edital" required
+                                                class="w-full border border-emerald-400/50 rounded-xl px-3.5 py-2 bg-emerald-50/30 dark:bg-[#0E1622] text-sm font-black text-emerald-700 dark:text-[#34D399]">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Dias Disponíveis por Semana (1 a 7)</label>
+                                            <input type="number" min="1" max="7" v-model.number="formMapaConfig.dias_disponiveis_semana" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Horas Líquidas por Dia Disponível</label>
+                                            <input type="number" step="0.5" min="1" max="16" v-model.number="formMapaConfig.horas_estudo_dia" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-slate-600 dark:text-[#CBD5E1] uppercase mb-1">Tempo Médio p/ Concluir 1 Tópico (h)</label>
+                                            <input type="number" step="0.25" min="0.5" max="10" v-model.number="formMapaConfig.horas_por_topico" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-indigo-600 dark:text-[#C4B5FD] uppercase mb-1">Iniciar Fase de Revisão (dias pré-prova)</label>
+                                            <input type="number" min="7" max="90" v-model.number="formMapaConfig.dias_antecedencia_revisao" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-bold text-amber-600 dark:text-[#FBBF24] uppercase mb-1">Tempo p/ Simulados (horas/semana)</label>
+                                            <input type="number" step="0.5" min="0" max="20" v-model.number="formMapaConfig.horas_simulado_semana" required
+                                                class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-800 dark:text-white">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Bloco 2: Disciplinas e Respectivos Pesos -->
+                                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                                    <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+                                        <div>
+                                            <h3 class="text-base font-extrabold text-slate-900 dark:text-[#F1F5F9]">
+                                                2. Disciplinas e Respectivos Pesos no Projeto
+                                            </h3>
+                                            <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                Ajuste os pesos e número de questões de cada disciplina para priorização no cronograma
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                                        <table class="w-full text-left text-xs border-collapse">
+                                            <thead class="bg-slate-50 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] uppercase">
+                                                <tr>
+                                                    <th class="py-3 px-4 font-bold">Disciplina</th>
+                                                    <th class="py-3 px-4 font-bold text-center">Bloco</th>
+                                                    <th class="py-3 px-4 font-bold text-center">Nº de Questões</th>
+                                                    <th class="py-3 px-4 font-bold text-center">Peso na Prova</th>
+                                                    <th class="py-3 px-4 font-bold text-center">% na Nota Final</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="divide-y divide-slate-100 dark:divide-[#24324A]">
+                                                <tr v-for="dConf in formMapaConfig.disciplinas" :key="dConf.id" class="hover:bg-slate-50/70 dark:hover:bg-[#1B2638]/50">
+                                                    <td class="py-2.5 px-4 font-bold text-slate-900 dark:text-[#F1F5F9]">{{ dConf.nome }}</td>
+                                                    <td class="py-2.5 px-4 text-center">
+                                                        <select v-model="dConf.grupo_conhecimento"
+                                                            class="border border-slate-300 dark:border-[#3D5A82] rounded-lg px-2 py-1 bg-white dark:bg-[#0E1622] text-xs font-bold text-slate-800 dark:text-white">
+                                                            <option value="BASICOS">Básicos</option>
+                                                            <option value="ESPECIFICOS">Específicos</option>
+                                                        </select>
+                                                    </td>
+                                                    <td class="py-2.5 px-4 text-center">
+                                                        <input type="number" min="1" max="120" v-model.number="dConf.qtd_questoes_prova"
+                                                            class="w-20 text-center border border-slate-300 dark:border-[#3D5A82] rounded-lg py-1 px-2 bg-white dark:bg-[#0E1622] font-bold text-slate-900 dark:text-white">
+                                                    </td>
+                                                    <td class="py-2.5 px-4 text-center">
+                                                        <input type="number" step="0.5" min="0.5" max="10" v-model.number="dConf.peso_prova"
+                                                            class="w-20 text-center border border-slate-300 dark:border-[#3D5A82] rounded-lg py-1 px-2 bg-white dark:bg-[#0E1622] font-bold text-slate-900 dark:text-white">
+                                                    </td>
+                                                    <td class="py-2.5 px-4 text-center font-black text-emerald-600 dark:text-[#34D399] font-mono-timer">
+                                                        {{ calcularRepresentatividadePreview(dConf) }}%
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+
                     </div>
                 </div>
 

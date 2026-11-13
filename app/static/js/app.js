@@ -57,6 +57,8 @@ const app = createApp({
                 setTimeout(renderCalendarioAnalytics, 100);
             } else if (abaAtiva.value === 'ciclo') {
                 setTimeout(renderDonut, 100);
+            } else if (abaAtiva.value === 'mapa_aprovacao') {
+                setTimeout(renderGraficosMapaAprovacao, 100);
             }
         };
 
@@ -66,6 +68,10 @@ const app = createApp({
                 abrirDashboard();
             } else if (aba === 'resultados') {
                 abrirResultados();
+            } else if (aba === 'mapa_aprovacao') {
+                abrirMapaAprovacao();
+            } else if (aba === 'gestao_temporal') {
+                abrirGestaoTemporal();
             } else {
                 abaAtiva.value = aba;
             }
@@ -3937,6 +3943,575 @@ const app = createApp({
         };
 
         // ==========================================
+        // 14.8 MAPA DA APROVAÇÃO (PREDIÇÃO ESTATÍSTICA & GESTÃO TEMPORAL)
+        // ==========================================
+        const mapaAprovacaoData = ref(null);
+        const carregandoMapaAprovacao = ref(false);
+        const analisandoMapaIA = ref(false);
+        const salvandoMapaConfig = ref(false);
+        const mostrarPainelIAMapa = ref(true);
+        const subAbaMapa = ref('preditivo'); // 'preditivo' | 'configuracao'
+        const subAbaTemporal = ref('projeto'); // 'projeto' | 'configuracao'
+        const disciplinaSelecionadaMapaId = ref(null);
+        const filtroTopicosMapa = ref('nao_estudado'); // 'nao_estudado' | 'todos' | 'em_andamento' | 'concluido'
+
+        let chartMapaCurvaInstance = null;
+        let chartMapaEvolucaoInstance = null;
+
+        const formMapaConfig = ref({
+            concurso: '',
+            area_concurso: 'Fiscal',
+            cargo: '',
+            especialidade: '',
+            banca: '',
+            estilo_banca: '',
+            data_prova: '',
+            tipo_data_prova: 'Confirmada',
+            nota_corte: 78.5,
+            nota_minima_geral: 60.0,
+            nota_minima_basicos: 50.0,
+            nota_minima_especificos: 60.0,
+            nota_minima_disciplina: 0.0,
+            nao_zerar_disciplina: true,
+            fator_penalidade_erro: 0.0,
+            meta_conclusao_edital: 85.0,
+            dias_disponiveis_semana: 6,
+            horas_estudo_dia: 4.0,
+            horas_por_topico: 1.5,
+            dias_antecedencia_revisao: 21,
+            horas_simulado_semana: 4.0,
+            disciplinas: []
+        });
+
+        const disciplinaSelecionadaMapa = computed(() => {
+            const lista = mapaAprovacaoData.value?.gestao_temporal?.progresso_disciplinas || [];
+            if (lista.length === 0) return null;
+            if (disciplinaSelecionadaMapaId.value) {
+                const enc = lista.find(d => d.id === disciplinaSelecionadaMapaId.value);
+                if (enc) return enc;
+            }
+            return lista[0];
+        });
+
+        const topicosFiltradosDisciplinaMapa = computed(() => {
+            const disc = disciplinaSelecionadaMapa.value;
+            if (!disc || !disc.topicos_lista) return [];
+            const f = filtroTopicosMapa.value;
+            if (f === 'todos') return disc.topicos_lista;
+            return disc.topicos_lista.filter(t => t.status === f);
+        });
+
+        const sincronizarFormMapaConfig = (data) => {
+            const p = data?.parametros_prova;
+            if (!p) return;
+            const discs = data.disciplinas || [];
+            formMapaConfig.value = {
+                concurso: p.concurso || '',
+                area_concurso: p.area_concurso || 'Fiscal',
+                cargo: p.cargo || '',
+                especialidade: p.especialidade || '',
+                banca: p.banca || '',
+                estilo_banca: p.estilo_banca || '',
+                data_prova: p.data_prova || '',
+                tipo_data_prova: p.tipo_data_prova || 'Confirmada',
+                nota_corte: p.nota_corte ?? 78.5,
+                nota_minima_geral: p.nota_minima_geral ?? 60.0,
+                nota_minima_basicos: p.nota_minima_basicos ?? 50.0,
+                nota_minima_especificos: p.nota_minima_especificos ?? 60.0,
+                nota_minima_disciplina: p.nota_minima_disciplina ?? 0.0,
+                nao_zerar_disciplina: p.nao_zerar_disciplina !== undefined ? Boolean(p.nao_zerar_disciplina) : true,
+                fator_penalidade_erro: (data.estimativa_nota?.fator_penalidade_efetivo !== undefined) ? data.estimativa_nota.fator_penalidade_efetivo : (p.fator_penalidade_erro ?? 0.0),
+                meta_conclusao_edital: p.meta_conclusao_edital ?? 85.0,
+                dias_disponiveis_semana: p.dias_disponiveis_semana ?? 6,
+                horas_estudo_dia: p.horas_estudo_dia ?? 4.0,
+                horas_por_topico: p.horas_por_topico ?? 1.5,
+                dias_antecedencia_revisao: p.dias_antecedencia_revisao ?? 21,
+                horas_simulado_semana: p.horas_simulado_semana ?? 4.0,
+                disciplinas: discs.map(d => ({
+                    id: d.id,
+                    nome: d.nome,
+                    grupo_conhecimento: d.grupo_conhecimento,
+                    qtd_questoes_prova: d.qtd_questoes_prova,
+                    peso_prova: d.peso_prova
+                }))
+            };
+        };
+
+        const calcularRepresentatividadePreview = (dConf) => {
+            const lista = formMapaConfig.value.disciplinas || [];
+            const totalMax = lista.reduce((acc, x) => {
+                const q = Math.max(1, Number(x.qtd_questoes_prova) || 0);
+                const p = Math.max(0.1, Number(x.peso_prova) || 1);
+                return acc + (q * p);
+            }, 0);
+            if (totalMax <= 0) return '0.0';
+            const pts = Math.max(1, Number(dConf.qtd_questoes_prova) || 0) * Math.max(0.1, Number(dConf.peso_prova) || 1);
+            return ((pts / totalMax) * 100).toFixed(1);
+        };
+
+        const carregarMapaAprovacao = async (editalId = null) => {
+            carregandoMapaAprovacao.value = true;
+            try {
+                const url = editalId ? `/api/mapa-aprovacao?edital_id=${editalId}` : '/api/mapa-aprovacao';
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    mapaAprovacaoData.value = data;
+                    sincronizarFormMapaConfig(data);
+                    const progDiscs = data.gestao_temporal?.progresso_disciplinas || [];
+                    if (progDiscs.length > 0 && !disciplinaSelecionadaMapaId.value) {
+                        disciplinaSelecionadaMapaId.value = progDiscs[0].id;
+                    }
+                    if (abaAtiva.value === 'mapa_aprovacao' && subAbaMapa.value === 'preditivo') {
+                        nextTick(() => {
+                            setTimeout(renderGraficosMapaAprovacao, 100);
+                        });
+                    }
+                } else {
+                    mostrarAlerta('Erro ao carregar o Mapa da Aprovação.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao carregar Mapa da Aprovação:', e);
+                mostrarAlerta('Falha de comunicação ao carregar Mapa da Aprovação.', 'erro');
+            } finally {
+                carregandoMapaAprovacao.value = false;
+            }
+        };
+
+        const abrirMapaAprovacao = async () => {
+            abaAtiva.value = 'mapa_aprovacao';
+            await carregarMapaAprovacao();
+        };
+
+        const abrirGestaoTemporal = async () => {
+            abaAtiva.value = 'gestao_temporal';
+            await carregarMapaAprovacao();
+        };
+
+        const mudarSubAbaMapa = (novaSubAba) => {
+            subAbaMapa.value = novaSubAba;
+            if (novaSubAba === 'preditivo') {
+                nextTick(() => {
+                    setTimeout(renderGraficosMapaAprovacao, 100);
+                });
+            }
+        };
+        const MudarSubAbaMapa = mudarSubAbaMapa;
+
+        const selecionarDisciplinaProjeto = (discId) => {
+            disciplinaSelecionadaMapaId.value = discId;
+        };
+
+        const alternarConcluidoTopicoNoMapa = async (topico) => {
+            if (!topico || !topico.id) return;
+            const novoValor = !topico.concluido;
+            topico.concluido = novoValor;
+            topico.status = novoValor ? 'concluido' : (topico.questoes > 0 ? 'em_andamento' : 'nao_estudado');
+            try {
+                const res = await fetch(`/api/editais/topicos/${topico.id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ concluido: novoValor })
+                });
+                if (res.ok) {
+                    mostrarAlerta(
+                        novoValor ? `Tópico concluído! Cronograma recalculado.` : `Tópico reaberto como pendente.`,
+                        'sucesso'
+                    );
+                    await carregarMapaAprovacao();
+                } else {
+                    topico.concluido = !novoValor;
+                    mostrarAlerta('Erro ao atualizar status do tópico.', 'erro');
+                }
+            } catch (e) {
+                topico.concluido = !novoValor;
+                mostrarAlerta('Erro de conexão ao atualizar tópico.', 'erro');
+            }
+        };
+
+        const salvarConfiguracaoMapaAprovacao = async (destinoSubAba = null) => {
+            if (salvandoMapaConfig.value) return;
+            salvandoMapaConfig.value = true;
+            try {
+                const res = await fetch('/api/mapa-aprovacao/configurar', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formMapaConfig.value)
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    mapaAprovacaoData.value = data;
+                    sincronizarFormMapaConfig(data);
+                    await carregarDadosProvaServidor();
+                    mostrarAlerta('Parâmetros da prova, pesos e metas temporais atualizados com sucesso!', 'sucesso');
+                    if (abaAtiva.value === 'gestao_temporal') {
+                        subAbaTemporal.value = destinoSubAba || 'projeto';
+                    } else {
+                        mudarSubAbaMapa(destinoSubAba || 'preditivo');
+                    }
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    mostrarAlerta(err.detail || 'Erro ao salvar configuração do Mapa da Aprovação.', 'erro');
+                }
+            } catch (e) {
+                console.error(e);
+                mostrarAlerta('Erro de conexão ao salvar configurações.', 'erro');
+            } finally {
+                salvandoMapaConfig.value = false;
+            }
+        };
+
+        const aplicarBenchmarkCorteIA = async (novaMeta) => {
+            if (!novaMeta) return;
+            formMapaConfig.value.nota_corte = Number(novaMeta);
+            await salvarConfiguracaoMapaAprovacao('preditivo');
+        };
+
+        const analisarMapaComIA = async () => {
+            if (analisandoMapaIA.value) return;
+            analisandoMapaIA.value = true;
+            mostrarPainelIAMapa.value = true;
+            try {
+                const edId = mapaAprovacaoData.value?.parametros_prova?.edital_id || '';
+                const url = edId ? `/api/mapa-aprovacao/analisar-ia?edital_id=${edId}` : '/api/mapa-aprovacao/analisar-ia';
+                const res = await fetch(url, { method: 'POST' });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (mapaAprovacaoData.value) {
+                        mapaAprovacaoData.value.analise_ia = data.analise_ia || data;
+                    }
+                    mostrarAlerta('Diagnóstico estratégico gerado com sucesso!', 'sucesso');
+                } else {
+                    mostrarAlerta('Erro ao gerar diagnóstico de IA.', 'erro');
+                }
+            } catch (e) {
+                console.error(e);
+                mostrarAlerta('Falha de rede ao consultar IA.', 'erro');
+            } finally {
+                analisandoMapaIA.value = false;
+            }
+        };
+
+        const renderGraficosMapaAprovacao = () => {
+            if (!mapaAprovacaoData.value || subAbaMapa.value !== 'preditivo') return;
+            const isDark = tema.value === 'dark';
+
+            // 1. Curva Preditiva de Densidade com Margem de Incerteza
+            const canvasCurva = document.getElementById('chartMapaCurvaPreditiva');
+            if (canvasCurva && mapaAprovacaoData.value.estimativa_nota?.curva_distribuicao) {
+                if (chartMapaCurvaInstance) {
+                    chartMapaCurvaInstance.destroy();
+                    chartMapaCurvaInstance = null;
+                }
+                const est = mapaAprovacaoData.value.estimativa_nota;
+                const paramProva = mapaAprovacaoData.value.parametros_prova;
+                const pontos = est.curva_distribuicao || [];
+                const ctxC = canvasCurva.getContext('2d');
+
+                const gradBand = ctxC.createLinearGradient(0, 0, canvasCurva.width || 500, 0);
+                gradBand.addColorStop(0, isDark ? 'rgba(244, 63, 94, 0.28)' : 'rgba(244, 63, 94, 0.2)');
+                gradBand.addColorStop(0.5, isDark ? 'rgba(99, 102, 241, 0.38)' : 'rgba(99, 102, 241, 0.28)');
+                gradBand.addColorStop(1, isDark ? 'rgba(16, 185, 129, 0.35)' : 'rgba(16, 185, 129, 0.25)');
+
+                chartMapaCurvaInstance = new Chart(ctxC, {
+                    type: 'line',
+                    data: {
+                        labels: pontos.map(p => `${p.perc}%`),
+                        datasets: [
+                            {
+                                label: est.eh_nota_liquida ? 'Intervalo de Confiança Líquido (Margem ±)' : 'Intervalo de Confiança (Margem ±)',
+                                data: pontos.map(p => p.dentro_incerteza ? p.densidade : null),
+                                borderColor: isDark ? '#38BDF8' : '#2563EB',
+                                backgroundColor: gradBand,
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.4,
+                                pointRadius: pontos.map(p => Math.abs(p.perc - Math.round(est.nota_estimada_perc)) < 1 ? 6 : 0),
+                                pointBackgroundColor: '#22D3EE',
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2
+                            },
+                            {
+                                label: est.eh_nota_liquida ? 'Onda Nota Líquida Estimada (IA)' : 'Onda Nota Estimada (IA)',
+                                data: pontos.map(p => p.densidade),
+                                borderColor: isDark ? 'rgba(148, 163, 184, 0.45)' : 'rgba(100, 116, 139, 0.45)',
+                                backgroundColor: isDark ? 'rgba(30, 41, 59, 0.3)' : 'rgba(226, 232, 240, 0.35)',
+                                borderWidth: 1.5,
+                                borderDash: [4, 4],
+                                fill: true,
+                                tension: 0.4,
+                                pointRadius: 0
+                            },
+                            ...(est.eh_nota_liquida ? [
+                                {
+                                    label: 'Margem Provável Bruta (≥ -6%)',
+                                    data: pontos.map(p => p.dentro_incerteza_bruta ? p.densidade_bruta : null),
+                                    borderColor: isDark ? '#FBBF24' : '#D97706',
+                                    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.22)' : 'rgba(245, 158, 11, 0.22)',
+                                    borderWidth: 2.5,
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointRadius: pontos.map(p => Math.abs(p.perc - Math.round(est.nota_bruta_estimada_perc)) < 1 ? 5 : 0),
+                                    pointBackgroundColor: isDark ? '#FBBF24' : '#D97706',
+                                    pointBorderColor: '#ffffff',
+                                    pointBorderWidth: 2
+                                },
+                                {
+                                    label: 'Onda Nota Bruta Estimada (IA)',
+                                    data: pontos.map(p => p.densidade_bruta),
+                                    borderColor: isDark ? 'rgba(251, 191, 36, 0.45)' : 'rgba(217, 119, 6, 0.45)',
+                                    backgroundColor: isDark ? 'rgba(251, 191, 36, 0.06)' : 'rgba(245, 158, 11, 0.06)',
+                                    borderWidth: 1.5,
+                                    borderDash: [4, 4],
+                                    fill: true,
+                                    tension: 0.4,
+                                    pointRadius: 0
+                                }
+                            ] : [])
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    title: (items) => `Nota Simulada: ${items[0]?.label || ''}`,
+                                    label: (ctx) => {
+                                        if (ctx.datasetIndex === 0 && ctx.parsed.y !== null) {
+                                            return `Dentro da margem provável (≥ ${est.intervalo_confianca.min_perc}%)`;
+                                        }
+                                        if (ctx.datasetIndex === 2 && ctx.parsed.y !== null) {
+                                            return `Dentro da margem provável bruta (≥ ${est.intervalo_confianca.bruta_min_perc}%)`;
+                                        }
+                                        return `${ctx.dataset.label}: ${ctx.parsed.y}%`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: isDark ? '#94A3B8' : '#64748B',
+                                    font: { size: 10, weight: 'bold' },
+                                    maxTicksLimit: 9
+                                },
+                                grid: { display: false }
+                            },
+                            y: {
+                                display: false,
+                                beginAtZero: true,
+                                suggestedMax: 135
+                            }
+                        }
+                    },
+                    plugins: [{
+                        id: 'marcadoresNotaEMeta',
+                        afterDraw(chart) {
+                            const { ctx, chartArea, scales } = chart;
+                            if (!chartArea || !scales.x) return;
+                            const totalLabels = pontos.length;
+                            if (totalLabels < 2) return;
+                            const minNota = pontos[0].perc;
+                            const maxNota = pontos[totalLabels - 1].perc;
+
+                            const getXForPerc = (val) => {
+                                const ratio = (val - minNota) / Math.max(1, maxNota - minNota);
+                                return chartArea.left + ratio * (chartArea.right - chartArea.left);
+                            };
+
+                            const marcadores = (est.eh_nota_liquida ? [
+                                {
+                                    val: est.nota_estimada_perc,
+                                    label: `Estimada Líq (IA): ${est.nota_estimada_perc}%`,
+                                    color: isDark ? '#22D3EE' : '#0284C7',
+                                    dash: [4, 3],
+                                    yOffset: 10
+                                },
+                                {
+                                    val: est.nota_liquida_observada_perc,
+                                    label: `Sua Líq: ${est.nota_liquida_observada_perc}%`,
+                                    color: isDark ? '#A78BFA' : '#7C3AED',
+                                    dash: [2, 3],
+                                    yOffset: 23
+                                },
+                                {
+                                    val: paramProva?.nota_corte ?? 64.0,
+                                    label: `Meta Líq: ${paramProva?.nota_corte ?? 64.0}%`,
+                                    color: isDark ? '#34D399' : '#059669',
+                                    dash: [3, 3],
+                                    yOffset: 36
+                                },
+                                {
+                                    val: est.nota_bruta_estimada_perc,
+                                    label: `Estimada Bruta (IA): ${est.nota_bruta_estimada_perc}%`,
+                                    color: isDark ? '#FBBF24' : '#D97706',
+                                    dash: [5, 3],
+                                    yOffset: 49
+                                },
+                                {
+                                    val: est.taxa_bruta_simples_perc,
+                                    label: `Sua Bruta: ${est.taxa_bruta_simples_perc}%`,
+                                    color: isDark ? '#F472B6' : '#DB2777',
+                                    dash: [2, 2],
+                                    yOffset: 62
+                                }
+                            ] : [
+                                {
+                                    val: est.nota_estimada_perc,
+                                    label: `Estimada (IA): ${est.nota_estimada_perc}%`,
+                                    color: isDark ? '#22D3EE' : '#0284C7',
+                                    dash: [4, 3],
+                                    yOffset: 12
+                                },
+                                {
+                                    val: est.taxa_bruta_simples_perc,
+                                    label: `Sua Nota: ${est.taxa_bruta_simples_perc}%`,
+                                    color: isDark ? '#A78BFA' : '#7C3AED',
+                                    dash: [2, 3],
+                                    yOffset: 26
+                                },
+                                {
+                                    val: paramProva?.nota_corte ?? 78.5,
+                                    label: `Meta (Corte): ${paramProva?.nota_corte ?? 78.5}%`,
+                                    color: isDark ? '#34D399' : '#059669',
+                                    dash: [3, 3],
+                                    yOffset: 40
+                                }
+                            ]).filter(m => m.val !== null && m.val !== undefined && !Number.isNaN(Number(m.val)));
+
+                            marcadores.forEach((m) => {
+                                const xPos = getXForPerc(Number(m.val));
+                                if (xPos < chartArea.left || xPos > chartArea.right) return;
+                                ctx.save();
+                                ctx.beginPath();
+                                ctx.setLineDash(m.dash);
+                                ctx.moveTo(xPos, chartArea.top + m.yOffset + 2);
+                                ctx.lineTo(xPos, chartArea.bottom);
+                                ctx.strokeStyle = m.color;
+                                ctx.lineWidth = 1.8;
+                                ctx.stroke();
+
+                                ctx.setLineDash([]);
+                                ctx.fillStyle = m.color;
+                                ctx.font = 'bold 10px "Plus Jakarta Sans", sans-serif';
+                                const textW = ctx.measureText(m.label).width;
+                                const pad = 4;
+                                const clampedX = Math.max(
+                                    chartArea.left + textW / 2 + pad,
+                                    Math.min(chartArea.right - textW / 2 - pad, xPos)
+                                );
+                                ctx.textAlign = 'center';
+                                ctx.fillText(m.label, clampedX, chartArea.top + m.yOffset);
+                                ctx.restore();
+                            });
+                        }
+                    }]
+                });
+            }
+
+            // 2. Gráfico de Evolução da Estimativa ao Longo do Tempo (com banda de incerteza)
+            const canvasEvol = document.getElementById('chartMapaEvolucaoEstimativa');
+            if (canvasEvol && mapaAprovacaoData.value.evolucao_estimativa) {
+                if (chartMapaEvolucaoInstance) {
+                    chartMapaEvolucaoInstance.destroy();
+                    chartMapaEvolucaoInstance = null;
+                }
+                const ev = mapaAprovacaoData.value.evolucao_estimativa || [];
+                const metaPerc = mapaAprovacaoData.value.parametros_prova?.nota_corte || 78.5;
+                const ctxE = canvasEvol.getContext('2d');
+
+                chartMapaEvolucaoInstance = new Chart(ctxE, {
+                    type: 'line',
+                    data: {
+                        labels: ev.map(item => item.periodo),
+                        datasets: [
+                            {
+                                label: 'Teto do Intervalo (+Incerteza)',
+                                data: ev.map(item => item.ic_max_perc),
+                                borderColor: 'transparent',
+                                backgroundColor: isDark ? 'rgba(99, 102, 241, 0.16)' : 'rgba(99, 102, 241, 0.12)',
+                                pointRadius: 0,
+                                fill: '+1',
+                                tension: 0.35
+                            },
+                            {
+                                label: 'Piso do Intervalo (-Incerteza)',
+                                data: ev.map(item => item.ic_min_perc),
+                                borderColor: 'transparent',
+                                backgroundColor: 'transparent',
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0.35
+                            },
+                            {
+                                label: 'Nota Estimada Ponderada (%)',
+                                data: ev.map(item => item.nota_estimada_perc),
+                                borderColor: isDark ? '#818CF8' : '#4F46E5',
+                                backgroundColor: isDark ? '#818CF8' : '#4F46E5',
+                                borderWidth: 2.5,
+                                tension: 0.35,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                fill: false
+                            },
+                            {
+                                label: 'Meta Desejada (%)',
+                                data: ev.map(() => metaPerc),
+                                borderColor: isDark ? '#34D399' : '#10B981',
+                                borderDash: [6, 4],
+                                borderWidth: 2,
+                                pointRadius: 0,
+                                fill: false
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (context) => {
+                                        const idx = context.dataIndex;
+                                        const item = ev[idx];
+                                        if (context.datasetIndex === 2 && item) {
+                                            return `Nota Estimada: ${item.nota_estimada_perc}% (±${item.incerteza_perc}% | IC: ${item.ic_min_perc}%-${item.ic_max_perc}%)`;
+                                        }
+                                        if (context.datasetIndex === 3) {
+                                            return `Meta Desejada: ${metaPerc}%`;
+                                        }
+                                        return null;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: isDark ? '#94A3B8' : '#64748B', font: { size: 11 } },
+                                grid: { display: false }
+                            },
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    color: isDark ? '#94A3B8' : '#64748B',
+                                    font: { size: 11 },
+                                    callback: (v) => `${v}%`
+                                },
+                                grid: { color: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // ==========================================
         // 15. EXPOSIÇÃO DE PROPRIEDADES PARA O TEMPLATE
         // ==========================================
         return {
@@ -4156,7 +4731,33 @@ const app = createApp({
             buscarNaArvoreTecModal,
             fixarVinculoManualTec,
             removerVinculoManualTec,
-            sincronizarEMapearTec
+            sincronizarEMapearTec,
+
+            // Mapa da Aprovação (Predição Estatística & Gestão Temporal)
+            mapaAprovacaoData,
+            carregandoMapaAprovacao,
+            analisandoMapaIA,
+            salvandoMapaConfig,
+            mostrarPainelIAMapa,
+            subAbaMapa,
+            subAbaTemporal,
+            disciplinaSelecionadaMapaId,
+            filtroTopicosMapa,
+            formMapaConfig,
+            disciplinaSelecionadaMapa,
+            topicosFiltradosDisciplinaMapa,
+            calcularRepresentatividadePreview,
+            carregarMapaAprovacao,
+            abrirMapaAprovacao,
+            abrirGestaoTemporal,
+            mudarSubAbaMapa,
+            MudarSubAbaMapa,
+            selecionarDisciplinaProjeto,
+            alternarConcluidoTopicoNoMapa,
+            salvarConfiguracaoMapaAprovacao,
+            aplicarBenchmarkCorteIA,
+            analisarMapaComIA,
+            renderGraficosMapaAprovacao
         };
     }
 });

@@ -47,7 +47,7 @@ load_dotenv()
 
 from app.database import Base, engine
 import app.models  # Garante registro dos modelos no SQLAlchemy
-from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova, ia_insights, tec_integracao
+from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova, ia_insights, tec_integracao, mapa_aprovacao
 
 # MIGRACAO AUTOMATICA E CRIACAO DE TABELAS (POSTGRES / SQLITE)
 from sqlalchemy import inspect, text
@@ -83,6 +83,22 @@ def auto_upgrade_db():
 
         # configuracao_painel_prova
         ("configuracao_painel_prova", "area_concurso", "VARCHAR(100) DEFAULT 'Fiscal'"),
+        ("configuracao_painel_prova", "tipo_data_prova", "VARCHAR(50) DEFAULT 'Confirmada'"),
+        ("configuracao_painel_prova", "qtd_questoes_total_prova", "INTEGER DEFAULT 160"),
+        ("configuracao_painel_prova", "nota_minima_geral", "REAL DEFAULT 60.0"),
+        ("configuracao_painel_prova", "nota_minima_basicos", "REAL DEFAULT 50.0"),
+        ("configuracao_painel_prova", "nota_minima_especificos", "REAL DEFAULT 60.0"),
+        ("configuracao_painel_prova", "nota_minima_disciplina", "REAL DEFAULT 0.0"),
+        ("configuracao_painel_prova", "nao_zerar_disciplina", "BOOLEAN DEFAULT TRUE"),
+        ("configuracao_painel_prova", "fator_penalidade_erro", "REAL DEFAULT 0.0"),
+        ("configuracao_painel_prova", "meta_conclusao_edital", "REAL DEFAULT 85.0"),
+        ("configuracao_painel_prova", "dias_disponiveis_semana", "INTEGER DEFAULT 6"),
+        ("configuracao_painel_prova", "horas_estudo_dia", "REAL DEFAULT 4.0"),
+        ("configuracao_painel_prova", "horas_por_topico", "REAL DEFAULT 1.5"),
+        ("configuracao_painel_prova", "dias_antecedencia_revisao", "INTEGER DEFAULT 21"),
+        ("configuracao_painel_prova", "horas_simulado_semana", "REAL DEFAULT 4.0"),
+        ("configuracao_painel_prova", "ultimo_mapa_ia", "TEXT"),
+        ("configuracao_painel_prova", "data_mapa_ia", "TIMESTAMP"),
         ("configuracao_painel_prova", "marcos_alertados", "TEXT DEFAULT '{}'"),
         ("configuracao_painel_prova", "ultimo_insight_ia", "TEXT"),
         ("configuracao_painel_prova", "data_insight_ia", "TIMESTAMP"),
@@ -140,6 +156,24 @@ def auto_upgrade_db():
                 if not res or res == 0:
                     conn.execute(text("INSERT INTO configuracao_painel_prova (id, concurso) VALUES (1, 'SEFAZ ALAGOAS');"))
                     print("[AUTO-UPGRADE] Linha padrão criada em configuracao_painel_prova.")
+                conn.execute(text("""
+                    UPDATE configuracao_painel_prova SET
+                        area_concurso = COALESCE(area_concurso, 'Fiscal'),
+                        tipo_data_prova = COALESCE(tipo_data_prova, 'Confirmada'),
+                        qtd_questoes_total_prova = COALESCE(qtd_questoes_total_prova, 160),
+                        nota_minima_geral = COALESCE(nota_minima_geral, 60.0),
+                        nota_minima_basicos = COALESCE(nota_minima_basicos, 50.0),
+                        nota_minima_especificos = COALESCE(nota_minima_especificos, 60.0),
+                        nota_minima_disciplina = COALESCE(nota_minima_disciplina, 0.0),
+                        nao_zerar_disciplina = COALESCE(nao_zerar_disciplina, TRUE),
+                        fator_penalidade_erro = COALESCE(fator_penalidade_erro, 0.0),
+                        meta_conclusao_edital = COALESCE(meta_conclusao_edital, 85.0),
+                        dias_disponiveis_semana = COALESCE(dias_disponiveis_semana, 6),
+                        horas_estudo_dia = COALESCE(horas_estudo_dia, 4.0),
+                        horas_por_topico = COALESCE(horas_por_topico, 1.5),
+                        dias_antecedencia_revisao = COALESCE(dias_antecedencia_revisao, 21),
+                        horas_simulado_semana = COALESCE(horas_simulado_semana, 4.0);
+                """))
     except Exception as e_row:
         print(f"[AUTO-UPGRADE] Aviso ao verificar linha 1 em configuracao_painel_prova: {e_row}")
 
@@ -203,6 +237,7 @@ app.include_router(resultados.router)
 app.include_router(configuracao_prova.router)
 app.include_router(ia_insights.router)
 app.include_router(tec_integracao.router)
+app.include_router(mapa_aprovacao.router)
 
 # Configuração dos Arquivos Estáticos e SPA Frontend
 STATIC_DIR = Path(__file__).resolve().parent / "static"
