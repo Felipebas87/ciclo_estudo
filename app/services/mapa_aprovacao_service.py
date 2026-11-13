@@ -333,6 +333,9 @@ def calcular_mapa_aprovacao(db: Session, edital_id: Optional[int] = None) -> Dic
         comprometimento_pts = round(pts_perdidos, 2)
         comprometimento_perc_nota_final = round((pts_perdidos / total_pontos_prova) * 100.0, 2)
 
+        taxa_bruta_round = round(taxa_estimada_bruta, 1)
+        pts_brutos_perdidos = round(max(0.0, pts_max - pts_brutos_estimados), 2)
+
         if taxa_estimada >= nota_corte:
             status_cor = "emerald"
             status_label = "Acima da Meta"
@@ -342,6 +345,13 @@ def calcular_mapa_aprovacao(db: Session, edital_id: Optional[int] = None) -> Dic
         else:
             status_cor = "rose"
             status_label = "Gargalo Crítico"
+
+        if taxa_bruta_round >= meta_disc_perc:
+            status_cor_bruto = "emerald"
+        elif taxa_bruta_round >= meta_disc_perc - 8.0:
+            status_cor_bruto = "amber"
+        else:
+            status_cor_bruto = "rose"
 
         disciplinas_detalhe.append({
             "id": d.id,
@@ -359,11 +369,17 @@ def calcular_mapa_aprovacao(db: Session, edital_id: Optional[int] = None) -> Dic
             "taxa_observada_perc": taxa_obs if taxa_obs is not None else 0.0,
             "tem_questoes": q_res > 0,
             "taxa_estimada_perc": taxa_estimada,
+            "taxa_estimada_bruta_perc": taxa_bruta_round,
             "incerteza_perc": incerteza_disc,
             "intervalo_min_perc": round(max(0.0, taxa_estimada - incerteza_disc), 1),
             "intervalo_max_perc": round(min(100.0, taxa_estimada + incerteza_disc), 1),
+            "intervalo_bruto_min_perc": round(max(0.0, taxa_bruta_round - incerteza_disc), 1),
+            "intervalo_bruto_max_perc": round(min(100.0, taxa_bruta_round + incerteza_disc), 1),
             "pontos_estimados": pts_estimados,
+            "pontos_brutos_estimados": pts_brutos_estimados,
             "pontos_perdidos_estimados": pts_perdidos,
+            "pontos_brutos_perdidos_estimados": pts_brutos_perdidos,
+            "status_cor_bruto": status_cor_bruto,
             "comprometimento_perc_nota_final": comprometimento_perc_nota_final,
             "deficit_pontos_para_corte": deficit_pontos_para_corte,
             "questoes_certas_estimadas": questoes_certas_estimadas,
@@ -668,6 +684,8 @@ def calcular_mapa_aprovacao(db: Session, edital_id: Optional[int] = None) -> Dic
             "nota_estimada_perc": nota_estimada_perc,
             "nota_estimada_pontos": nota_estimada_pontos,
             "nota_bruta_estimada_perc": nota_bruta_estimada_perc,
+            "soma_pontos_estimados": round(soma_pontos_estimados, 2),
+            "soma_pontos_brutos_estimados": round(soma_pontos_brutos_estimados, 2),
             "total_pontos_prova": round(total_pontos_prova, 1),
             "aproveitamento_observado_perc": aproveitamento_ponderado_obs_perc,
             "nota_liquida_observada_perc": nota_liquida_observada_perc,

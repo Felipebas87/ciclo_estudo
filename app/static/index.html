@@ -3449,7 +3449,7 @@
                                     </div>
 
                                     <!-- Placar Comparativo (Estilo Raio-X de Aprovação) -->
-                                    <div class="flex items-center gap-6 bg-slate-50 dark:bg-[#1B2638] px-5 py-3 rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                                    <div class="flex flex-wrap items-center gap-6 bg-slate-50 dark:bg-[#1B2638] px-5 py-3 rounded-2xl border border-slate-200 dark:border-[#24324A]">
                                         <div>
                                             <span class="text-[11px] font-bold text-slate-400 dark:text-[#94A3B8] block">Nota Estimada Atual</span>
                                             <span class="text-2xl sm:text-3xl font-black font-mono-timer"
@@ -3463,6 +3463,17 @@
                                             <span class="text-[11px] font-bold text-slate-400 dark:text-[#94A3B8] block">Meta de Desempenho</span>
                                             <span class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white font-mono-timer">
                                                 {{ mapaAprovacaoData.parametros_prova.nota_corte }}%
+                                            </span>
+                                        </div>
+                                        <div class="h-8 w-px bg-slate-200 dark:bg-[#24324A]"></div>
+                                        <div>
+                                            <span class="text-[11px] font-bold text-slate-400 dark:text-[#94A3B8] block">Soma Pontuação Estimada</span>
+                                            <span class="text-2xl sm:text-3xl font-black text-blue-600 dark:text-[#60A5FA] font-mono-timer">
+                                                {{ mapaAprovacaoData.estimativa_nota.soma_pontos_brutos_estimados }}
+                                            </span>
+                                            <span class="text-xs font-bold text-slate-400 dark:text-[#94A3B8] ml-1">/ {{ mapaAprovacaoData.parametros_prova.total_pontos_prova }} pts</span>
+                                            <span v-if="mapaAprovacaoData.estimativa_nota.eh_nota_liquida" class="block text-[10px] font-bold text-slate-400 dark:text-[#94A3B8]">
+                                                Líq: {{ mapaAprovacaoData.estimativa_nota.soma_pontos_estimados }} pts
                                             </span>
                                         </div>
                                     </div>
@@ -3493,8 +3504,8 @@
                                                         Meta: <strong class="text-slate-800 dark:text-white">{{ disc.meta_necessaria_perc }}%</strong> ({{ disc.questoes_certas_meta }}/{{ disc.qtd_questoes_prova }}q)
                                                     </span>
                                                     <span class="text-sm font-black font-mono-timer"
-                                                        :class="disc.status_cor === 'emerald' ? 'text-emerald-600 dark:text-[#34D399]' : (disc.status_cor === 'amber' ? 'text-amber-500 dark:text-[#FBBF24]' : 'text-rose-500 dark:text-[#F87171]')">
-                                                        {{ disc.taxa_estimada_perc }}%
+                                                        :class="disc.status_cor_bruto === 'emerald' ? 'text-emerald-600 dark:text-[#34D399]' : (disc.status_cor_bruto === 'amber' ? 'text-amber-500 dark:text-[#FBBF24]' : 'text-rose-500 dark:text-[#F87171]')">
+                                                        {{ disc.taxa_estimada_bruta_perc }}%
                                                     </span>
                                                     <span class="text-[10.5px] text-slate-400 dark:text-[#94A3B8] font-mono-timer">
                                                         (±{{ disc.incerteza_perc }}%)
@@ -3507,11 +3518,11 @@
                                         <div class="relative w-full h-3 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden">
                                             <!-- Faixa de incerteza sutil -->
                                             <div class="absolute top-0 bottom-0 bg-white/15 dark:bg-white/10"
-                                                :style="{ left: disc.intervalo_min_perc + '%', width: (disc.intervalo_max_perc - disc.intervalo_min_perc) + '%' }"></div>
-                                            <!-- Barra principal da estimativa -->
+                                                :style="{ left: disc.intervalo_bruto_min_perc + '%', width: (disc.intervalo_bruto_max_perc - disc.intervalo_bruto_min_perc) + '%' }"></div>
+                                            <!-- Barra principal da estimativa (Acerto Bruto) -->
                                             <div class="h-full rounded-full transition-all duration-500"
-                                                :class="disc.status_cor === 'emerald' ? 'bg-emerald-500 dark:bg-[#34D399]' : (disc.status_cor === 'amber' ? 'bg-amber-500 dark:bg-[#FBBF24]' : 'bg-rose-500 dark:bg-[#F87171]')"
-                                                :style="{ width: Math.min(100, disc.taxa_estimada_perc) + '%' }"></div>
+                                                :class="disc.status_cor_bruto === 'emerald' ? 'bg-emerald-500 dark:bg-[#34D399]' : (disc.status_cor_bruto === 'amber' ? 'bg-amber-500 dark:bg-[#FBBF24]' : 'bg-rose-500 dark:bg-[#F87171]')"
+                                                :style="{ width: Math.min(100, disc.taxa_estimada_bruta_perc) + '%' }"></div>
                                             <!-- Marcador da Meta -->
                                             <div class="absolute top-0 bottom-0 w-0.5 bg-slate-900 dark:bg-white z-10"
                                                 :style="{ left: Math.min(99, disc.meta_necessaria_perc) + '%' }"
@@ -3522,8 +3533,8 @@
                                         <div class="flex flex-wrap items-center justify-between gap-2 mt-2 text-[11px] text-slate-500 dark:text-[#94A3B8]">
                                             <div class="flex flex-wrap items-center gap-3">
                                                 <span>
-                                                    Pontuação Estimada: <strong class="text-slate-700 dark:text-[#E2E8F0]">{{ disc.pontos_estimados }} / {{ disc.pontos_maximos }} pts</strong>
-                                                    (Perda atual: <strong class="text-rose-500 dark:text-[#F87171]">-{{ disc.pontos_perdidos_estimados }} pts</strong>)
+                                                    Pontuação Estimada: <strong class="text-slate-700 dark:text-[#E2E8F0]">{{ disc.pontos_brutos_estimados }} / {{ disc.pontos_maximos }} pts</strong>
+                                                    (Perda atual: <strong class="text-rose-500 dark:text-[#F87171]">-{{ disc.pontos_brutos_perdidos_estimados }} pts</strong>)
                                                 </span>
                                                 <span>&bull;</span>
                                                 <span>
