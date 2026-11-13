@@ -6,7 +6,7 @@ from datetime import datetime, date, timezone
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, Depends, Query, HTTPException, Body
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 
 from app.database import get_db
 from app.models.configuracao_prova import ConfiguracaoPainelProva
@@ -18,13 +18,56 @@ from app.models.topico import Topico
 
 router = APIRouter(prefix="/api/ia", tags=["Insights de IA"])
 
+MODELOS_GEMINI_ATIVOS = [
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+    "gemini-3.8-flash",
+    "gemini-3.7-flash",
+    "gemini-flash-latest",
+    "gemini-2.5-flash",
+]
+
+
+def extrair_json_resiliente(texto: str) -> Dict[str, Any]:
+    """Extrai e faz parse de JSON de respostas Gemini de forma resiliente a cercas Markdown e quebras de linha."""
+    if not texto:
+        raise ValueError("Resposta vazia do modelo.")
+    t = texto.strip()
+    if t.startswith("```json"):
+        t = t[7:].strip()
+    elif t.startswith("```"):
+        t = t[3:].strip()
+    if t.endswith("```"):
+        t = t[:-3].strip()
+    try:
+        return json.loads(t, strict=False)
+    except Exception:
+        ini = t.find("{")
+        fim = t.rfind("}")
+        if ini != -1 and fim != -1 and fim > ini:
+            return json.loads(t[ini : fim + 1], strict=False)
+        raise
+
+
 def obter_chave_gemini(config: Optional[ConfiguracaoPainelProva] = None) -> Optional[str]:
-    # Prioridade 1: Chave salva no banco de dados pelo usuário
-    if config and config.gemini_api_key and config.gemini_api_key.strip():
-        k = config.gemini_api_key.strip(" \t\r\n'\"")
+    # Prioridade 1: Chave salva no objeto ORM de configuração
+    if config and getattr(config, "gemini_api_key", None) and str(config.gemini_api_key).strip():
+        k = str(config.gemini_api_key).strip(" \t\r\n'\"")
         if k:
             return k
-    # Prioridade 2: Variáveis de ambiente no servidor (.env ou Environment Variables no Render)
+    # Prioridade 2: Fallback SQL direto (garante leitura mesmo se a sessão ORM estiver desatualizada)
+    try:
+        from app.database import engine
+        with engine.connect() as conn:
+            row = conn.execute(
+                text("SELECT gemini_api_key FROM configuracao_painel_prova WHERE gemini_api_key IS NOT NULL AND TRIM(gemini_api_key) != '' ORDER BY id ASC LIMIT 1")
+            ).first()
+            if row and row[0] and str(row[0]).strip(" \t\r\n'\""):
+                return str(row[0]).strip(" \t\r\n'\"")
+    except Exception:
+        pass
+    # Prioridade 3: Variáveis de ambiente no servidor (.env ou Environment Variables no Render)
     for env_var in ["GEMINI_API_KEY", "GOOGLE_API_KEY", "GEMINI_KEY", "GOOGLE_GENAI_API_KEY"]:
         env_key = os.getenv(env_var)
         if env_key and env_key.strip():
@@ -397,79 +440,38 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
     agora_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     prompt_completo = f"{prompt}\n\n[SEED TEMPORAL: {agora_timestamp}]"
 
-    # Lista de modelos oficiais do Google Gemini de alta velocidade
-    modelos_candidatos = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.5-flash-lite",
-        "gemini-1.5-flash"
-    ]
+    modelos_candidatos = MODELOS_GEMINI_ATIVOS
 
-    # Tentativa 1: Via SDK oficial google.genai (se instalado no ambiente)
-    try:
-        from google import genai
-        from google.genai import types
-
-        client = genai.Client(api_key=api_key)
-        config_params = types.GenerateContentConfig(
-            temperature=0.95,
-            response_mime_type="application/json"
-        )
-
+    # Chamada REST assíncrona resiliente com failover automático entre modelos Gemini 3.x / Flash
+    async with httpx.AsyncClient(timeout=20.0) as http_client:
         for modelo in modelos_candidatos:
             try:
-                response = client.models.generate_content(
-                    model=modelo,
-                    contents=prompt_completo,
-                    config=config_params
-                )
-                texto = response.text.strip()
-                if texto.startswith("```json"):
-                    texto = texto[7:]
-                if texto.endswith("```"):
-                    texto = texto[:-3]
-                parsed = json.loads(texto.strip())
-                print(f"[IA INSIGHTS] Sucesso via SDK google.genai com modelo {modelo}")
-                return _montar_resposta_insight(parsed, f"Google Gemini ({modelo})", datetime.now(), dados)
-            except Exception as mod_err:
-                print(f"[IA INSIGHTS] Modelo {modelo} via SDK falhou: {mod_err}. Tentando próximo...")
-                continue
-    except Exception as e:
-        print(f"[IA INSIGHTS] SDK google.genai não carregado ({e}). Acionando API REST direta com HTTPX...")
-
-    # Tentativa 2: Via REST API direta do Google Gemini com HTTPX (autônomo, sem dependências extras)
-    for modelo in modelos_candidatos:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
-            payload = {
-                "contents": [{"parts": [{"text": prompt_completo}]}],
-                "generationConfig": {
-                    "responseMimeType": "application/json",
-                    "temperature": 0.95
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+                payload = {
+                    "contents": [{"parts": [{"text": prompt_completo}]}],
+                    "generationConfig": {
+                        "responseMimeType": "application/json",
+                        "temperature": 0.75
+                    }
                 }
-            }
-            async with httpx.AsyncClient(timeout=12.0) as http_client:
                 resp = await http_client.post(url, json=payload)
                 if resp.status_code == 200:
                     resp_json = resp.json()
-                    texto = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    if texto.startswith("```json"):
-                        texto = texto[7:]
-                    if texto.endswith("```"):
-                        texto = texto[:-3]
-                    parsed = json.loads(texto.strip())
+                    partes = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                    texto = "".join(p.get("text", "") for p in partes if "text" in p).strip()
+                    parsed = extrair_json_resiliente(texto)
                     print(f"[IA INSIGHTS] Sucesso via REST HTTPX com modelo {modelo}")
                     return _montar_resposta_insight(parsed, f"Google Gemini ({modelo})", datetime.now(), dados)
-                elif resp.status_code in (400, 401, 403):
-                    print(f"[IA INSIGHTS] Chave inválida ou recusada com status {resp.status_code}: {resp.text[:120]}")
+                elif resp.status_code in (401, 403) or "API_KEY_INVALID" in resp.text:
+                    print(f"[IA INSIGHTS] Chave inválida ou recusada com status {resp.status_code}: {resp.text[:160]}")
                     break
                 else:
-                    print(f"[IA INSIGHTS] Modelo {modelo} via REST retornou HTTP {resp.status_code}: {resp.text[:120]}")
-        except Exception as rest_err:
-            print(f"[IA INSIGHTS] Erro na requisição REST para modelo {modelo}: {rest_err}")
-            continue
+                    print(f"[IA INSIGHTS] Modelo {modelo} via REST retornou HTTP {resp.status_code}: {resp.text[:160]}")
+            except Exception as rest_err:
+                print(f"[IA INSIGHTS] Erro na requisição REST para modelo {modelo}: {rest_err}")
+                continue
 
-    print("[IA INSIGHTS] Todos os modelos e métodos Gemini falharam. Recorrendo ao motor heurístico.")
+    print("[IA INSIGHTS] Todos os modelos Gemini falharam. Recorrendo ao motor heurístico.")
     return None
 
 def gerar_insight_heuristico(dados: Dict[str, Any]) -> Dict[str, Any]:
@@ -707,7 +709,7 @@ def status_chave_gemini(db: Session = Depends(get_db)):
         "configurada": configurada,
         "chave_mascarada": mascarada,
         "origem": origem,
-        "modelo": "Google Gemini (2.5 Flash)"
+        "modelo": "Google Gemini (3.6 / 3.8 Flash)"
     }
 
 @router.post("/config-chave")
@@ -803,15 +805,19 @@ async def obter_insights_ia(db: Session = Depends(get_db)):
         db.commit()
         db.refresh(config)
 
-    # Retorno instantâneo do último insight em cache (< 2ms) para nunca travar a aplicação
+    chave_ativa = obter_chave_gemini(config)
+
+    # Retorna o último insight em cache apenas se já for do Google Gemini (ou se não houver chave ativa)
     if config.ultimo_insight_ia:
         try:
-            return json.loads(config.ultimo_insight_ia)
+            cached = json.loads(config.ultimo_insight_ia)
+            origem_cache = str(cached.get("modelo_origem", ""))
+            if not chave_ativa or "Google Gemini" in origem_cache:
+                return cached
         except Exception:
             pass
 
     dados_estudo = calcular_dados_estudo(db)
-    chave_ativa = obter_chave_gemini(config)
     insight = None
     if chave_ativa:
         try:

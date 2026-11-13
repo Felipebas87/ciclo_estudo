@@ -10,6 +10,7 @@ from app.services.mapa_aprovacao_service import (
     calcular_mapa_aprovacao,
     gerar_analise_ia_mapa_aprovacao
 )
+from app.routers.ia_insights import obter_chave_gemini
 
 router = APIRouter(prefix="/api/mapa-aprovacao", tags=["Mapa da Aprovação"])
 
@@ -48,11 +49,25 @@ class ConfiguracaoMapaPayload(BaseModel):
 
 
 @router.get("")
-def obter_mapa_aprovacao(
+async def obter_mapa_aprovacao(
     edital_id: Optional[int] = Query(None),
     db: Session = Depends(get_db)
 ) -> Dict[str, Any]:
-    return calcular_mapa_aprovacao(db, edital_id)
+    mapa = calcular_mapa_aprovacao(db, edital_id)
+    if "erro" in mapa:
+        return mapa
+    config = db.query(ConfiguracaoPainelProva).first()
+    chave_ativa = obter_chave_gemini(config)
+    analise_atual = mapa.get("analise_ia") or {}
+    origem_atual = str(analise_atual.get("modelo_origem", ""))
+    if chave_ativa and "Google Gemini" not in origem_atual:
+        try:
+            nova_ia = await gerar_analise_ia_mapa_aprovacao(db, edital_id)
+            if isinstance(nova_ia, dict) and "Google Gemini" in str(nova_ia.get("modelo_origem", "")):
+                mapa = calcular_mapa_aprovacao(db, edital_id)
+        except Exception as e:
+            print(f"[MAPA APROVACAO] Aviso ao atualizar parecer IA automático: {e}")
+    return mapa
 
 
 @router.put("/configurar")

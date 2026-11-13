@@ -13,6 +13,7 @@ from app.models.topico import Topico
 from app.models.ciclo import CicloEstudos, BlocoCiclo
 from app.models.sessao import SessaoEstudo
 from app.models.configuracao_prova import ConfiguracaoPainelProva
+from app.routers.ia_insights import MODELOS_GEMINI_ATIVOS, extrair_json_resiliente
 
 
 def extrair_chave_numerica_titulo(titulo: str) -> Tuple[List[int], str]:
@@ -572,11 +573,7 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO NO FORMATO:
   ]
 }}"""
 
-    modelos_rest = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash"
-    ]
+    modelos_rest = MODELOS_GEMINI_ATIVOS
     async with httpx.AsyncClient(timeout=12.0) as http_client:
         for modelo in modelos_rest:
             try:
@@ -683,11 +680,7 @@ Retorne ESTRITAMENTE um JSON no seguinte formato:
   ]
 }}"""
 
-    modelos_rest = [
-        "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-1.5-flash"
-    ]
+    modelos_rest = MODELOS_GEMINI_ATIVOS
     async with httpx.AsyncClient(timeout=min(15.0, timeout_segundos)) as http_client:
         for modelo in modelos_rest:
             try:

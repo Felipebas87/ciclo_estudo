@@ -24,9 +24,15 @@ def salvar_configuracao_prova(dados: ConfiguracaoPainelProvaBase, db: Session = 
         config = ConfiguracaoPainelProva(id=1)
         db.add(config)
     
-    campos = dados.model_dump(exclude_unset=False)
+    campos_protegidos_se_nulo = {
+        "gemini_api_key", "tec_senha", "ultimo_insight_ia",
+        "data_insight_ia", "ultimo_mapa_ia", "data_mapa_ia", "marcos_alertados"
+    }
+    campos = dados.model_dump(exclude_unset=True)
     for campo, valor in campos.items():
         if hasattr(config, campo) and campo != 'id':
+            if campo in campos_protegidos_se_nulo and valor is None:
+                continue
             setattr(config, campo, valor)
             
     db.commit()

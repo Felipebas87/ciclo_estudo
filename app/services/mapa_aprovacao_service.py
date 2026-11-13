@@ -12,7 +12,7 @@ from app.models.disciplina import Disciplina
 from app.models.topico import Topico
 from app.models.sessao import SessaoEstudo
 from app.models.ciclo import CicloEstudos
-from app.routers.ia_insights import obter_chave_gemini
+from app.routers.ia_insights import obter_chave_gemini, MODELOS_GEMINI_ATIVOS, extrair_json_resiliente
 
 
 def _garantir_config(db: Session) -> ConfiguracaoPainelProva:
@@ -1157,8 +1157,8 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO NO FORMATO:
   ]
 }}"""
 
-        modelos = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-        async with httpx.AsyncClient(timeout=15.0) as client:
+        modelos = MODELOS_GEMINI_ATIVOS
+        async with httpx.AsyncClient(timeout=20.0) as client:
             for mod in modelos:
                 try:
                     url = f"https://generativelanguage.googleapis.com/v1beta/models/{mod}:generateContent?key={chave}"
@@ -1168,18 +1168,21 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO NO FORMATO:
                     }
                     resp = await client.post(url, json=payload)
                     if resp.status_code == 200:
-                        txt = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-                        if txt.startswith("```json"):
-                            txt = txt[7:]
-                        if txt.endswith("```"):
-                            txt = txt[:-3]
-                        parsed = json.loads(txt.strip())
+                        partes = resp.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                        txt = "".join(pt.get("text", "") for pt in partes if "text" in pt).strip()
+                        parsed = extrair_json_resiliente(txt)
                         parsed["modelo_origem"] = f"Google Gemini ({mod})"
                         parsed["timestamp"] = datetime.now().strftime("%d/%m/%Y %H:%M")
                         config.ultimo_mapa_ia = json.dumps(parsed, ensure_ascii=False)
                         config.data_mapa_ia = datetime.now()
                         db.commit()
+                        print(f"[MAPA APROVACAO IA] Sucesso via Google Gemini ({mod})")
                         return parsed
+                    elif resp.status_code in (401, 403) or "API_KEY_INVALID" in resp.text:
+                        print(f"[MAPA APROVACAO IA] Chave inválida ({resp.status_code}): {resp.text[:140]}")
+                        break
+                    else:
+                        print(f"[MAPA APROVACAO IA] Modelo {mod} retornou HTTP {resp.status_code}: {resp.text[:140]}")
                 except Exception as e:
                     print(f"[MAPA APROVACAO IA] Aviso com {mod}: {e}")
                     continue
