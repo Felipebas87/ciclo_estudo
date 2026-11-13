@@ -245,6 +245,15 @@ STATIC_DIR.mkdir(exist_ok=True)
 
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+@app.middleware("http")
+async def disable_static_js_cache(request, call_next):
+    response = await call_next(request)
+    if request.url.path.startswith("/static/js/") or request.url.path.startswith("/static/css/"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 @app.get("/", include_in_schema=False)
 def serve_index():
     index_path = STATIC_DIR / "index.html"

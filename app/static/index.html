@@ -3685,6 +3685,16 @@
                         </div>
 
                     </div>
+
+                    <div v-else class="text-center py-16 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] space-y-3">
+                        <p class="text-slate-600 dark:text-[#94A3B8] font-semibold text-sm">
+                            {{ mapaAprovacaoData?.erro || 'Carregando dados do Mapa da Aprovação...' }}
+                        </p>
+                        <button type="button" @click="carregarMapaAprovacao()"
+                            class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-rotate mr-1.5"></i> Recarregar Mapa da Aprovação
+                        </button>
+                    </div>
                 </div>
 
                 <!-- ========================================== -->
@@ -4312,6 +4322,16 @@
                             </form>
                         </div>
 
+                    </div>
+
+                    <div v-else class="text-center py-16 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] space-y-3">
+                        <p class="text-slate-600 dark:text-[#94A3B8] font-semibold text-sm">
+                            {{ mapaAprovacaoData?.erro || 'Carregando dados da Gestão Temporal...' }}
+                        </p>
+                        <button type="button" @click="carregarMapaAprovacao()"
+                            class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-sm cursor-pointer">
+                            <i class="fa-solid fa-rotate mr-1.5"></i> Recarregar Gestão Temporal
+                        </button>
                     </div>
                 </div>
 
@@ -5335,7 +5355,7 @@
     </div>
 
     
-            <script src="/static/js/app.js?v=20261105_alinhamento_esteira_v17"></script>
+            <script src="/static/js/app.js?v=20261113_mapa_aprovacao_v19"></script>
 </body>
 
 </html>
