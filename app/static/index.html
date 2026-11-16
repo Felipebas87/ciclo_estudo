@@ -923,7 +923,7 @@
                                             :title="b.disciplina.nome">
                                             {{ b.disciplina.nome }}
                                         </h4>
-                                        <!-- Tópico apontado na trilha para este bloco do ciclo -->
+                                        <!-- Tópico apontado na trilha para este bloco do ciclo (ou Disciplina + Tópico da Revisão Anki) -->
                                         <div v-if="b.disciplina.categoria !== 'REVISAO_ANKI' && (b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))"
                                             class="mt-1.5 p-1.5 sm:p-2 rounded-lg bg-slate-100/90 dark:bg-[#0F1826]/90 border border-slate-200/80 dark:border-[#2A3F5F] text-[10.5px]"
                                             :title="(b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.titulo">
@@ -1171,6 +1171,102 @@
                                         <i class="fa-solid fa-arrow-right text-[10px]"></i>
                                     </span>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CARD MISSÕES DE HOJE NA PÁGINA CICLO ATUAL (ABAIXO DA ESTEIRA) -->
+                    <div v-if="cicloAtivo && roteiroEstudoData && roteiroEstudoData.agenda_hoje"
+                        class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-5">
+                        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-[#24324A] pb-4">
+                            <div>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider">
+                                        <i class="fa-solid fa-bullseye mr-1"></i>Missões do Dia &bull; Sincronizadas com o Ciclo
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">
+                                        {{ roteiroEstudoData.agenda_hoje.dia_semana_nome }}, {{ roteiroEstudoData.agenda_hoje.data_fmt }}
+                                    </span>
+                                </div>
+                                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1">
+                                    Missões de Hoje ({{ roteiroEstudoData.agenda_hoje.qtd_concluidas_hoje }} de {{ roteiroEstudoData.agenda_hoje.missoes_hoje.length }} concluídas)
+                                </h3>
+                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                    Cada sessão registrada no Ciclo marca automaticamente a missão correspondente de hoje como concluída.
+                                </p>
+                            </div>
+
+                            <div class="flex items-center gap-3">
+                                <div class="text-right">
+                                    <div class="text-2xl font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                        {{ roteiroEstudoData.agenda_hoje.percentual_concluido_hoje }}%
+                                    </div>
+                                    <div class="text-[10px] uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] font-bold">
+                                        Meta Diária ({{ roteiroEstudoData.parametros_roteiro.horas_por_dia }}h)
+                                    </div>
+                                </div>
+                                <button type="button" @click="navegarPara('roteiro_estudo')"
+                                    class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] dark:hover:bg-[#24324A] text-slate-700 dark:text-[#F1F5F9] font-bold text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer flex items-center gap-1.5">
+                                    <i class="fa-solid fa-route text-emerald-500"></i>
+                                    <span>Ver Roteiro Completo</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div v-for="missao in roteiroEstudoData.agenda_hoje.missoes_hoje" :key="'ciclo-' + missao.id"
+                                class="p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3"
+                                :class="missao.concluida
+                                    ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-400/50'
+                                    : 'bg-slate-50 hover:bg-slate-100/80 dark:bg-[#1B2638] dark:hover:bg-[#202E44] border-slate-200 dark:border-[#24324A]'">
+                                <div class="space-y-2">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <div class="flex flex-wrap items-center gap-1.5">
+                                            <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider"
+                                                :class="missao.concluida ? 'bg-emerald-500 text-white' : 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/30 dark:text-blue-200 border border-blue-500/25 dark:border-blue-400/30'">
+                                                <i :class="missao.concluida ? 'fa-solid fa-check-double mr-1' : 'fa-regular fa-clock mr-1'"></i>
+                                                Missão {{ missao.ordem_dia }} &bull; 1 Hora ({{ missao.duracao_minutos }} min)
+                                            </span>
+                                            <span v-if="missao.prioridade === 1" class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black">
+                                                ⚡ Prioridade Alta (P1)
+                                            </span>
+                                            <span v-if="missao.mais_cobrado" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[10px] font-black">
+                                                🔥 Mais Cobrado
+                                            </span>
+                                        </div>
+                                        <span class="text-[11px] font-mono-timer font-bold"
+                                            :class="missao.concluida ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'">
+                                            {{ missao.concluida ? `Concluída (${missao.questoes_realizadas}q)` : `Meta: ~${missao.questoes_estimadas} questões` }}
+                                        </span>
+                                    </div>
+
+                                    <div>
+                                        <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-[#34D399]">
+                                            {{ missao.disciplina_nome }}
+                                        </div>
+                                        <div class="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5 leading-snug">
+                                            {{ missao.topico_titulo }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center justify-between pt-2 border-t border-slate-200/80 dark:border-[#24324A]">
+                                    <span class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                        <i class="fa-solid fa-layer-group mr-1 text-blue-500 dark:text-blue-400"></i>{{ missao.modo_estudo }}
+                                    </span>
+
+                                    <button v-if="!missao.concluida"
+                                        type="button"
+                                        @click="iniciarMissaoRoteiroNoCiclo(missao)"
+                                        class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
+                                        <i class="fa-solid fa-check"></i>
+                                        <span>Marcar Estudo no Ciclo</span>
+                                    </button>
+                                    <span v-else class="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-xs flex items-center gap-1.5">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                        <span>Missão Cumprida no Ciclo</span>
+                                    </span>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6604,7 +6700,8 @@
                     'bg-gradient-to-b from-yellow-900/90 via-slate-900 to-slate-950 border-yellow-400/60': medalhaEmCelebracao.tier === 'ouro',
                     'bg-gradient-to-b from-sky-950 via-slate-900 to-slate-950 border-sky-400/60': medalhaEmCelebracao.tier === 'platina',
                     'bg-gradient-to-b from-cyan-950 via-indigo-950 to-slate-950 border-cyan-300/70': medalhaEmCelebracao.tier === 'diamante',
-                    'bg-gradient-to-b from-purple-950 via-rose-950/80 to-slate-950 border-amber-400/80': medalhaEmCelebracao.tier === 'lendario'
+                    'bg-gradient-to-b from-purple-950 via-rose-950/80 to-slate-950 border-amber-400/80': medalhaEmCelebracao.tier === 'lendario',
+                    'bg-gradient-to-b from-emerald-950 via-violet-950 to-slate-950 border-emerald-300/80': medalhaEmCelebracao.tier === 'mitico'
                 }">
 
                 <!-- Fogos / Brilhos visuais internos no modal -->
@@ -6616,7 +6713,8 @@
                             'bg-yellow-400': medalhaEmCelebracao.tier === 'ouro',
                             'bg-sky-400': medalhaEmCelebracao.tier === 'platina',
                             'bg-cyan-400': medalhaEmCelebracao.tier === 'diamante',
-                            'bg-fuchsia-500': medalhaEmCelebracao.tier === 'lendario'
+                            'bg-fuchsia-500': medalhaEmCelebracao.tier === 'lendario',
+                            'bg-emerald-400': medalhaEmCelebracao.tier === 'mitico'
                         }"></div>
                     <i class="fa-solid fa-wand-magic-sparkles absolute top-6 left-8 text-yellow-300/80 text-xl animate-bounce"></i>
                     <i class="fa-solid fa-star absolute top-10 right-10 text-amber-300/90 text-lg animate-ping"></i>
@@ -6633,7 +6731,8 @@
                             'bg-yellow-500/30 text-yellow-200 border-yellow-300/60': medalhaEmCelebracao.tier === 'ouro',
                             'bg-sky-500/30 text-sky-200 border-sky-300/60': medalhaEmCelebracao.tier === 'platina',
                             'bg-cyan-400/30 text-cyan-100 border-cyan-200/70': medalhaEmCelebracao.tier === 'diamante',
-                            'bg-gradient-to-r from-amber-500/40 to-fuchsia-500/40 text-amber-200 border-amber-300': medalhaEmCelebracao.tier === 'lendario'
+                            'bg-gradient-to-r from-amber-500/40 to-fuchsia-500/40 text-amber-200 border-amber-300': medalhaEmCelebracao.tier === 'lendario',
+                            'bg-gradient-to-r from-emerald-500/40 via-violet-500/40 to-amber-400/40 text-emerald-200 border-emerald-300': medalhaEmCelebracao.tier === 'mitico'
                         }">
                         🎉 Nova Conquista Desbloqueada &bull; {{ medalhaEmCelebracao.tier_label }}
                     </span>
@@ -6648,7 +6747,8 @@
                             'bg-gradient-to-br from-[#FDE047] via-[#EAB308] to-[#A16207] border-[#FEF08A] shadow-yellow-400/50': medalhaEmCelebracao.tier === 'ouro',
                             'bg-gradient-to-br from-[#7DD3FC] via-[#0284C7] to-[#1E3A8A] border-[#E0F2FE] shadow-sky-400/50': medalhaEmCelebracao.tier === 'platina',
                             'bg-gradient-to-br from-[#A5F3FC] via-[#06B6D4] to-[#3B0764] border-[#CFFAFE] shadow-cyan-300/60': medalhaEmCelebracao.tier === 'diamante',
-                            'bg-gradient-to-br from-[#FDE047] via-[#E11D48] to-[#581C87] border-[#FDE047] shadow-rose-500/60': medalhaEmCelebracao.tier === 'lendario'
+                            'bg-gradient-to-br from-[#FDE047] via-[#E11D48] to-[#581C87] border-[#FDE047] shadow-rose-500/60': medalhaEmCelebracao.tier === 'lendario',
+                            'bg-gradient-to-br from-[#34D399] via-[#7C3AED] to-[#0F172A] border-[#A7F3D0] shadow-emerald-400/60': medalhaEmCelebracao.tier === 'mitico'
                         }">
                         <!-- Anel interno pontilhado -->
                         <div class="w-24 h-24 rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/15">
@@ -6756,7 +6856,8 @@
                                         'bg-gradient-to-br from-yellow-300 via-amber-400 to-amber-600 border-yellow-100': gamificacaoData.rank_atual.cor === 'ouro',
                                         'bg-gradient-to-br from-sky-300 via-blue-500 to-indigo-700 border-sky-100': gamificacaoData.rank_atual.cor === 'platina',
                                         'bg-gradient-to-br from-cyan-300 via-teal-400 to-indigo-800 border-cyan-100': gamificacaoData.rank_atual.cor === 'diamante',
-                                        'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200': gamificacaoData.rank_atual.cor === 'lendario'
+                                        'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200': gamificacaoData.rank_atual.cor === 'lendario',
+                                        'bg-gradient-to-br from-emerald-300 via-violet-600 to-slate-950 border-emerald-200': gamificacaoData.rank_atual.cor === 'mitico'
                                     }">
                                     <div class="w-12 h-12 rounded-full bg-indigo-950 border-2 border-amber-200 flex items-center justify-center">
                                         <i class="fa-solid fa-star text-amber-300 text-xl"></i>
@@ -6921,7 +7022,8 @@
                                         'bg-gradient-to-br from-[#FDE047] via-[#EAB308] to-[#A16207] border-[#FEF08A] text-yellow-950': med.tier === 'ouro',
                                         'bg-gradient-to-br from-[#7DD3FC] via-[#0284C7] to-[#1E3A8A] border-[#E0F2FE] text-white': med.tier === 'platina',
                                         'bg-gradient-to-br from-[#A5F3FC] via-[#06B6D4] to-[#3B0764] border-[#CFFAFE] text-white': med.tier === 'diamante',
-                                        'bg-gradient-to-br from-[#FDE047] via-[#E11D48] to-[#581C87] border-[#FDE047] text-white': med.tier === 'lendario'
+                                        'bg-gradient-to-br from-[#FDE047] via-[#E11D48] to-[#581C87] border-[#FDE047] text-white': med.tier === 'lendario',
+                                        'bg-gradient-to-br from-[#34D399] via-[#7C3AED] to-[#0F172A] border-[#A7F3D0] text-white': med.tier === 'mitico'
                                     }">
                                 <i class="text-xl fa-solid"
                                     :class="{
@@ -6956,7 +7058,8 @@
                                             'text-yellow-600 dark:text-yellow-400': med.tier === 'ouro',
                                             'text-sky-600 dark:text-sky-400': med.tier === 'platina',
                                             'text-cyan-600 dark:text-cyan-300': med.tier === 'diamante',
-                                            'text-rose-600 dark:text-rose-400': med.tier === 'lendario'
+                                            'text-rose-600 dark:text-rose-400': med.tier === 'lendario',
+                                            'text-violet-600 dark:text-emerald-300': med.tier === 'mitico'
                                         }">
                                         {{ med.tier_label }} &bull; +{{ med.xp }} XP
                                     </span>
@@ -7003,7 +7106,8 @@
                                             'bg-gradient-to-br from-yellow-300 to-amber-600 border-yellow-100 text-slate-950': rk.cor === 'ouro',
                                             'bg-gradient-to-br from-sky-300 to-indigo-700 border-sky-100 text-white': rk.cor === 'platina',
                                             'bg-gradient-to-br from-cyan-300 to-indigo-800 border-cyan-100 text-white': rk.cor === 'diamante',
-                                            'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200 text-white': rk.cor === 'lendario'
+                                            'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200 text-white': rk.cor === 'lendario',
+                                            'bg-gradient-to-br from-emerald-300 via-violet-600 to-slate-950 border-emerald-200 text-white': rk.cor === 'mitico'
                                         }">
                                     <i class="fa-solid text-sm" :class="rk.desbloqueado ? 'fa-star' : 'fa-lock'"></i>
                                 </div>

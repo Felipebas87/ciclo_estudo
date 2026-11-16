@@ -88,11 +88,11 @@ class TestRoteiroEstudo(unittest.TestCase):
         gam = rot["gamificacao"]
         self.assertGreaterEqual(gam["xp_total"], 0)
         self.assertIn("rank_atual", gam)
-        self.assertEqual(len(gam["todos_ranks"]), 10)
-        self.assertGreaterEqual(len(gam["medalhas"]), 40)
+        self.assertEqual(len(gam["todos_ranks"]), 20)
+        self.assertGreaterEqual(len(gam["medalhas"]), 56)
 
         tiers_encontrados = {m["tier"] for m in gam["medalhas"]}
-        for t_esp in ("bronze", "prata", "ouro", "platina", "diamante", "lendario"):
+        for t_esp in ("bronze", "prata", "ouro", "platina", "diamante", "lendario", "mitico"):
             self.assertIn(t_esp, tiers_encontrados)
 
 
