@@ -4799,6 +4799,12 @@ const app = createApp({
 
         const iniciarMissaoRoteiroNoCiclo = (missao) => {
             if (!missao) return;
+            const missoesHoje = roteiroEstudoData.value?.agenda_hoje?.missoes_hoje || [];
+            const idxM = missoesHoje.findIndex(m => m.id === missao.id);
+            if (idxM > 0 && missoesHoje.slice(0, idxM).some(m => !m.concluida)) {
+                mostrarAlerta('Finalize a missão anterior antes de avançar para a próxima matéria do ciclo.', 'erro');
+                return;
+            }
             const dId = missao.disciplina_id || (todasDisciplinas.value[0]?.id || '');
             const tId = missao.topico_id || '';
             const bId = missao.bloco_ciclo_id || (blocoAtual.value ? blocoAtual.value.id : null);

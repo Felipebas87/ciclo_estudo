@@ -1214,11 +1214,13 @@
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div v-for="missao in roteiroEstudoData.agenda_hoje.missoes_hoje" :key="'ciclo-' + missao.id"
+                            <div v-for="(missao, idxMissao) in roteiroEstudoData.agenda_hoje.missoes_hoje" :key="'ciclo-' + missao.id"
                                 class="p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3"
                                 :class="missao.concluida
                                     ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-400/50'
-                                    : 'bg-slate-50 hover:bg-slate-100/80 dark:bg-[#1B2638] dark:hover:bg-[#202E44] border-slate-200 dark:border-[#24324A]'">
+                                    : (idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida
+                                        ? 'bg-slate-100/60 dark:bg-[#141D2E]/80 border-slate-200/80 dark:border-[#24324A] opacity-80'
+                                        : 'bg-slate-50 hover:bg-slate-100/80 dark:bg-[#1B2638] dark:hover:bg-[#202E44] border-slate-200 dark:border-[#24324A]')">
                                 <div class="space-y-2">
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                         <div class="flex flex-wrap items-center gap-1.5">
@@ -1257,10 +1259,15 @@
 
                                     <button v-if="!missao.concluida"
                                         type="button"
+                                        :disabled="idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida"
+                                        :title="(idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida) ? 'Finalize a missão anterior antes de iniciar esta matéria do ciclo' : 'Marcar estudo no ciclo'"
                                         @click="iniciarMissaoRoteiroNoCiclo(missao)"
-                                        class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
-                                        <i class="fa-solid fa-check"></i>
-                                        <span>Marcar Estudo no Ciclo</span>
+                                        class="px-4 py-2 rounded-xl font-black text-xs shadow-sm transition-all flex items-center gap-1.5"
+                                        :class="(idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida)
+                                            ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75'
+                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'">
+                                        <i class="fa-solid" :class="(idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida) ? 'fa-lock' : 'fa-check'"></i>
+                                        <span>{{ (idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida) ? `Aguardando Missão ${missao.ordem_dia - 1}` : 'Marcar Estudo no Ciclo' }}</span>
                                     </button>
                                     <span v-else class="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-xs flex items-center gap-1.5">
                                         <i class="fa-solid fa-circle-check"></i>
@@ -1530,11 +1537,13 @@
 
                             <!-- Lista de Missões do Dia (1 Hora = 1 Disciplina e 1 Tópico) -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div v-for="missao in roteiroEstudoData.agenda_hoje.missoes_hoje" :key="missao.id"
+                                <div v-for="(missao, idxMissao) in roteiroEstudoData.agenda_hoje.missoes_hoje" :key="missao.id"
                                     class="p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3"
                                     :class="missao.concluida
                                         ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-400/50'
-                                        : 'bg-slate-50 hover:bg-slate-100/80 dark:bg-[#1B2638] dark:hover:bg-[#202E44] border-slate-200 dark:border-[#24324A]'">
+                                        : (idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida
+                                            ? 'bg-slate-100/60 dark:bg-[#141D2E]/80 border-slate-200/80 dark:border-[#24324A] opacity-80'
+                                            : 'bg-slate-50 hover:bg-slate-100/80 dark:bg-[#1B2638] dark:hover:bg-[#202E44] border-slate-200 dark:border-[#24324A]')">
                                     <div class="space-y-2">
                                         <div class="flex flex-wrap items-center justify-between gap-2">
                                             <div class="flex flex-wrap items-center gap-1.5">
@@ -1573,10 +1582,15 @@
 
                                         <button v-if="!missao.concluida"
                                             type="button"
+                                            :disabled="idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida"
+                                            :title="(idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida) ? 'Finalize a missão anterior antes de iniciar esta matéria do ciclo' : 'Marcar estudo no ciclo'"
                                             @click="iniciarMissaoRoteiroNoCiclo(missao)"
-                                            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
-                                            <i class="fa-solid fa-check"></i>
-                                            <span>Marcar Estudo no Ciclo</span>
+                                            class="px-4 py-2 rounded-xl font-black text-xs shadow-sm transition-all flex items-center gap-1.5"
+                                            :class="(idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida)
+                                                ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 dark:text-slate-400 cursor-not-allowed opacity-75'
+                                                : 'bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer'">
+                                            <i class="fa-solid" :class="(idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida) ? 'fa-lock' : 'fa-check'"></i>
+                                            <span>{{ (idxMissao > 0 && !roteiroEstudoData.agenda_hoje.missoes_hoje[idxMissao - 1].concluida) ? `Aguardando Missão ${missao.ordem_dia - 1}` : 'Marcar Estudo no Ciclo' }}</span>
                                         </button>
                                         <span v-else class="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-xs flex items-center gap-1.5">
                                             <i class="fa-solid fa-circle-check"></i>
