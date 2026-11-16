@@ -47,7 +47,7 @@ load_dotenv()
 
 from app.database import Base, engine
 import app.models  # Garante registro dos modelos no SQLAlchemy
-from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova, ia_insights, tec_integracao, mapa_aprovacao
+from app.routers import editais, ciclos, sessoes, dashboard, resultados, configuracao_prova, ia_insights, tec_integracao, mapa_aprovacao, roteiro_estudo
 
 # MIGRACAO AUTOMATICA E CRIACAO DE TABELAS (POSTGRES / SQLITE)
 from sqlalchemy import inspect, text
@@ -238,6 +238,7 @@ app.include_router(configuracao_prova.router)
 app.include_router(ia_insights.router)
 app.include_router(tec_integracao.router)
 app.include_router(mapa_aprovacao.router)
+app.include_router(roteiro_estudo.router)
 
 # Configuração dos Arquivos Estáticos e SPA Frontend
 STATIC_DIR = Path(__file__).resolve().parent / "static"

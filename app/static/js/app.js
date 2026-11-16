@@ -72,6 +72,8 @@ const app = createApp({
                 abrirMapaAprovacao();
             } else if (aba === 'gestao_temporal') {
                 abrirGestaoTemporal();
+            } else if (aba === 'roteiro_estudo') {
+                abrirRoteiroEstudo();
             } else {
                 abaAtiva.value = aba;
             }
@@ -1783,7 +1785,8 @@ const app = createApp({
             const [rCiclo, rSess] = await Promise.all([
                 fetch('/api/ciclos/ativo'),
                 fetch('/api/sessoes?limite=100'),
-                targetEditalId ? carregarDashboardData(targetEditalId) : Promise.resolve()
+                targetEditalId ? carregarDashboardData(targetEditalId) : Promise.resolve(),
+                carregarRoteiroEstudo(true).catch(() => {})
             ]);
             if (rCiclo && rCiclo.ok) cicloAtivo.value = await rCiclo.json();
             if (rSess && rSess.ok) sessoes.value = await rSess.json();
@@ -1832,6 +1835,7 @@ const app = createApp({
                 // Carrega status da IA e insights em segundo plano sem travar a inicialização do app
                 verificarStatusChaveIA().catch(() => {});
                 carregarInsightsIA().catch(() => {});
+                carregarRoteiroEstudo(true).catch(() => {});
             } catch (e) {
                 console.error('Erro ao inicializar dados:', e);
                 mostrarAlerta('Não foi possível sincronizar todos os dados com o servidor.', 'erro');
@@ -4512,6 +4516,299 @@ const app = createApp({
         };
 
         // ==========================================
+        // 14.9 ROTEIRO DE ESTUDO (AGENDA DO DIA, CALENDÁRIO E PROJEÇÃO ATÉ A PROVA)
+        // ==========================================
+        const roteiroEstudoData = ref(null);
+        const carregandoRoteiroEstudo = ref(false);
+        const salvandoParametrosRoteiro = ref(false);
+        const simuladorRoteiroExpandido = ref(false);
+        const subAbaRoteiro = ref('semana'); // 'semana' | 'calendario' | 'ate_prova' | 'disciplinas'
+        const mesCalendarioRoteiroIdx = ref(0);
+        const diaCalendarioSelecionado = ref(null);
+        const disciplinaRoteiroExpandidaId = ref(null);
+
+        // Gamificação & Medalhas
+        const modalGaleriaMedalhasAberto = ref(false);
+        const modalCelebracaoMedalhaAberto = ref(false);
+        const filaMedalhasParaCelebrar = ref([]);
+        const medalhaEmCelebracao = ref(null);
+        const filtroCategoriaMedalhas = ref('TODAS');
+        const resgatandoDesafioDiario = ref(false);
+
+        const gamificacaoData = computed(() => roteiroEstudoData.value?.gamificacao || null);
+
+        const medalhasFiltradasGaleria = computed(() => {
+            const lista = gamificacaoData.value?.medalhas || [];
+            const f = filtroCategoriaMedalhas.value;
+            if (!f || f === 'TODAS') return lista;
+            if (f === 'CONQUISTADAS') return lista.filter(m => m.conquistada);
+            return lista.filter(m => m.categoria === f);
+        });
+
+        const dispararFogosEConfetesMedalha = () => {
+            if (typeof confetti === 'undefined') return;
+            const cores = ['#fbbf24', '#34d399', '#60a5fa', '#f43f5e', '#a855f7', '#22d3ee'];
+            confetti({
+                particleCount: 110,
+                spread: 85,
+                origin: { y: 0.55 },
+                colors: cores,
+                zIndex: 99999
+            });
+            setTimeout(() => {
+                confetti({
+                    particleCount: 70,
+                    angle: 60,
+                    spread: 60,
+                    origin: { x: 0.15, y: 0.65 },
+                    colors: cores,
+                    zIndex: 99999
+                });
+                confetti({
+                    particleCount: 70,
+                    angle: 120,
+                    spread: 60,
+                    origin: { x: 0.85, y: 0.65 },
+                    colors: cores,
+                    zIndex: 99999
+                });
+            }, 320);
+            setTimeout(() => {
+                confetti({
+                    particleCount: 90,
+                    startVelocity: 35,
+                    spread: 360,
+                    ticks: 70,
+                    origin: { x: 0.5, y: 0.35 },
+                    colors: cores,
+                    zIndex: 99999
+                });
+            }, 700);
+        };
+
+        const abrirCelebracaoDeMedalha = (medalha) => {
+            if (!medalha) return;
+            medalhaEmCelebracao.value = medalha;
+            modalCelebracaoMedalhaAberto.value = true;
+            setTimeout(() => {
+                dispararFogosEConfetesMedalha();
+            }, 120);
+        };
+
+        const verificarNovasMedalhasConquistadas = (gam) => {
+            if (!gam || !Array.isArray(gam.medalhas_recem_conquistadas)) return;
+            const novas = gam.medalhas_recem_conquistadas;
+            if (novas.length > 0 && !modalCelebracaoMedalhaAberto.value) {
+                filaMedalhasParaCelebrar.value = [...novas];
+                abrirCelebracaoDeMedalha(filaMedalhasParaCelebrar.value[0]);
+            }
+        };
+
+        const fecharOuProximaMedalhaCelebracao = async () => {
+            const atual = medalhaEmCelebracao.value;
+            if (atual && atual.id) {
+                try {
+                    await fetch('/api/roteiro-estudo/gamificacao/marcar-vistas', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ medalha_ids: [atual.id] })
+                    });
+                    if (gamificacaoData.value && Array.isArray(gamificacaoData.value.medalhas)) {
+                        const mObj = gamificacaoData.value.medalhas.find(x => x.id === atual.id);
+                        if (mObj) mObj.eh_nova = false;
+                    }
+                    if (gamificacaoData.value?.resumo_conquistas) {
+                        gamificacaoData.value.resumo_conquistas.novas_nao_vistas = Math.max(
+                            0,
+                            (gamificacaoData.value.resumo_conquistas.novas_nao_vistas || 1) - 1
+                        );
+                    }
+                } catch (e) {
+                    console.warn('Aviso ao marcar medalha como vista:', e);
+                }
+            }
+
+            filaMedalhasParaCelebrar.value = filaMedalhasParaCelebrar.value.filter(m => m.id !== (atual?.id));
+            if (filaMedalhasParaCelebrar.value.length > 0) {
+                abrirCelebracaoDeMedalha(filaMedalhasParaCelebrar.value[0]);
+            } else {
+                modalCelebracaoMedalhaAberto.value = false;
+                medalhaEmCelebracao.value = null;
+            }
+        };
+
+        const celebrarMedalhaManual = (medalha) => {
+            if (!medalha || !medalha.conquistada) return;
+            filaMedalhasParaCelebrar.value = [medalha];
+            abrirCelebracaoDeMedalha(medalha);
+        };
+
+        const abrirGaleriaMedalhas = async () => {
+            modalGaleriaMedalhasAberto.value = true;
+            if (!roteiroEstudoData.value) {
+                await carregarRoteiroEstudo(true);
+            }
+        };
+
+        const resgatarDesafioDiarioXP = async () => {
+            if (resgatandoDesafioDiario.value) return;
+            resgatandoDesafioDiario.value = true;
+            try {
+                const res = await fetch('/api/roteiro-estudo/gamificacao/resgatar-desafio', { method: 'POST' });
+                if (res.ok) {
+                    const novoGam = await res.json();
+                    if (roteiroEstudoData.value) {
+                        roteiroEstudoData.value.gamificacao = novoGam;
+                    }
+                    dispararFogosEConfetesMedalha();
+                    mostrarAlerta('🎉 +150 XP do Desafio Diário resgatados com sucesso!', 'sucesso');
+                }
+            } catch (e) {
+                console.error(e);
+            } finally {
+                resgatandoDesafioDiario.value = false;
+            }
+        };
+
+        const formParametrosRoteiro = ref({
+            horas_por_dia: 2.0,
+            dias_por_semana: 6,
+            questoes_por_hora: 18.0,
+            data_prova: ''
+        });
+
+        const mesCalendarioRoteiroAtual = computed(() => {
+            const lista = roteiroEstudoData.value?.calendario_mensal || [];
+            if (lista.length === 0) return null;
+            const idx = Math.max(0, Math.min(lista.length - 1, mesCalendarioRoteiroIdx.value));
+            return lista[idx];
+        });
+
+        const sincronizarFormParametrosRoteiro = (data) => {
+            const p = data?.parametros_roteiro;
+            if (!p) return;
+            formParametrosRoteiro.value = {
+                horas_por_dia: p.horas_por_dia ?? 2.0,
+                dias_por_semana: p.dias_por_semana ?? 6,
+                questoes_por_hora: p.questoes_por_hora ?? 18.0,
+                data_prova: p.data_prova_iso || ''
+            };
+        };
+
+        async function carregarRoteiroEstudo(silencioso = false) {
+            if (!silencioso) carregandoRoteiroEstudo.value = true;
+            try {
+                const edId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+                const url = edId ? `/api/roteiro-estudo?edital_id=${edId}` : '/api/roteiro-estudo';
+                const res = await fetch(url);
+                if (res.ok) {
+                    const data = await res.json();
+                    roteiroEstudoData.value = data;
+                    sincronizarFormParametrosRoteiro(data);
+                    if (data.roteiro_semana && data.roteiro_semana.length > 0 && !diaCalendarioSelecionado.value) {
+                        diaCalendarioSelecionado.value = data.roteiro_semana[0];
+                    } else if (diaCalendarioSelecionado.value && data.calendario_mensal) {
+                        for (const m of data.calendario_mensal) {
+                            const achou = (m.celulas || []).find(c => !c.vazio && c.data_iso === diaCalendarioSelecionado.value.data_iso);
+                            if (achou) {
+                                diaCalendarioSelecionado.value = achou;
+                                break;
+                            }
+                        }
+                    }
+                    if (data.roteiro_por_disciplina && data.roteiro_por_disciplina.length > 0 && !disciplinaRoteiroExpandidaId.value) {
+                        disciplinaRoteiroExpandidaId.value = data.roteiro_por_disciplina[0].disciplina_id;
+                    }
+                    if (data.gamificacao) {
+                        verificarNovasMedalhasConquistadas(data.gamificacao);
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao carregar Roteiro de Estudo:', e);
+            } finally {
+                if (!silencioso) carregandoRoteiroEstudo.value = false;
+            }
+        }
+
+        const abrirRoteiroEstudo = async () => {
+            abaAtiva.value = 'roteiro_estudo';
+            await carregarRoteiroEstudo();
+        };
+
+        const recalcularRoteiroEstudo = async () => {
+            if (salvandoParametrosRoteiro.value) return;
+            salvandoParametrosRoteiro.value = true;
+            try {
+                const edId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+                const res = await fetch('/api/roteiro-estudo/parametros', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        edital_id: edId,
+                        horas_por_dia: Number(formParametrosRoteiro.value.horas_por_dia) || 2.0,
+                        dias_por_semana: Number(formParametrosRoteiro.value.dias_por_semana) || 6,
+                        questoes_por_hora: Number(formParametrosRoteiro.value.questoes_por_hora) || 18.0,
+                        data_prova: formParametrosRoteiro.value.data_prova || null
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    roteiroEstudoData.value = data;
+                    sincronizarFormParametrosRoteiro(data);
+                    if (data.roteiro_semana && data.roteiro_semana.length > 0) {
+                        diaCalendarioSelecionado.value = data.roteiro_semana[0];
+                    }
+                    mostrarAlerta(
+                        `Roteiro recalculado para ${data.parametros_roteiro.horas_por_dia}h/dia (${data.parametros_roteiro.missoes_por_dia} missões/dia)!`,
+                        'sucesso'
+                    );
+                } else {
+                    mostrarAlerta('Falha ao recalcular o Roteiro de Estudo.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao recalcular roteiro:', e);
+                mostrarAlerta('Erro de conexão ao recalcular roteiro.', 'erro');
+            } finally {
+                salvandoParametrosRoteiro.value = false;
+            }
+        };
+
+        const aplicarHorasRapidasRoteiro = async (horas) => {
+            formParametrosRoteiro.value.horas_por_dia = Number(horas);
+            await recalcularRoteiroEstudo();
+        };
+
+        const selecionarDiaCalendarioRoteiro = (celula) => {
+            if (!celula || celula.vazio) return;
+            diaCalendarioSelecionado.value = celula;
+        };
+
+        const iniciarMissaoRoteiroNoCiclo = (missao) => {
+            if (!missao) return;
+            const dId = missao.disciplina_id || (todasDisciplinas.value[0]?.id || '');
+            const tId = missao.topico_id || '';
+            const bId = missao.bloco_ciclo_id || (blocoAtual.value ? blocoAtual.value.id : null);
+            const qEst = Number(missao.questoes_estimadas) || 18;
+            const acEst = Math.round(qEst * 0.8);
+            const erEst = Math.max(0, qEst - acEst);
+
+            formSessao.value = {
+                id: null,
+                is_revisao_anki: false,
+                disciplina_id: dId,
+                bloco_ciclo_id: bId,
+                topico_id: tId,
+                tempo_estudado_minutos: missao.duracao_minutos || 60,
+                qtd_questoes_total: qEst,
+                qtd_acertos: acEst,
+                qtd_erros: erEst,
+                avancar_ciclo: true,
+                data: getDataHojeLocal()
+            };
+            modalCheckinAberto.value = true;
+        };
+
+        // ==========================================
         // 15. EXPOSIÇÃO DE PROPRIEDADES PARA O TEMPLATE
         // ==========================================
         return {
@@ -4757,7 +5054,41 @@ const app = createApp({
             salvarConfiguracaoMapaAprovacao,
             aplicarBenchmarkCorteIA,
             analisarMapaComIA,
-            renderGraficosMapaAprovacao
+            renderGraficosMapaAprovacao,
+
+            // Roteiro de Estudo (Agenda do Dia, Semana, Mês, Até a Prova & Projeções)
+            roteiroEstudoData,
+            carregandoRoteiroEstudo,
+            salvandoParametrosRoteiro,
+            simuladorRoteiroExpandido,
+            subAbaRoteiro,
+            mesCalendarioRoteiroIdx,
+            diaCalendarioSelecionado,
+            disciplinaRoteiroExpandidaId,
+            formParametrosRoteiro,
+            mesCalendarioRoteiroAtual,
+            carregarRoteiroEstudo,
+            abrirRoteiroEstudo,
+            recalcularRoteiroEstudo,
+            aplicarHorasRapidasRoteiro,
+            selecionarDiaCalendarioRoteiro,
+            iniciarMissaoRoteiroNoCiclo,
+
+            // Gamificação, Ranks & Medalhas
+            gamificacaoData,
+            modalGaleriaMedalhasAberto,
+            modalCelebracaoMedalhaAberto,
+            filaMedalhasParaCelebrar,
+            medalhaEmCelebracao,
+            filtroCategoriaMedalhas,
+            resgatandoDesafioDiario,
+            medalhasFiltradasGaleria,
+            dispararFogosEConfetesMedalha,
+            abrirCelebracaoDeMedalha,
+            fecharOuProximaMedalhaCelebracao,
+            celebrarMedalhaManual,
+            abrirGaleriaMedalhas,
+            resgatarDesafioDiarioXP
         };
     }
 });

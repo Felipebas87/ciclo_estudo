@@ -400,6 +400,14 @@
                             <span v-if="cicloAtivo && cicloAtivo.bloco_atual" class="w-2 h-2 rounded-full bg-emerald-400 dark:bg-[#6EE7B7] animate-pulse"></span>
                         </button>
 
+                        <!-- 1.5 Roteiro de Estudo (abaixo do Ciclo Atual) -->
+                        <button @click="navegarPara('roteiro_estudo')"
+                            :class="abaAtiva === 'roteiro_estudo' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold' : 'text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-100/80 dark:hover:bg-[#1B2638] font-semibold'"
+                            class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-150">
+                            <i class="fa-solid fa-route text-base w-5 text-center" :class="abaAtiva === 'roteiro_estudo' ? 'text-white' : 'text-emerald-500 dark:text-[#34D399]'"></i>
+                            <span class="flex-1 text-left">Roteiro de Estudo</span>
+                        </button>
+
                         <!-- 2. Editais -->
                         <button @click="navegarPara('editais')"
                             :class="abaAtiva === 'editais' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold' : 'text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-100/80 dark:hover:bg-[#1B2638] font-semibold'"
@@ -517,10 +525,10 @@
                         
                         <div>
                             <h2 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-[#F1F5F9] capitalize leading-tight truncate">
-                                {{ abaAtiva === 'ciclo' ? 'Ciclo de Estudos' : (abaAtiva === 'editais' ? 'Editais & Matérias' : (abaAtiva === 'verticalizado' ? 'Edital Verticalizado' : (abaAtiva === 'diario' ? 'Diário de Sessões' : (abaAtiva === 'dashboard' ? 'Performance & Dashboard' : (abaAtiva === 'heatmap' ? 'Constância de Estudos' : (abaAtiva === 'mapa_aprovacao' ? 'Mapa da Aprovação' : (abaAtiva === 'gestao_temporal' ? 'Gestão Temporal (Projeto da Aprovação)' : 'Resultados & Raio-X'))))))) }}
+                                {{ abaAtiva === 'ciclo' ? 'Ciclo de Estudos' : (abaAtiva === 'roteiro_estudo' ? 'Roteiro de Estudo' : (abaAtiva === 'editais' ? 'Editais & Matérias' : (abaAtiva === 'verticalizado' ? 'Edital Verticalizado' : (abaAtiva === 'diario' ? 'Diário de Sessões' : (abaAtiva === 'dashboard' ? 'Performance & Dashboard' : (abaAtiva === 'heatmap' ? 'Constância de Estudos' : (abaAtiva === 'mapa_aprovacao' ? 'Mapa da Aprovação' : (abaAtiva === 'gestao_temporal' ? 'Gestão Temporal (Projeto da Aprovação)' : 'Resultados & Raio-X')))))))) }}
                             </h2>
                             <p class="text-[11px] text-slate-400 dark:text-[#94A3B8] hidden sm:block">
-                                {{ abaAtiva === 'ciclo' ? 'Acompanhe a esteira de matérias e cronometre sua sessão' : (abaAtiva === 'editais' ? 'Gerencie disciplinas, pesos e cargas horárias' : (abaAtiva === 'verticalizado' ? 'Controle de tópicos estudados e revisões' : (abaAtiva === 'diario' ? 'Histórico completo de sessões cumpridas' : (abaAtiva === 'dashboard' ? 'Métricas de horas e aproveitamento geral' : (abaAtiva === 'heatmap' ? 'Visualização da frequência diária' : (abaAtiva === 'mapa_aprovacao' ? 'Nota estimada na prova com margem de incerteza, pesos das disciplinas e critérios eliminatórios' : (abaAtiva === 'gestao_temporal' ? 'Gerenciamento de projeto até a prova: ritmo semanal do edital, fase de revisão e simulados' : 'Comparativos com nota de corte e estatísticas'))))))) }}
+                                {{ abaAtiva === 'ciclo' ? 'Acompanhe a esteira de matérias e cronometre sua sessão' : (abaAtiva === 'roteiro_estudo' ? 'Missões diárias sincronizadas com o Ciclo, calendário visual e projeção do edital verticalizado até a prova' : (abaAtiva === 'editais' ? 'Gerencie disciplinas, pesos e cargas horárias' : (abaAtiva === 'verticalizado' ? 'Controle de tópicos estudados e revisões' : (abaAtiva === 'diario' ? 'Histórico completo de sessões cumpridas' : (abaAtiva === 'dashboard' ? 'Métricas de horas e aproveitamento geral' : (abaAtiva === 'heatmap' ? 'Visualização da frequência diária' : (abaAtiva === 'mapa_aprovacao' ? 'Nota estimada na prova com margem de incerteza, pesos das disciplinas e critérios eliminatórios' : (abaAtiva === 'gestao_temporal' ? 'Gerenciamento de projeto até a prova: ritmo semanal do edital, fase de revisão e simulados' : 'Comparativos com nota de corte e estatísticas')))))))) }}
                             </p>
                         </div>
                     </div>
@@ -535,6 +543,21 @@
                                 <option v-for="ed in editais" :key="ed.id" :value="ed.id">{{ ed.nome }}</option>
                             </select>
                         </div>
+
+                        <!-- Botão Topbar: Medalhas, Conquistas & Rank (Gamificação) -->
+                        <button type="button" @click="abrirGaleriaMedalhas()"
+                            class="relative px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl border border-amber-400/40 dark:border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-700 dark:text-amber-300 font-black text-xs transition-all flex items-center gap-2 shadow-xs active:scale-95 cursor-pointer"
+                            title="Ver Galeria de Medalhas, Conquistas e Patentes">
+                            <i class="fa-solid fa-medal text-amber-500 dark:text-amber-400 text-sm sm:text-base"></i>
+                            <span class="hidden sm:inline">Medalhas</span>
+                            <span v-if="gamificacaoData" class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-200 font-mono-timer text-[10px] font-black">
+                                {{ gamificacaoData.resumo_conquistas.conquistadas }}/{{ gamificacaoData.resumo_conquistas.total }}
+                            </span>
+                            <span v-if="gamificacaoData && gamificacaoData.resumo_conquistas.novas_nao_vistas > 0"
+                                class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#141D2E] animate-ping"></span>
+                            <span v-if="gamificacaoData && gamificacaoData.resumo_conquistas.novas_nao_vistas > 0"
+                                class="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-rose-500 ring-2 ring-white dark:ring-[#141D2E]"></span>
+                        </button>
 
                         <!-- Botão: + Nova Preparação -->
                         <button @click="voltarAoWizard()"
@@ -1117,6 +1140,655 @@
                                         <i class="fa-solid fa-arrow-right text-[10px]"></i>
                                     </span>
                                 </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========================================== -->
+                <!-- ABA 1.5: ROTEIRO DE ESTUDO                 -->
+                <!-- ========================================== -->
+                <div v-if="abaAtiva === 'roteiro_estudo'" class="space-y-6">
+                    <!-- Loading -->
+                    <div v-if="carregandoRoteiroEstudo && !roteiroEstudoData"
+                        class="bg-white dark:bg-[#141D2E] p-12 rounded-3xl border border-slate-200 dark:border-[#24324A] text-center shadow-xs">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl text-emerald-500 mb-3"></i>
+                        <p class="text-sm font-bold text-slate-600 dark:text-[#94A3B8]">Montando Roteiro de Estudo sincronizado com o Ciclo e Edital Verticalizado...</p>
+                    </div>
+
+                    <div v-else-if="roteiroEstudoData && !roteiroEstudoData.erro" class="space-y-6">
+
+                        <!-- 1. BARRA DISCRETA RECOLHÍVEL: SIMULADOR DE RITMO & HORAS DIÁRIAS DO ROTEIRO -->
+                        <div class="bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] px-4 py-3 shadow-2xs">
+                            <div class="flex flex-wrap items-center justify-between gap-3">
+                                <div class="flex flex-wrap items-center gap-2.5">
+                                    <i class="fa-solid fa-sliders text-emerald-500 text-sm"></i>
+                                    <span class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-[#F1F5F9]">
+                                        Simulador de Ritmo &amp; Horas Diárias do Roteiro
+                                    </span>
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border border-emerald-500/30">
+                                        {{ roteiroEstudoData.parametros_roteiro.horas_por_dia }}h/dia ({{ roteiroEstudoData.parametros_roteiro.missoes_por_dia }} missões) &bull; {{ roteiroEstudoData.parametros_roteiro.dias_por_semana }}d/sem
+                                    </span>
+                                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-[#60A5FA] border border-blue-500/30">
+                                        {{ roteiroEstudoData.parametros_roteiro.dias_corridos_ate_prova }} dias até a prova ({{ roteiroEstudoData.parametros_roteiro.data_prova_fmt }})
+                                    </span>
+                                </div>
+
+                                <button type="button"
+                                    @click="simuladorRoteiroExpandido = !simuladorRoteiroExpandido"
+                                    class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] dark:hover:bg-[#24324A] text-slate-700 dark:text-[#CBD5E1] font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5">
+                                    <i class="fa-solid" :class="simuladorRoteiroExpandido ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                    <span>{{ simuladorRoteiroExpandido ? 'Recolher Parâmetros' : 'Ajustar Horas / Simular Ritmo' }}</span>
+                                </button>
+                            </div>
+
+                            <!-- Conteúdo Expansível dos Parâmetros -->
+                            <div v-if="simuladorRoteiroExpandido" class="mt-4 pt-4 border-t border-slate-100 dark:border-[#24324A] space-y-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                        Ajuste quantas horas estudará por dia (cada 1h = 1 disciplina e 1 tópico do Verticalizado) e recalcule o roteiro até a prova.
+                                    </p>
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <span class="text-[11px] font-bold text-slate-400 mr-1">Ritmo Rápido:</span>
+                                        <button v-for="hOpt in [1, 2, 3, 4, 5, 6]" :key="hOpt"
+                                            type="button"
+                                            @click="aplicarHorasRapidasRoteiro(hOpt)"
+                                            :disabled="salvandoParametrosRoteiro"
+                                            class="px-2.5 py-1 rounded-lg text-xs font-black transition-all cursor-pointer border"
+                                            :class="Number(formParametrosRoteiro.horas_por_dia) === hOpt
+                                                ? 'bg-emerald-600 text-white border-emerald-500 shadow-xs'
+                                                : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A] hover:bg-slate-200'">
+                                            {{ hOpt }}h/dia
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <form @submit.prevent="recalcularRoteiroEstudo()" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
+                                    <div>
+                                        <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-[#94A3B8] mb-1">
+                                            Horas de Estudo / Dia (Missões)
+                                        </label>
+                                        <input type="number" step="1" min="1" max="12" v-model.number="formParametrosRoteiro.horas_por_dia"
+                                            class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-black text-slate-900 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-[#94A3B8] mb-1">
+                                            Dias de Estudo / Semana
+                                        </label>
+                                        <select v-model.number="formParametrosRoteiro.dias_por_semana"
+                                            class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-900 dark:text-white">
+                                            <option v-for="dSem in [3, 4, 5, 6, 7]" :key="dSem" :value="dSem">{{ dSem }} dias por semana ({{ dSem * Number(formParametrosRoteiro.horas_por_dia || 2) }}h/sem)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-[#94A3B8] mb-1">
+                                            Ritmo Médio (Questões / Hora)
+                                        </label>
+                                        <input type="number" step="1" min="5" max="80" v-model.number="formParametrosRoteiro.questoes_por_hora"
+                                            class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-900 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-bold uppercase text-slate-500 dark:text-[#94A3B8] mb-1">
+                                            Data da Prova Alvo
+                                        </label>
+                                        <input type="date" v-model="formParametrosRoteiro.data_prova"
+                                            class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3.5 py-2 bg-slate-50 dark:bg-[#0E1622] text-sm font-bold text-slate-900 dark:text-white">
+                                    </div>
+                                    <div>
+                                        <button type="submit" :disabled="salvandoParametrosRoteiro"
+                                            class="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50">
+                                            <i :class="salvandoParametrosRoteiro ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-calculator'"></i>
+                                            <span>{{ salvandoParametrosRoteiro ? 'Recalculando...' : 'Recalcular Roteiro' }}</span>
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- 2. CARDS DE PROJEÇÃO ATÉ A PROVA (% EDITAL, PROBABILIDADE P1 & MAIS COBRADOS, QUESTÕES) -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- Card 1: % do Edital que conseguirá ver até a prova -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                            % Edital Visto Até a Prova
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-black bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                            Atual: {{ roteiroEstudoData.projecao_ate_prova.perc_edital_atual }}%
+                                        </span>
+                                    </div>
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-3xl font-black font-mono-timer text-blue-600 dark:text-[#60A5FA]">
+                                            {{ roteiroEstudoData.projecao_ate_prova.perc_edital_ate_prova }}%
+                                        </span>
+                                        <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">
+                                            ({{ roteiroEstudoData.projecao_ate_prova.topicos_vistos_ate_prova }}/{{ roteiroEstudoData.projecao_ate_prova.total_topicos_edital }} tópicos)
+                                        </span>
+                                    </div>
+                                    <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden mt-2">
+                                        <div class="h-full rounded-full bg-blue-600 dark:bg-[#60A5FA] transition-all duration-500"
+                                            :style="{ width: Math.min(100, roteiroEstudoData.projecao_ate_prova.perc_edital_ate_prova) + '%' }"></div>
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                    Avançará <strong>+{{ roteiroEstudoData.projecao_ate_prova.novos_topicos_ate_prova }} tópicos inéditos</strong> até a prova.
+                                    <span v-if="roteiroEstudoData.projecao_ate_prova.perc_edital_ate_prova < 100">
+                                        Para 100% do edital: <strong>{{ roteiroEstudoData.projecao_ate_prova.horas_dia_necessarias_100_edital }}h/dia</strong>.
+                                    </span>
+                                </p>
+                            </div>
+
+                            <!-- Card 2: Probabilidade de ver Prioridade Alta (P1) -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                            Prob. Ver Prioridade Alta (⚡ P1)
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-black bg-amber-500/15 text-amber-600 dark:text-[#FBBF24]">
+                                            Trilha Pareto
+                                        </span>
+                                    </div>
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-3xl font-black font-mono-timer text-amber-600 dark:text-[#FBBF24]">
+                                            {{ roteiroEstudoData.projecao_ate_prova.probabilidade_ver_p1_perc }}%
+                                        </span>
+                                        <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">
+                                            ({{ roteiroEstudoData.projecao_ate_prova.vistos_p1_ate_prova }}/{{ roteiroEstudoData.projecao_ate_prova.total_prioridade_alta_p1 }} P1)
+                                        </span>
+                                    </div>
+                                    <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden mt-2">
+                                        <div class="h-full rounded-full bg-amber-500 dark:bg-[#FBBF24] transition-all duration-500"
+                                            :style="{ width: Math.min(100, roteiroEstudoData.projecao_ate_prova.probabilidade_ver_p1_perc) + '%' }"></div>
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                    Como o roteiro segue a ordem do Verticalizado (P1 primeiro), você prioriza os tópicos de maior peso estratégico.
+                                </p>
+                            </div>
+
+                            <!-- Card 3: Probabilidade de ver os Itens Mais Cobrados -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                            Prob. Ver Mais Cobrados (🔥)
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-black bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                                            Alta Incidência
+                                        </span>
+                                    </div>
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-3xl font-black font-mono-timer text-rose-600 dark:text-rose-400">
+                                            {{ roteiroEstudoData.projecao_ate_prova.probabilidade_ver_mais_cobrados_perc }}%
+                                        </span>
+                                        <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">
+                                            ({{ roteiroEstudoData.projecao_ate_prova.vistos_mais_cobrados_ate_prova }}/{{ roteiroEstudoData.projecao_ate_prova.total_mais_cobrados }} 🔥)
+                                        </span>
+                                    </div>
+                                    <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden mt-2">
+                                        <div class="h-full rounded-full bg-rose-500 transition-all duration-500"
+                                            :style="{ width: Math.min(100, roteiroEstudoData.projecao_ate_prova.probabilidade_ver_mais_cobrados_perc) + '%' }"></div>
+                                    </div>
+                                </div>
+                                <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                    Núcleo Prioritário Combinado (P1 + 🔥): <strong>{{ roteiroEstudoData.projecao_ate_prova.probabilidade_ver_nucleo_prioritario_perc }}%</strong> coberto até a prova.
+                                </p>
+                            </div>
+
+                            <!-- Card 4: Quantas Questões irá fazer mantendo o ritmo -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div>
+                                    <div class="flex items-center justify-between mb-1">
+                                        <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                            Questões Até a Prova
+                                        </span>
+                                        <span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/15 text-emerald-600 dark:text-[#34D399]">
+                                            +{{ roteiroEstudoData.projecao_ate_prova.questoes_novas_ate_prova }} novas
+                                        </span>
+                                    </div>
+                                    <div class="flex items-baseline gap-2">
+                                        <span class="text-3xl font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                            {{ roteiroEstudoData.projecao_ate_prova.questoes_acumuladas_ate_prova }}
+                                        </span>
+                                        <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">
+                                            questões totais
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="text-[11px] text-slate-500 dark:text-[#94A3B8] space-y-0.5">
+                                    <div>Já feitas: <strong>{{ roteiroEstudoData.projecao_ate_prova.questoes_ja_resolvidas }}q</strong> &bull; Semana: <strong>+{{ roteiroEstudoData.projecao_ate_prova.questoes_projecao_semana }}q</strong></div>
+                                    <div>Mês (30d): <strong>+{{ roteiroEstudoData.projecao_ate_prova.questoes_projecao_mes }}q</strong> ({{ roteiroEstudoData.projecao_ate_prova.total_horas_ate_prova }}h até a prova)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======================================================================= -->
+                        <!-- 3. TELA PRINCIPAL — AGENDA DO DIA SEPARADAMENTE (MISSÕES DO CICLO HOJE) -->
+                        <!-- ======================================================================= -->
+                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-5">
+                            <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 dark:border-[#24324A] pb-4">
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider">
+                                            <i class="fa-solid fa-bullseye mr-1"></i>Agenda Separada do Dia &bull; Sincronizada com o Ciclo
+                                        </span>
+                                        <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">
+                                            {{ roteiroEstudoData.agenda_hoje.dia_semana_nome }}, {{ roteiroEstudoData.agenda_hoje.data_fmt }}
+                                        </span>
+                                    </div>
+                                    <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white mt-1">
+                                        Missões de Hoje ({{ roteiroEstudoData.agenda_hoje.qtd_concluidas_hoje }} de {{ roteiroEstudoData.agenda_hoje.missoes_hoje.length }} concluídas)
+                                    </h3>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                        Cada vez que você registra um estudo no <strong>Ciclo Atual</strong> (ou clica em <em>Marcar Estudo no Ciclo</em> abaixo), a missão do dia é marcada automaticamente como concluída.
+                                    </p>
+                                </div>
+
+                                <div class="flex items-center gap-3">
+                                    <div class="text-right">
+                                        <div class="text-2xl font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                            {{ roteiroEstudoData.agenda_hoje.percentual_concluido_hoje }}%
+                                        </div>
+                                        <div class="text-[10px] uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] font-bold">Meta Diária ({{ roteiroEstudoData.parametros_roteiro.horas_por_dia }}h)</div>
+                                    </div>
+                                    <button type="button" @click="navegarPara('ciclo')"
+                                        class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] dark:hover:bg-[#24324A] text-slate-700 dark:text-[#F1F5F9] font-bold text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer flex items-center gap-1.5">
+                                        <i class="fa-solid fa-arrows-spin text-blue-500 dark:text-[#60A5FA]"></i>
+                                        <span>Ir para o Ciclo</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Lista de Missões do Dia (1 Hora = 1 Disciplina e 1 Tópico) -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div v-for="missao in roteiroEstudoData.agenda_hoje.missoes_hoje" :key="missao.id"
+                                    class="p-4 rounded-2xl border transition-all flex flex-col justify-between gap-3"
+                                    :class="missao.concluida
+                                        ? 'bg-emerald-50 dark:bg-emerald-500/15 border-emerald-200 dark:border-emerald-400/50'
+                                        : 'bg-slate-50 hover:bg-slate-100/80 dark:bg-[#1B2638] dark:hover:bg-[#202E44] border-slate-200 dark:border-[#24324A]'">
+                                    <div class="space-y-2">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider"
+                                                    :class="missao.concluida ? 'bg-emerald-500 text-white' : 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/30 dark:text-blue-200 border border-blue-500/25 dark:border-blue-400/30'">
+                                                    <i :class="missao.concluida ? 'fa-solid fa-check-double mr-1' : 'fa-regular fa-clock mr-1'"></i>
+                                                    Missão {{ missao.ordem_dia }} &bull; 1 Hora ({{ missao.duracao_minutos }} min)
+                                                </span>
+                                                <span v-if="missao.prioridade === 1" class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black">
+                                                    ⚡ Prioridade Alta (P1)
+                                                </span>
+                                                <span v-if="missao.mais_cobrado" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[10px] font-black">
+                                                    🔥 Mais Cobrado
+                                                </span>
+                                            </div>
+                                            <span class="text-[11px] font-mono-timer font-bold"
+                                                :class="missao.concluida ? 'text-emerald-600 dark:text-emerald-300' : 'text-slate-500 dark:text-slate-400'">
+                                                {{ missao.concluida ? `Concluída (${missao.questoes_realizadas}q)` : `Meta: ~${missao.questoes_estimadas} questões` }}
+                                            </span>
+                                        </div>
+
+                                        <div>
+                                            <div class="text-xs font-extrabold uppercase tracking-wider text-emerald-600 dark:text-[#34D399]">
+                                                {{ missao.disciplina_nome }}
+                                            </div>
+                                            <div class="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5 leading-snug">
+                                                {{ missao.topico_titulo }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center justify-between pt-2 border-t border-slate-200/80 dark:border-[#24324A]">
+                                        <span class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                            <i class="fa-solid fa-layer-group mr-1 text-blue-500 dark:text-blue-400"></i>{{ missao.modo_estudo }}
+                                        </span>
+
+                                        <button v-if="!missao.concluida"
+                                            type="button"
+                                            @click="iniciarMissaoRoteiroNoCiclo(missao)"
+                                            class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
+                                            <i class="fa-solid fa-check"></i>
+                                            <span>Marcar Estudo no Ciclo</span>
+                                        </button>
+                                        <span v-else class="px-3 py-1.5 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-black text-xs flex items-center gap-1.5">
+                                            <i class="fa-solid fa-circle-check"></i>
+                                            <span>Missão Cumprida no Ciclo</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ======================================================================= -->
+                        <!-- 4. ABAS DE VISUALIZAÇÃO DO ROTEIRO: SEMANA | CALENDÁRIO | ATÉ A PROVA   -->
+                        <!-- ======================================================================= -->
+                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-6">
+                            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-[#24324A] pb-4">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button type="button" @click="subAbaRoteiro = 'semana'"
+                                        class="px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRoteiro === 'semana' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-calendar-week mr-1.5"></i>O Que Será Estudado na Semana (7 Dias)
+                                    </button>
+                                    <button type="button" @click="subAbaRoteiro = 'calendario'"
+                                        class="px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRoteiro === 'calendario' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-calendar-days mr-1.5"></i>Calendário Mensal do Roteiro
+                                    </button>
+                                    <button type="button" @click="subAbaRoteiro = 'ate_prova'"
+                                        class="px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRoteiro === 'ate_prova' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-flag-checkered mr-1.5"></i>Horizonte Semana a Semana Até a Prova ({{ roteiroEstudoData.semanas_ate_prova.length }} sem.)
+                                    </button>
+                                    <button type="button" @click="subAbaRoteiro = 'disciplinas'"
+                                        class="px-4 py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRoteiro === 'disciplinas' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-list-check mr-1.5"></i>Tópicos Vistos Até a Prova por Disciplina
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 1: ROTEIRO DA SEMANA (PRÓXIMOS 7 DIAS) -->
+                            <div v-if="subAbaRoteiro === 'semana'" class="space-y-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                            Cronograma Detalhado dos Próximos 7 Dias ({{ roteiroEstudoData.parametros_roteiro.horas_por_semana }}h/semana &bull; ~{{ roteiroEstudoData.projecao_ate_prova.questoes_projecao_semana }} questões)
+                                        </h4>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                            Sequência exata de disciplinas do seu Ciclo combinada com a fila de tópicos prioritários do Edital Verticalizado.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3">
+                                    <div v-for="diaSem in roteiroEstudoData.roteiro_semana" :key="diaSem.data_iso"
+                                        class="p-3.5 rounded-2xl border flex flex-col justify-between space-y-3"
+                                        :class="diaSem.eh_hoje
+                                            ? 'bg-emerald-500/10 border-emerald-500/50'
+                                            : (diaSem.dia_ativo ? 'bg-slate-50 dark:bg-[#1B2638] border-slate-200 dark:border-[#24324A]' : 'bg-slate-100/50 dark:bg-[#0E1622]/50 border-slate-200/40 dark:border-[#1B2638] opacity-60')">
+                                        <div>
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-xs font-black uppercase text-slate-900 dark:text-white">
+                                                    {{ diaSem.dia_semana_curto }}
+                                                    <span v-if="diaSem.eh_hoje" class="ml-1 px-1.5 py-0.5 rounded bg-emerald-500 text-slate-950 text-[9px] font-black">HOJE</span>
+                                                </span>
+                                                <span class="text-[11px] font-mono-timer font-bold text-slate-400">{{ diaSem.data_curta }}</span>
+                                            </div>
+                                            <div class="text-[11px] font-mono-timer text-blue-600 dark:text-[#60A5FA] mt-0.5">
+                                                {{ diaSem.horas_previstas }}h ({{ diaSem.qtd_total }} missões) &bull; ~{{ diaSem.questoes_previstas }}q
+                                            </div>
+
+                                            <div class="mt-3 space-y-2">
+                                                <div v-for="mDia in diaSem.missoes" :key="mDia.id"
+                                                    class="p-2.5 rounded-xl border text-xs space-y-1"
+                                                    :class="mDia.concluida
+                                                        ? 'bg-emerald-500/15 border-emerald-500/40'
+                                                        : 'bg-white dark:bg-[#141D2E] border-slate-200/80 dark:border-[#24324A]'">
+                                                    <div class="flex items-center justify-between gap-1">
+                                                        <span class="text-[10px] font-black uppercase text-blue-600 dark:text-[#60A5FA] truncate" :title="mDia.disciplina_nome">
+                                                            {{ mDia.disciplina_nome }}
+                                                        </span>
+                                                        <span v-if="mDia.concluida" class="text-[10px] font-black text-emerald-500">✓</span>
+                                                        <span v-else class="text-[9px] font-mono-timer text-slate-400">1h</span>
+                                                    </div>
+                                                    <div class="text-[11px] font-semibold text-slate-700 dark:text-[#CBD5E1] line-clamp-2" :title="mDia.topico_titulo">
+                                                        {{ mDia.topico_titulo }}
+                                                    </div>
+                                                    <div class="flex flex-wrap items-center gap-1 pt-0.5">
+                                                        <span v-if="mDia.prioridade === 1" class="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[9px] font-black">⚡ P1</span>
+                                                        <span v-if="mDia.mais_cobrado" class="px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[9px] font-black">🔥</span>
+                                                    </div>
+                                                </div>
+                                                <div v-if="!diaSem.missoes || diaSem.missoes.length === 0" class="text-[11px] text-slate-400 italic py-3 text-center">
+                                                    Dia de Descanso
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 2: CALENDÁRIO VISUAL DO MÊS -->
+                            <div v-if="subAbaRoteiro === 'calendario' && mesCalendarioRoteiroAtual" class="space-y-5">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <h4 class="text-base font-black text-slate-900 dark:text-white">
+                                            Calendário do Roteiro — {{ mesCalendarioRoteiroAtual.titulo_mes }}
+                                        </h4>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                            Previsto no mês: <strong>{{ mesCalendarioRoteiroAtual.horas_previstas_mes }} horas</strong> ({{ mesCalendarioRoteiroAtual.missoes_previstas_mes }} missões) e <strong>~{{ mesCalendarioRoteiroAtual.questoes_previstas_mes }} questões</strong>. Clique em qualquer dia para inspecionar as missões.
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <button type="button"
+                                            @click="mesCalendarioRoteiroIdx = Math.max(0, mesCalendarioRoteiroIdx - 1)"
+                                            :disabled="mesCalendarioRoteiroIdx === 0"
+                                            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1B2638] text-slate-700 dark:text-[#CBD5E1] font-bold text-xs disabled:opacity-40 cursor-pointer">
+                                            <i class="fa-solid fa-chevron-left mr-1"></i>Mês Anterior
+                                        </button>
+                                        <span class="text-xs font-black px-3 py-1.5 rounded-xl bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                            {{ mesCalendarioRoteiroAtual.titulo_mes }}
+                                        </span>
+                                        <button type="button"
+                                            @click="mesCalendarioRoteiroIdx = Math.min((roteiroEstudoData.calendario_mensal || []).length - 1, mesCalendarioRoteiroIdx + 1)"
+                                            :disabled="mesCalendarioRoteiroIdx >= (roteiroEstudoData.calendario_mensal || []).length - 1"
+                                            class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-[#1B2638] text-slate-700 dark:text-[#CBD5E1] font-bold text-xs disabled:opacity-40 cursor-pointer">
+                                            Próximo Mês<i class="fa-solid fa-chevron-right ml-1"></i>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Cabeçalho Seg a Dom -->
+                                <div class="grid grid-cols-7 gap-2 text-center text-[11px] font-black uppercase text-slate-400">
+                                    <div>Seg</div>
+                                    <div>Ter</div>
+                                    <div>Qua</div>
+                                    <div>Qui</div>
+                                    <div>Sex</div>
+                                    <div>Sáb</div>
+                                    <div>Dom</div>
+                                </div>
+
+                                <!-- Grade do Mês -->
+                                <div class="grid grid-cols-7 gap-2">
+                                    <div v-for="(cel, cIdx) in mesCalendarioRoteiroAtual.celulas" :key="cIdx"
+                                        @click="selecionarDiaCalendarioRoteiro(cel)"
+                                        class="min-h-[96px] p-2 rounded-2xl border transition-all"
+                                        :class="cel.vazio
+                                            ? 'border-transparent bg-transparent pointer-events-none'
+                                            : (diaCalendarioSelecionado && diaCalendarioSelecionado.data_iso === cel.data_iso
+                                                ? ' ring-2 ring-blue-500 bg-blue-500/10 border-blue-500 cursor-pointer'
+                                                : (cel.eh_hoje
+                                                    ? 'bg-emerald-500/10 border-emerald-500/50 cursor-pointer'
+                                                    : (cel.no_roteiro && cel.dia_ativo
+                                                        ? 'bg-slate-50 dark:bg-[#1B2638] border-slate-200 dark:border-[#24324A] hover:border-blue-400 cursor-pointer'
+                                                        : 'bg-slate-100/40 dark:bg-[#0E1622]/40 border-slate-200/40 dark:border-[#1B2638] opacity-60 cursor-pointer')))">
+                                        <div v-if="!cel.vazio" class="space-y-1">
+                                            <div class="flex items-center justify-between">
+                                                <span class="text-xs font-black"
+                                                    :class="cel.eh_hoje ? 'text-emerald-600 dark:text-[#34D399]' : 'text-slate-700 dark:text-[#F1F5F9]'">
+                                                    {{ cel.dia_numero }}
+                                                </span>
+                                                <span v-if="cel.missoes && cel.missoes.length > 0"
+                                                    class="text-[9px] font-mono-timer font-bold px-1.5 py-0.2 rounded bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                                    {{ cel.missoes.length }}h
+                                                </span>
+                                            </div>
+                                            <div v-if="cel.missoes && cel.missoes.length > 0" class="space-y-1">
+                                                <div v-for="mCel in cel.missoes.slice(0, 2)" :key="mCel.id"
+                                                    class="px-1.5 py-0.5 rounded bg-white dark:bg-[#141D2E] border border-slate-200/70 dark:border-[#24324A] text-[10px] truncate"
+                                                    :title="mCel.disciplina_nome + ' — ' + mCel.topico_titulo">
+                                                    <span class="font-extrabold text-slate-800 dark:text-slate-200">{{ mCel.disciplina_nome }}</span>
+                                                </div>
+                                                <div v-if="cel.missoes.length > 2" class="text-[9px] font-bold text-slate-400 text-center">
+                                                    +{{ cel.missoes.length - 2 }} missão(ões)
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Detalhe do Dia Selecionado no Calendário -->
+                                <div v-if="diaCalendarioSelecionado"
+                                    class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-3">
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <h5 class="text-sm font-black text-slate-900 dark:text-white">
+                                            <i class="fa-regular fa-calendar-check text-blue-500 mr-1.5"></i>
+                                            Missões Programadas para {{ diaCalendarioSelecionado.data_fmt }} ({{ diaCalendarioSelecionado.dia_semana_curto }})
+                                        </h5>
+                                        <span class="text-xs font-mono-timer font-bold text-blue-600 dark:text-[#60A5FA]">
+                                            {{ (diaCalendarioSelecionado.missoes || []).length }} hora(s) &bull; ~{{ diaCalendarioSelecionado.questoes_previstas || 0 }} questões
+                                        </span>
+                                    </div>
+                                    <div v-if="!diaCalendarioSelecionado.missoes || diaCalendarioSelecionado.missoes.length === 0"
+                                        class="text-xs text-slate-500 italic">
+                                        Nenhuma missão programada para esta data (dia livre / fora do período ativo).
+                                    </div>
+                                    <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <div v-for="mDet in diaCalendarioSelecionado.missoes" :key="mDet.id"
+                                            class="p-3.5 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200 dark:border-[#24324A] flex items-start justify-between gap-3">
+                                            <div class="space-y-1">
+                                                <div class="flex items-center gap-1.5">
+                                                    <span class="px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-[#60A5FA] text-[10px] font-black">
+                                                        {{ mDet.ordem_dia }}ª Hora
+                                                    </span>
+                                                    <span class="text-xs font-black text-slate-900 dark:text-white">{{ mDet.disciplina_nome }}</span>
+                                                    <span v-if="mDet.prioridade === 1" class="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-600 dark:text-amber-300 text-[9px] font-black">⚡ P1</span>
+                                                    <span v-if="mDet.mais_cobrado" class="px-1.5 py-0.2 rounded bg-rose-500/15 text-rose-600 dark:text-rose-300 text-[9px] font-black">🔥</span>
+                                                </div>
+                                                <div class="text-xs text-slate-600 dark:text-[#CBD5E1] font-semibold">
+                                                    {{ mDet.topico_titulo }}
+                                                </div>
+                                                <div class="text-[10px] text-slate-400">
+                                                    {{ mDet.modo_estudo }} &bull; ~{{ mDet.questoes_estimadas }} questões
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 3: SEMANA A SEMANA ATÉ A PROVA -->
+                            <div v-if="subAbaRoteiro === 'ate_prova'" class="space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                        Visão Macro Semana a Semana Até o Dia da Prova ({{ roteiroEstudoData.parametros_roteiro.data_prova_fmt }})
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                        Acompanhe a evolução cumulativa de tópicos, disciplinas e questões até a véspera do concurso.
+                                    </p>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div v-for="semItem in roteiroEstudoData.semanas_ate_prova" :key="semItem.numero_semana"
+                                        class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-2.5">
+                                        <div class="flex items-center justify-between">
+                                            <span class="px-2.5 py-0.5 rounded-lg bg-blue-600 text-white text-xs font-black">
+                                                Semana {{ semItem.numero_semana }} ({{ semItem.periodo_fmt }})
+                                            </span>
+                                            <span class="text-xs font-mono-timer font-black text-emerald-600 dark:text-[#34D399]">
+                                                {{ semItem.horas_planejadas }}h &bull; +{{ semItem.questoes_estimadas }} questões
+                                            </span>
+                                        </div>
+                                        <div class="flex flex-wrap items-center gap-2 text-xs text-slate-600 dark:text-[#CBD5E1]">
+                                            <span><strong>{{ semItem.qtd_missoes }}</strong> missões</span> &bull;
+                                            <span><strong>{{ semItem.qtd_topicos_ineditos }}</strong> tópicos novos</span> &bull;
+                                            <span class="text-amber-600 dark:text-[#FBBF24] font-bold"><strong>{{ semItem.qtd_topicos_alta_prioridade }}</strong> tópicos P1/🔥</span>
+                                        </div>
+                                        <div class="flex flex-wrap gap-1.5 pt-1">
+                                            <span v-for="dNome in semItem.disciplinas_envolvidas" :key="dNome"
+                                                class="px-2 py-0.5 rounded bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] text-[10px] font-bold text-slate-700 dark:text-[#CBD5E1]">
+                                                {{ dNome }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 4: TÓPICOS VISTOS ATÉ A PROVA POR DISCIPLINA (ROTEIRIZADO PELO VERTICALIZADO) -->
+                            <div v-if="subAbaRoteiro === 'disciplinas'" class="space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                        O Que Será Visto de Cada Disciplina Até a Prova (Ordem do Edital Verticalizado)
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                        Veja exatamente até qual tópico você chegará em cada matéria mantendo o ritmo de <strong>{{ roteiroEstudoData.parametros_roteiro.horas_por_dia }}h/dia</strong>.
+                                    </p>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div v-for="dRot in roteiroEstudoData.roteiro_por_disciplina" :key="dRot.disciplina_id"
+                                        class="rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] overflow-hidden">
+                                        <div @click="disciplinaRoteiroExpandidaId = (disciplinaRoteiroExpandidaId === dRot.disciplina_id ? null : dRot.disciplina_id)"
+                                            class="p-4 flex flex-wrap items-center justify-between gap-3 cursor-pointer hover:bg-slate-100/70 dark:hover:bg-[#202E44]/50 transition-colors">
+                                            <div class="space-y-1">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="text-sm font-black text-slate-900 dark:text-white">{{ dRot.nome }}</span>
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                                        Cobertura até a prova: {{ dRot.perc_ate_prova }}% ({{ dRot.total_vistos_ate_prova }}/{{ dRot.total_topicos }})
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-600 dark:text-[#FBBF24]">
+                                                        P1 &amp; 🔥 cobertos: {{ dRot.perc_cobertura_p1_mais_cobrados }}% ({{ dRot.vistos_p1_mais_cobrados_ate_prova }}/{{ dRot.total_p1_mais_cobrados }})
+                                                    </span>
+                                                </div>
+                                                <div class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    Já vistos: <strong>{{ dRot.ja_vistos }}</strong> &bull;
+                                                    Verá até a prova: <strong>+{{ dRot.novos_ate_prova }} tópicos</strong>
+                                                    <span v-if="dRot.restantes_apos_prova > 0" class="text-rose-500 font-semibold ml-1">
+                                                        &bull; Ficariam pendentes: {{ dRot.restantes_apos_prova }} tópicos
+                                                    </span>
+                                                    <span v-else class="text-emerald-500 font-semibold ml-1">
+                                                        &bull; 100% da disciplina concluída antes da prova (+{{ dRot.revisoes_apos_fechar }} blocos de revisão)
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <i class="fa-solid text-slate-400"
+                                                :class="disciplinaRoteiroExpandidaId === dRot.disciplina_id ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                        </div>
+
+                                        <div v-if="disciplinaRoteiroExpandidaId === dRot.disciplina_id"
+                                            class="p-4 border-t border-slate-200 dark:border-[#24324A] bg-white dark:bg-[#141D2E] grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <h5 class="text-xs font-black uppercase text-emerald-600 dark:text-[#34D399] mb-2">
+                                                    <i class="fa-solid fa-check mr-1"></i>Tópicos que serão vistos até a prova ({{ dRot.topicos_programados.length }})
+                                                </h5>
+                                                <div v-if="dRot.topicos_programados.length === 0" class="text-xs text-slate-400 italic">
+                                                    Todos os tópicos programados já foram vistos ou aguardando giro do ciclo.
+                                                </div>
+                                                <ul class="space-y-1.5 max-h-60 overflow-y-auto pr-1 text-xs">
+                                                    <li v-for="tProg in dRot.topicos_programados" :key="tProg.id"
+                                                        class="p-2 rounded-lg bg-slate-50 dark:bg-[#1B2638] border border-slate-200/70 dark:border-[#24324A] flex items-center justify-between gap-2">
+                                                        <span class="text-slate-800 dark:text-slate-200 truncate" :title="tProg.titulo">{{ tProg.titulo }}</span>
+                                                        <span class="flex items-center gap-1 shrink-0">
+                                                            <span v-if="tProg.prioridade === 1" class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[9px] font-black">⚡ P1</span>
+                                                            <span v-if="tProg.mais_cobrado" class="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-600 dark:text-rose-300 text-[9px] font-black">🔥</span>
+                                                        </span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                            <div>
+                                                <h5 class="text-xs font-black uppercase text-rose-500 mb-2">
+                                                    <i class="fa-regular fa-clock mr-1"></i>Tópicos que ficariam fora no ritmo atual ({{ dRot.topicos_nao_alcancados.length }})
+                                                </h5>
+                                                <div v-if="dRot.topicos_nao_alcancados.length === 0" class="text-xs text-emerald-500 font-bold">
+                                                    Nenhum tópico ficará de fora! Você fechará 100% desta matéria antes da prova.
+                                                </div>
+                                                <ul v-else class="space-y-1.5 max-h-60 overflow-y-auto pr-1 text-xs">
+                                                    <li v-for="tFora in dRot.topicos_nao_alcancados" :key="tFora.id"
+                                                        class="p-2 rounded-lg bg-rose-500/5 border border-rose-500/20 flex items-center justify-between gap-2">
+                                                        <span class="text-slate-600 dark:text-slate-400 truncate" :title="tFora.titulo">{{ tFora.titulo }}</span>
+                                                        <span class="flex items-center gap-1 shrink-0">
+                                                            <span v-if="tFora.prioridade === 1" class="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-600 dark:text-amber-300 text-[9px] font-black">⚡ P1</span>
+                                                            <span v-if="tFora.mais_cobrado" class="px-1.5 py-0.2 rounded bg-rose-500/20 text-rose-600 dark:text-rose-300 text-[9px] font-black">🔥</span>
+                                                        </span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -5365,8 +6037,441 @@
         </div>
     </div>
 
+        <!-- ======================================================================= -->
+        <!-- MODAL 1: CELEBRAÇÃO DE MEDALHA CONQUISTADA (FOGOS, CONFETES & EMBLEMA)  -->
+        <!-- ======================================================================= -->
+        <div v-if="modalCelebracaoMedalhaAberto && medalhaEmCelebracao"
+            class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md">
+            <div class="relative w-full max-w-md rounded-3xl overflow-hidden border shadow-2xl p-6 sm:p-8 text-center space-y-5 transition-all"
+                :class="{
+                    'bg-gradient-to-b from-amber-950 via-slate-900 to-slate-950 border-amber-500/50': medalhaEmCelebracao.tier === 'bronze',
+                    'bg-gradient-to-b from-slate-800 via-slate-900 to-slate-950 border-slate-300/50': medalhaEmCelebracao.tier === 'prata',
+                    'bg-gradient-to-b from-yellow-900/90 via-slate-900 to-slate-950 border-yellow-400/60': medalhaEmCelebracao.tier === 'ouro',
+                    'bg-gradient-to-b from-sky-950 via-slate-900 to-slate-950 border-sky-400/60': medalhaEmCelebracao.tier === 'platina',
+                    'bg-gradient-to-b from-cyan-950 via-indigo-950 to-slate-950 border-cyan-300/70': medalhaEmCelebracao.tier === 'diamante',
+                    'bg-gradient-to-b from-purple-950 via-rose-950/80 to-slate-950 border-amber-400/80': medalhaEmCelebracao.tier === 'lendario'
+                }">
+
+                <!-- Fogos / Brilhos visuais internos no modal -->
+                <div class="pointer-events-none absolute inset-0 overflow-hidden">
+                    <div class="absolute -top-10 left-1/2 -translate-x-1/2 w-64 h-64 rounded-full blur-3xl opacity-35 animate-pulse"
+                        :class="{
+                            'bg-amber-500': medalhaEmCelebracao.tier === 'bronze',
+                            'bg-slate-300': medalhaEmCelebracao.tier === 'prata',
+                            'bg-yellow-400': medalhaEmCelebracao.tier === 'ouro',
+                            'bg-sky-400': medalhaEmCelebracao.tier === 'platina',
+                            'bg-cyan-400': medalhaEmCelebracao.tier === 'diamante',
+                            'bg-fuchsia-500': medalhaEmCelebracao.tier === 'lendario'
+                        }"></div>
+                    <i class="fa-solid fa-wand-magic-sparkles absolute top-6 left-8 text-yellow-300/80 text-xl animate-bounce"></i>
+                    <i class="fa-solid fa-star absolute top-10 right-10 text-amber-300/90 text-lg animate-ping"></i>
+                    <i class="fa-solid fa-burst absolute bottom-16 left-10 text-cyan-300/70 text-lg animate-pulse"></i>
+                    <i class="fa-solid fa-star absolute bottom-20 right-8 text-yellow-400/80 text-base animate-bounce"></i>
+                </div>
+
+                <!-- Badge Topo -->
+                <div class="relative z-10 flex items-center justify-center gap-2">
+                    <span class="px-3 py-1 rounded-full text-[11px] font-black uppercase tracking-widest border shadow-sm"
+                        :class="{
+                            'bg-amber-600/30 text-amber-200 border-amber-400/40': medalhaEmCelebracao.tier === 'bronze',
+                            'bg-slate-400/30 text-slate-100 border-slate-300/50': medalhaEmCelebracao.tier === 'prata',
+                            'bg-yellow-500/30 text-yellow-200 border-yellow-300/60': medalhaEmCelebracao.tier === 'ouro',
+                            'bg-sky-500/30 text-sky-200 border-sky-300/60': medalhaEmCelebracao.tier === 'platina',
+                            'bg-cyan-400/30 text-cyan-100 border-cyan-200/70': medalhaEmCelebracao.tier === 'diamante',
+                            'bg-gradient-to-r from-amber-500/40 to-fuchsia-500/40 text-amber-200 border-amber-300': medalhaEmCelebracao.tier === 'lendario'
+                        }">
+                        🎉 Nova Conquista Desbloqueada &bull; {{ medalhaEmCelebracao.tier_label }}
+                    </span>
+                </div>
+
+                <!-- Desenho Visual Exclusivo da Medalha (Anel Metálico + Fita + Ícone de Dificuldade) -->
+                <div class="relative z-10 flex flex-col items-center justify-center py-2">
+                    <div class="relative w-32 h-32 rounded-full flex items-center justify-center shadow-2xl border-4 transition-transform duration-500 scale-105"
+                        :class="{
+                            'bg-gradient-to-br from-[#D97706] via-[#B45309] to-[#78350F] border-[#FBBF24] shadow-amber-600/40': medalhaEmCelebracao.tier === 'bronze',
+                            'bg-gradient-to-br from-[#F1F5F9] via-[#94A3B8] to-[#475569] border-white shadow-slate-300/40': medalhaEmCelebracao.tier === 'prata',
+                            'bg-gradient-to-br from-[#FDE047] via-[#EAB308] to-[#A16207] border-[#FEF08A] shadow-yellow-400/50': medalhaEmCelebracao.tier === 'ouro',
+                            'bg-gradient-to-br from-[#7DD3FC] via-[#0284C7] to-[#1E3A8A] border-[#E0F2FE] shadow-sky-400/50': medalhaEmCelebracao.tier === 'platina',
+                            'bg-gradient-to-br from-[#A5F3FC] via-[#06B6D4] to-[#3B0764] border-[#CFFAFE] shadow-cyan-300/60': medalhaEmCelebracao.tier === 'diamante',
+                            'bg-gradient-to-br from-[#FDE047] via-[#E11D48] to-[#581C87] border-[#FDE047] shadow-rose-500/60': medalhaEmCelebracao.tier === 'lendario'
+                        }">
+                        <!-- Anel interno pontilhado -->
+                        <div class="w-24 h-24 rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/15">
+                            <i class="text-4xl text-white drop-shadow-md fa-solid"
+                                :class="{
+                                    'fa-bullseye': medalhaEmCelebracao.icone === 'target',
+                                    'fa-bolt': medalhaEmCelebracao.icone === 'bolt',
+                                    'fa-calendar-check': medalhaEmCelebracao.icone === 'calendar',
+                                    'fa-fire-flame-curved': medalhaEmCelebracao.icone === 'flame',
+                                    'fa-gem': medalhaEmCelebracao.icone === 'gem',
+                                    'fa-crown': medalhaEmCelebracao.icone === 'crown',
+                                    'fa-arrows-spin': medalhaEmCelebracao.icone === 'cycle',
+                                    'fa-trophy': medalhaEmCelebracao.icone === 'trophy',
+                                    'fa-check-double': medalhaEmCelebracao.icone === 'check',
+                                    'fa-shield-halved': medalhaEmCelebracao.icone === 'shield',
+                                    'fa-star': medalhaEmCelebracao.icone === 'star',
+                                    'fa-award': medalhaEmCelebracao.icone === 'award',
+                                    'fa-compass': medalhaEmCelebracao.icone === 'compass'
+                                }"></i>
+                        </div>
+                    </div>
+                    <!-- Fita da Medalha -->
+                    <div class="flex -mt-2 z-0">
+                        <div class="w-5 h-8 bg-blue-600 transform -skew-x-12 rounded-b-sm shadow-md"></div>
+                        <div class="w-5 h-8 bg-indigo-700 transform skew-x-12 rounded-b-sm shadow-md"></div>
+                    </div>
+                </div>
+
+                <!-- Título, Descrição e XP -->
+                <div class="relative z-10 space-y-2">
+                    <div class="text-xs font-bold uppercase tracking-wider text-slate-400">
+                        {{ medalhaEmCelebracao.categoria }}
+                    </div>
+                    <h3 class="text-2xl font-black text-white tracking-tight">
+                        {{ medalhaEmCelebracao.titulo }}
+                    </h3>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        {{ medalhaEmCelebracao.descricao }}
+                    </p>
+                    <div class="pt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono-timer font-black text-sm">
+                        <i class="fa-solid fa-bolt"></i>
+                        <span>+{{ medalhaEmCelebracao.xp }} XP Conquistados</span>
+                    </div>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="relative z-10 flex flex-col sm:flex-row gap-2.5 pt-2">
+                    <button type="button"
+                        @click="dispararFogosEConfetesMedalha()"
+                        class="px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer">
+                        <i class="fa-solid fa-wand-magic-sparkles mr-1.5 text-yellow-300"></i>Soltar Fogos
+                    </button>
+                    <button type="button"
+                        @click="fecharOuProximaMedalhaCelebracao(); abrirGaleriaMedalhas()"
+                        class="px-4 py-2.5 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 text-blue-200 font-bold text-xs border border-blue-400/30 transition-all cursor-pointer">
+                        <i class="fa-solid fa-medal mr-1.5"></i>Ver Todas as Medalhas
+                    </button>
+                    <button type="button"
+                        @click="fecharOuProximaMedalhaCelebracao()"
+                        class="flex-1 py-2.5 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg transition-all cursor-pointer">
+                        {{ filaMedalhasParaCelebrar.length > 1 ? `Próxima Medalha (${filaMedalhasParaCelebrar.length - 1})` : 'Continuar Vencendo!' }}
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ======================================================================= -->
+        <!-- MODAL 2: GALERIA COMPLETA DE MEDALHAS, CONQUISTAS, DESAFIO & RANKS      -->
+        <!-- ======================================================================= -->
+        <div v-if="modalGaleriaMedalhasAberto && gamificacaoData"
+            class="fixed inset-0 z-[95] flex items-center justify-center p-3 sm:p-6 bg-slate-950/75 backdrop-blur-xs">
+            <div class="bg-slate-100 dark:bg-[#0E1622] border border-slate-200 dark:border-[#24324A] rounded-3xl w-full max-w-4xl max-h-[92vh] overflow-y-auto shadow-2xl p-4 sm:p-6 space-y-5">
+
+                <!-- Cabeçalho do Modal -->
+                <div class="flex items-center justify-between border-b border-slate-200 dark:border-[#24324A] pb-3">
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-trophy"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                                Central de Conquistas, Medalhas &amp; Patentes ORBiS
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                Clique em qualquer medalha conquistada para visualizar sua animação e soltar fogos!
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" @click="modalGaleriaMedalhasAberto = false"
+                        class="w-9 h-9 rounded-xl bg-white dark:bg-[#141D2E] text-slate-500 hover:text-slate-800 dark:hover:text-white border border-slate-200 dark:border-[#24324A] flex items-center justify-center cursor-pointer">
+                        <i class="fa-solid fa-xmark text-base"></i>
+                    </button>
+                </div>
+
+                <!-- BLOCO 1: PATENTE ATUAL (ROSETTE EMBLEM), NÍVEL DE XP, SEQUÊNCIA E PRÓXIMO OBJETIVO -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="lg:col-span-7 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-4">
+                        <div class="flex items-center gap-4">
+                            <!-- Emblema Roseta Estilo Anki/Orbis -->
+                            <div class="relative flex flex-col items-center shrink-0">
+                                <div class="w-20 h-20 rounded-full flex items-center justify-center shadow-lg border-4"
+                                    :class="{
+                                        'bg-gradient-to-br from-orange-400 via-amber-500 to-red-500 border-orange-200': gamificacaoData.rank_atual.cor === 'bronze',
+                                        'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600 border-slate-100': gamificacaoData.rank_atual.cor === 'prata',
+                                        'bg-gradient-to-br from-yellow-300 via-amber-400 to-amber-600 border-yellow-100': gamificacaoData.rank_atual.cor === 'ouro',
+                                        'bg-gradient-to-br from-sky-300 via-blue-500 to-indigo-700 border-sky-100': gamificacaoData.rank_atual.cor === 'platina',
+                                        'bg-gradient-to-br from-cyan-300 via-teal-400 to-indigo-800 border-cyan-100': gamificacaoData.rank_atual.cor === 'diamante',
+                                        'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200': gamificacaoData.rank_atual.cor === 'lendario'
+                                    }">
+                                    <div class="w-12 h-12 rounded-full bg-indigo-950 border-2 border-amber-200 flex items-center justify-center">
+                                        <i class="fa-solid fa-star text-amber-300 text-xl"></i>
+                                    </div>
+                                </div>
+                                <div class="flex -mt-1.5">
+                                    <div class="w-3.5 h-5 bg-blue-700 transform -skew-x-12 rounded-b-xs"></div>
+                                    <div class="w-3.5 h-5 bg-indigo-500 transform skew-x-12 rounded-b-xs"></div>
+                                </div>
+                            </div>
+
+                            <!-- Nome do Rank + Nível + Barra de XP -->
+                            <div class="flex-1 min-w-0 space-y-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <h4 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white truncate">
+                                        {{ gamificacaoData.rank_atual.titulo }}
+                                    </h4>
+                                    <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                        Nível {{ gamificacaoData.rank_atual.nivel }}
+                                    </span>
+                                </div>
+                                <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden">
+                                    <div class="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-500"
+                                        :style="{ width: gamificacaoData.percentual_nivel + '%' }"></div>
+                                </div>
+                                <div class="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-[#94A3B8]">
+                                    <span class="font-mono-timer">{{ gamificacaoData.xp_total }} XP Total</span>
+                                    <span class="font-mono-timer text-blue-600 dark:text-[#60A5FA]">{{ gamificacaoData.percentual_nivel }}%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Subcard Sequência Atual & Próximo Objetivo -->
+                        <div class="grid grid-cols-2 divide-x divide-slate-200 dark:divide-[#24324A] rounded-2xl bg-slate-50 dark:bg-[#1B2638] p-3.5 text-center border border-slate-200/70 dark:border-[#24324A]">
+                            <div class="px-2">
+                                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Sequência Atual</div>
+                                <div class="text-base sm:text-lg font-black text-slate-900 dark:text-white mt-0.5">
+                                    {{ gamificacaoData.sequencia_atual_dias }} {{ gamificacaoData.sequencia_atual_dias === 1 ? 'dia' : 'dias' }}
+                                </div>
+                                <div class="text-[11px] font-bold text-emerald-600 dark:text-[#34D399]">
+                                    Recorde: {{ gamificacaoData.maior_sequencia_dias }} dias
+                                </div>
+                            </div>
+                            <div class="px-2">
+                                <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Próximo Objetivo</div>
+                                <div class="text-sm sm:text-base font-black text-blue-600 dark:text-[#60A5FA] truncate mt-0.5">
+                                    {{ gamificacaoData.proximo_rank ? gamificacaoData.proximo_rank.titulo : 'Rank Máximo!' }}
+                                </div>
+                                <div class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                    {{ gamificacaoData.proximo_rank ? `Faltam ${gamificacaoData.faltam_xp_proximo_rank} XP` : 'Nível Lenda Alcançado' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOCO 2: DESAFIO DIÁRIO + SUA PRÓXIMA MEDALHA -->
+                    <div class="lg:col-span-5 flex flex-col justify-between gap-4">
+                        <!-- Desafio Diário -->
+                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-3">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                    Desafio Diário
+                                </span>
+                                <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                    {{ gamificacaoData.desafio_diario.percentual }}%
+                                </span>
+                            </div>
+                            <div class="text-sm font-bold text-slate-800 dark:text-white">
+                                {{ gamificacaoData.desafio_diario.titulo }}
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex-1 h-2.5 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden">
+                                    <div class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                        :style="{ width: gamificacaoData.desafio_diario.percentual + '%' }"></div>
+                                </div>
+                                <span class="text-xs font-mono-timer font-bold text-slate-500">
+                                    {{ gamificacaoData.desafio_diario.missoes_concluidas_hoje }}/{{ gamificacaoData.desafio_diario.meta_missoes_hoje }}
+                                </span>
+                            </div>
+                            <button type="button"
+                                @click="resgatarDesafioDiarioXP()"
+                                :disabled="!gamificacaoData.desafio_diario.concluido || gamificacaoData.desafio_diario.resgatado || resgatandoDesafioDiario"
+                                class="w-full py-2.5 px-4 rounded-xl font-black text-xs transition-all cursor-pointer"
+                                :class="gamificacaoData.desafio_diario.resgatado
+                                    ? 'bg-emerald-500/20 text-emerald-600 dark:text-[#34D399] border border-emerald-500/30'
+                                    : (gamificacaoData.desafio_diario.concluido
+                                        ? 'bg-amber-500 hover:bg-amber-400 text-slate-950 shadow-md animate-pulse'
+                                        : 'bg-slate-200 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] opacity-70 cursor-not-allowed')">
+                                {{ gamificacaoData.desafio_diario.resgatado ? '✓ +150 XP Resgatados Hoje' : `Resgatar +${gamificacaoData.desafio_diario.xp_recompensa} XP` }}
+                            </button>
+                        </div>
+
+                        <!-- Sua Próxima Medalha -->
+                        <div v-if="gamificacaoData.proxima_medalha"
+                            class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-4 shadow-xs flex items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <div class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-[#60A5FA]">
+                                    Sua Próxima Medalha ({{ gamificacaoData.proxima_medalha.percentual_progresso }}%)
+                                </div>
+                                <div class="text-sm font-black text-slate-900 dark:text-white">
+                                    {{ gamificacaoData.proxima_medalha.titulo }} &bull; {{ gamificacaoData.proxima_medalha.tier_label }}
+                                </div>
+                                <div class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                    Faltam <strong>{{ gamificacaoData.proxima_medalha.faltam_para_conquistar }} {{ gamificacaoData.proxima_medalha.unidade }}</strong> para alcançar (+{{ gamificacaoData.proxima_medalha.xp }} XP).
+                                </div>
+                            </div>
+                            <span class="w-10 h-10 rounded-full bg-amber-500/15 text-amber-500 flex items-center justify-center shrink-0">
+                                <i class="fa-solid fa-angles-right"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOCO 3: GALERIA DE MEDALHAS E CONQUISTAS (ESTILOS BRONZE, PRATA, OURO, PLATINA, DIAMANTE, LENDÁRIO) -->
+                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <h4 class="text-sm font-black uppercase tracking-wider text-slate-700 dark:text-white">
+                                Conquistas &amp; Medalhas
+                            </h4>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs font-mono-timer font-black bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                                {{ gamificacaoData.resumo_conquistas.conquistadas }} / {{ gamificacaoData.resumo_conquistas.total }}
+                            </span>
+                        </div>
+
+                        <!-- Filtros de Categoria -->
+                        <div class="flex flex-wrap gap-1.5">
+                            <button v-for="cat in ['TODAS', 'CONQUISTADAS', 'Missões & Roteiro', 'Ciclo de Estudos', 'Resolução de Questões', 'Edital & Pareto', 'Performance & Horas']"
+                                :key="cat"
+                                type="button"
+                                @click="filtroCategoriaMedalhas = cat"
+                                class="px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all cursor-pointer"
+                                :class="filtroCategoriaMedalhas === cat
+                                    ? 'bg-blue-600 text-white shadow-xs'
+                                    : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8]'">
+                                {{ cat === 'TODAS' ? 'Todas' : (cat === 'CONQUISTADAS' ? 'Desbloqueadas' : cat) }}
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+                        <div v-for="med in medalhasFiltradasGaleria" :key="med.id"
+                            @click="med.conquistada ? celebrarMedalhaManual(med) : null"
+                            class="relative p-4 rounded-2xl border transition-all flex items-center gap-3.5"
+                            :class="med.conquistada
+                                ? 'bg-slate-50 dark:bg-[#1B2638] border-amber-400/50 dark:border-amber-500/40 hover:scale-[1.01] cursor-pointer shadow-xs'
+                                : 'bg-slate-100/50 dark:bg-[#0E1622]/50 border-slate-200/70 dark:border-[#1E293B] opacity-75'">
+
+                            <!-- Selo "Novo" -->
+                            <span v-if="med.eh_nova"
+                                class="absolute -top-2 left-4 px-2 py-0.5 rounded-md bg-slate-700 text-white text-[9px] font-black uppercase tracking-wider shadow-sm">
+                                Novo
+                            </span>
+
+                            <!-- Desenho da Medalha Circular -->
+                            <div class="relative w-14 h-14 rounded-full flex items-center justify-center shrink-0 border-4 shadow-md"
+                                :class="!med.conquistada
+                                    ? 'bg-slate-200 dark:bg-slate-800 border-slate-300 dark:border-slate-700 text-slate-400'
+                                    : {
+                                        'bg-gradient-to-br from-[#D97706] via-[#B45309] to-[#78350F] border-[#FBBF24] text-amber-100': med.tier === 'bronze',
+                                        'bg-gradient-to-br from-[#F8FAFC] via-[#94A3B8] to-[#475569] border-white text-white': med.tier === 'prata',
+                                        'bg-gradient-to-br from-[#FDE047] via-[#EAB308] to-[#A16207] border-[#FEF08A] text-yellow-950': med.tier === 'ouro',
+                                        'bg-gradient-to-br from-[#7DD3FC] via-[#0284C7] to-[#1E3A8A] border-[#E0F2FE] text-white': med.tier === 'platina',
+                                        'bg-gradient-to-br from-[#A5F3FC] via-[#06B6D4] to-[#3B0764] border-[#CFFAFE] text-white': med.tier === 'diamante',
+                                        'bg-gradient-to-br from-[#FDE047] via-[#E11D48] to-[#581C87] border-[#FDE047] text-white': med.tier === 'lendario'
+                                    }">
+                                <i class="text-xl fa-solid"
+                                    :class="{
+                                        'fa-bullseye': med.icone === 'target',
+                                        'fa-bolt': med.icone === 'bolt',
+                                        'fa-calendar-check': med.icone === 'calendar',
+                                        'fa-fire-flame-curved': med.icone === 'flame',
+                                        'fa-gem': med.icone === 'gem',
+                                        'fa-crown': med.icone === 'crown',
+                                        'fa-arrows-spin': med.icone === 'cycle',
+                                        'fa-trophy': med.icone === 'trophy',
+                                        'fa-check-double': med.icone === 'check',
+                                        'fa-shield-halved': med.icone === 'shield',
+                                        'fa-star': med.icone === 'star',
+                                        'fa-award': med.icone === 'award',
+                                        'fa-compass': med.icone === 'compass'
+                                    }"></i>
+                                <!-- Cadeado quando bloqueada -->
+                                <span v-if="!med.conquistada"
+                                    class="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-white dark:bg-[#141D2E] border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[10px] text-slate-500">
+                                    <i class="fa-solid fa-lock"></i>
+                                </span>
+                            </div>
+
+                            <!-- Informações e Progresso -->
+                            <div class="flex-1 min-w-0 space-y-1">
+                                <div class="flex items-center justify-between gap-1">
+                                    <span class="text-[10px] font-black uppercase tracking-wider"
+                                        :class="{
+                                            'text-amber-600 dark:text-amber-400': med.tier === 'bronze',
+                                            'text-slate-500 dark:text-slate-300': med.tier === 'prata',
+                                            'text-yellow-600 dark:text-yellow-400': med.tier === 'ouro',
+                                            'text-sky-600 dark:text-sky-400': med.tier === 'platina',
+                                            'text-cyan-600 dark:text-cyan-300': med.tier === 'diamante',
+                                            'text-rose-600 dark:text-rose-400': med.tier === 'lendario'
+                                        }">
+                                        {{ med.tier_label }} &bull; +{{ med.xp }} XP
+                                    </span>
+                                    <span class="text-[10px] font-mono-timer font-bold text-slate-400">
+                                        {{ med.progresso_atual }}/{{ med.meta }}
+                                    </span>
+                                </div>
+                                <div class="text-xs font-black text-slate-900 dark:text-white truncate" :title="med.titulo">
+                                    {{ med.titulo }}
+                                </div>
+                                <div class="text-[11px] text-slate-500 dark:text-[#94A3B8] line-clamp-2">
+                                    {{ med.descricao }}
+                                </div>
+                                <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#141D2E] overflow-hidden pt-0.5">
+                                    <div class="h-full rounded-full transition-all duration-500"
+                                        :class="med.conquistada ? 'bg-emerald-500' : 'bg-blue-500'"
+                                        :style="{ width: med.percentual_progresso + '%' }"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BLOCO 4: TODOS OS RANKS (GALERIA DE PATENTES DO SISTEMA) -->
+                <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-4">
+                    <h4 class="text-xs font-black uppercase tracking-widest text-center text-slate-500 dark:text-[#94A3B8]">
+                        Todos os Ranks &amp; Patentes
+                    </h4>
+                    <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                        <div v-for="rk in gamificacaoData.todos_ranks" :key="rk.nivel"
+                            class="p-3 rounded-2xl border flex flex-col items-center text-center space-y-1.5 transition-all"
+                            :class="rk.atual
+                                ? 'bg-blue-500/10 border-blue-500 ring-2 ring-blue-500/30'
+                                : (rk.desbloqueado
+                                    ? 'bg-slate-50 dark:bg-[#1B2638] border-slate-200 dark:border-[#24324A]'
+                                    : 'bg-slate-100/40 dark:bg-[#0E1622]/40 border-slate-200/40 dark:border-[#1B2638] opacity-55')">
+                            <div class="relative flex flex-col items-center">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-xs"
+                                    :class="!rk.desbloqueado
+                                        ? 'bg-slate-300 dark:bg-slate-700 border-slate-400 text-slate-500'
+                                        : {
+                                            'bg-gradient-to-br from-orange-400 to-red-500 border-amber-200 text-white': rk.cor === 'bronze',
+                                            'bg-gradient-to-br from-slate-300 to-slate-600 border-white text-white': rk.cor === 'prata',
+                                            'bg-gradient-to-br from-yellow-300 to-amber-600 border-yellow-100 text-slate-950': rk.cor === 'ouro',
+                                            'bg-gradient-to-br from-sky-300 to-indigo-700 border-sky-100 text-white': rk.cor === 'platina',
+                                            'bg-gradient-to-br from-cyan-300 to-indigo-800 border-cyan-100 text-white': rk.cor === 'diamante',
+                                            'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200 text-white': rk.cor === 'lendario'
+                                        }">
+                                    <i class="fa-solid text-sm" :class="rk.desbloqueado ? 'fa-star' : 'fa-lock'"></i>
+                                </div>
+                                <div class="flex -mt-1">
+                                    <div class="w-2.5 h-3.5 transform -skew-x-12" :class="rk.desbloqueado ? 'bg-blue-600' : 'bg-slate-400'"></div>
+                                    <div class="w-2.5 h-3.5 transform skew-x-12" :class="rk.desbloqueado ? 'bg-indigo-500' : 'bg-slate-500'"></div>
+                                </div>
+                            </div>
+                            <div class="text-[11px] font-black text-slate-800 dark:text-white leading-tight">
+                                {{ rk.titulo }}
+                            </div>
+                            <div class="text-[10px] font-mono-timer text-slate-400">
+                                Nível {{ rk.nivel }} &bull; {{ rk.xp_min }} XP
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     
-            <script src="/static/js/app.js?v=20261113_mapa_aprovacao_v19"></script>
+            <script src="/static/js/app.js?v=20261116_roteiro_gamificacao_v20"></script>
 </body>
 
 </html>
