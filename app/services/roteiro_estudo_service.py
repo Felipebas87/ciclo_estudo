@@ -260,10 +260,10 @@ def calcular_roteiro_estudo(
     )
     questoes_por_hora = round(max(5.0, min(80.0, questoes_por_hora)), 1)
 
-    # 5. Disciplinas e filas de tópicos ordenadas pelo Edital Verticalizado
+    # 5. Disciplinas e filas de tópicos ordenadas pelo Edital Verticalizado (Edital Completo)
     disciplinas_validas = [
         d for d in edital.disciplinas
-        if d.categoria != "REVISAO_ANKI" and d.nome != "REVISÃO ANKI" and getattr(d, "incluir_no_ciclo", True)
+        if d.categoria != "REVISAO_ANKI" and d.nome != "REVISÃO ANKI"
     ]
     disciplinas_validas.sort(key=lambda d: (d.ordem_trilha if d.ordem_trilha is not None else 999, d.id))
     mapa_disc = {d.id: d for d in disciplinas_validas}
@@ -316,7 +316,8 @@ def calcular_roteiro_estudo(
                 })
 
     if not sequencia_blocos:
-        for idx_d, d in enumerate(disciplinas_validas):
+        discs_fallback = [d for d in disciplinas_validas if getattr(d, "incluir_no_ciclo", True)] or disciplinas_validas
+        for idx_d, d in enumerate(discs_fallback):
             sequencia_blocos.append({
                 "bloco_id": None,
                 "ordem_ciclo": idx_d,
