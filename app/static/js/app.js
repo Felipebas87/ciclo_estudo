@@ -59,6 +59,8 @@ const app = createApp({
                 setTimeout(renderDonut, 100);
             } else if (abaAtiva.value === 'mapa_aprovacao') {
                 setTimeout(renderGraficosMapaAprovacao, 100);
+            } else if (abaAtiva.value === 'revisoes') {
+                setTimeout(renderGraficosRevisoes, 100);
             }
         };
 
@@ -74,6 +76,8 @@ const app = createApp({
                 abrirGestaoTemporal();
             } else if (aba === 'roteiro_estudo') {
                 abrirRoteiroEstudo();
+            } else if (aba === 'revisoes') {
+                abrirCentralRevisoes();
             } else {
                 abaAtiva.value = aba;
             }
@@ -1284,7 +1288,9 @@ const app = createApp({
 
         const proximoTopicoBlocoAtual = computed(() => {
             if (!blocoAtual.value || !blocoAtual.value.disciplina_id) return null;
-            if (blocoAtual.value.disciplina && blocoAtual.value.disciplina.categoria === 'REVISAO_ANKI') return null;
+            if (blocoAtual.value.disciplina && blocoAtual.value.disciplina.categoria === 'REVISAO_ANKI') {
+                return blocoAtual.value.proximo_topico || null;
+            }
             return getProximoTopicoTrilha(blocoAtual.value.disciplina_id);
         });
 
@@ -1786,7 +1792,8 @@ const app = createApp({
                 fetch('/api/ciclos/ativo'),
                 fetch('/api/sessoes?limite=100'),
                 targetEditalId ? carregarDashboardData(targetEditalId) : Promise.resolve(),
-                carregarRoteiroEstudo(true).catch(() => {})
+                carregarRoteiroEstudo(true).catch(() => {}),
+                carregarCentralRevisoes(true).catch(() => {})
             ]);
             if (rCiclo && rCiclo.ok) cicloAtivo.value = await rCiclo.json();
             if (rSess && rSess.ok) sessoes.value = await rSess.json();
@@ -1836,6 +1843,7 @@ const app = createApp({
                 verificarStatusChaveIA().catch(() => {});
                 carregarInsightsIA().catch(() => {});
                 carregarRoteiroEstudo(true).catch(() => {});
+                carregarCentralRevisoes(true).catch(() => {});
             } catch (e) {
                 console.error('Erro ao inicializar dados:', e);
                 mostrarAlerta('Não foi possível sincronizar todos os dados com o servidor.', 'erro');
@@ -2094,8 +2102,11 @@ const app = createApp({
         function abrirModalCheckin() {
             const tempoCronometrado = timerSegundos.value >= 60 ? Math.round(timerSegundos.value / 60) : 60;
             const isRevisao = blocoAtual.value && blocoAtual.value.disciplina && blocoAtual.value.disciplina.categoria === 'REVISAO_ANKI';
-            const dId = (!isRevisao && blocoAtual.value && blocoAtual.value.disciplina_id) ? blocoAtual.value.disciplina_id : (todasDisciplinas.value[0]?.id || '');
-            const topicoSugerido = getProximoTopicoTrilha(dId);
+            const topicoAnki = (isRevisao && blocoAtual.value?.proximo_topico) ? blocoAtual.value.proximo_topico : null;
+            const dId = topicoAnki?.disciplina_id
+                ? topicoAnki.disciplina_id
+                : ((!isRevisao && blocoAtual.value && blocoAtual.value.disciplina_id) ? blocoAtual.value.disciplina_id : (todasDisciplinas.value[0]?.id || ''));
+            const topicoSugerido = topicoAnki || getProximoTopicoTrilha(dId);
             formSessao.value = {
                 id: null,
                 disciplina_id: dId,
@@ -2118,8 +2129,11 @@ const app = createApp({
             const tempoSugerido = timerSegundos.value >= 60
                 ? Math.round(timerSegundos.value / 60)
                 : 60; // 60 min por padrão conforme solicitado
-            const dId = (bloco && !isRevisao) ? bloco.disciplina_id : (todasDisciplinas.value[0]?.id || '');
-            const topicoSugerido = getProximoTopicoTrilha(dId);
+            const topicoAnki = (isRevisao && bloco?.proximo_topico) ? bloco.proximo_topico : null;
+            const dId = topicoAnki?.disciplina_id
+                ? topicoAnki.disciplina_id
+                : ((bloco && !isRevisao) ? bloco.disciplina_id : (todasDisciplinas.value[0]?.id || ''));
+            const topicoSugerido = topicoAnki || getProximoTopicoTrilha(dId);
 
             formSessao.value = {
                 id: null,
@@ -4809,6 +4823,225 @@ const app = createApp({
         };
 
         // ==========================================
+        // 14.10 CENTRAL DE REVISÕES & MEMORIZAÇÃO ESPAÇADA (ANKI / EBBINGHAUS / SM-2)
+        // ==========================================
+        const revisoesData = ref(null);
+        const carregandoRevisoes = ref(false);
+        const subAbaRevisoes = ref('sequencia_anki'); // 'sequencia_anki' | 'pior_rendimento' | 'historico' | 'tecnicas'
+        const filtroStatusRevisao = ref('TODAS'); // 'TODAS' | 'ATRASADA_CRITICA' | 'PARA_HOJE' | 'PROGRAMADA' | 'CONSOLIDADA'
+
+        let chartRevEbbinghausInstance = null;
+        let chartRevConstanciaInstance = null;
+        let chartRevVulnerabilidadeInstance = null;
+
+        const filaSequencialAnkiFiltrada = computed(() => {
+            const lista = revisoesData.value?.fila_sequencial_anki || [];
+            const f = filtroStatusRevisao.value;
+            if (!f || f === 'TODAS') return lista;
+            return lista.filter(item => item.status_revisao === f);
+        });
+
+        async function carregarCentralRevisoes(silencioso = false) {
+            if (!silencioso) carregandoRevisoes.value = true;
+            try {
+                const edId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+                const url = edId ? `/api/revisoes?edital_id=${edId}` : '/api/revisoes';
+                const res = await fetch(url);
+                if (res.ok) {
+                    revisoesData.value = await res.json();
+                    if (abaAtiva.value === 'revisoes') {
+                        nextTick(() => setTimeout(renderGraficosRevisoes, 100));
+                    }
+                }
+            } catch (e) {
+                console.error('Erro ao carregar Central de Revisões:', e);
+            } finally {
+                if (!silencioso) carregandoRevisoes.value = false;
+            }
+        }
+
+        const abrirCentralRevisoes = async () => {
+            abaAtiva.value = 'revisoes';
+            await carregarCentralRevisoes();
+            nextTick(() => setTimeout(renderGraficosRevisoes, 120));
+        };
+
+        const iniciarRevisaoAnkiDoTopico = (item) => {
+            if (!item) return;
+            const dId = item.disciplina_id || (todasDisciplinas.value[0]?.id || '');
+            const tId = item.topico_id || '';
+            const blocoAnkiAtual = (blocoAtual.value && blocoAtual.value.disciplina?.categoria === 'REVISAO_ANKI')
+                ? blocoAtual.value
+                : null;
+
+            formSessao.value = {
+                id: null,
+                is_revisao_anki: true,
+                disciplina_id: dId,
+                bloco_ciclo_id: blocoAnkiAtual ? blocoAnkiAtual.id : (blocoAtual.value ? blocoAtual.value.id : null),
+                topico_id: tId,
+                tempo_estudado_minutos: 45,
+                qtd_questoes_total: 15,
+                qtd_acertos: 12,
+                qtd_erros: 3,
+                avancar_ciclo: !!blocoAnkiAtual,
+                data: getDataHojeLocal()
+            };
+            modalCheckinAberto.value = true;
+        };
+
+        const renderGraficosRevisoes = () => {
+            if (!revisoesData.value?.graficos || typeof Chart === 'undefined') return;
+            const isDark = tema.value === 'dark';
+            const textColor = isDark ? '#94A3B8' : '#64748B';
+            const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
+
+            // 1. Gráfico Curva de Esquecimento de Ebbinghaus vs Retenção Anki
+            const elEbb = document.getElementById('chartRevisoesEbbinghaus');
+            if (elEbb && revisoesData.value.graficos.curva_ebbinghaus) {
+                if (chartRevEbbinghausInstance) {
+                    chartRevEbbinghausInstance.destroy();
+                    chartRevEbbinghausInstance = null;
+                }
+                const ebb = revisoesData.value.graficos.curva_ebbinghaus;
+                chartRevEbbinghausInstance = new Chart(elEbb.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: ebb.labels || [],
+                        datasets: [
+                            {
+                                label: 'Com Revisão Espaçada Anki (1d • 7d • 15d • 30d)',
+                                data: ebb.com_revisao_anki || [],
+                                borderColor: '#10B981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.16)',
+                                borderWidth: 3,
+                                fill: true,
+                                tension: 0.35,
+                                pointRadius: 4,
+                                pointBackgroundColor: '#10B981'
+                            },
+                            {
+                                label: 'Sem Revisão (Queda Natural de Ebbinghaus)',
+                                data: ebb.sem_revisao || [],
+                                borderColor: '#F43F5E',
+                                backgroundColor: 'rgba(244, 63, 94, 0.08)',
+                                borderWidth: 2,
+                                borderDash: [5, 5],
+                                fill: true,
+                                tension: 0.35,
+                                pointRadius: 3,
+                                pointBackgroundColor: '#F43F5E'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' } } }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: { color: textColor, font: { size: 10 }, callback: (v) => `${v}%` },
+                                grid: { color: gridColor }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // 2. Gráfico Constância de Revisões (Últimos 14 dias)
+            const elConst = document.getElementById('chartRevisoesConstancia');
+            if (elConst && revisoesData.value.graficos.constancia_14d) {
+                if (chartRevConstanciaInstance) {
+                    chartRevConstanciaInstance.destroy();
+                    chartRevConstanciaInstance = null;
+                }
+                const c14 = revisoesData.value.graficos.constancia_14d;
+                chartRevConstanciaInstance = new Chart(elConst.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: c14.map(x => x.data_fmt),
+                        datasets: [
+                            {
+                                label: 'Minutos Revisados',
+                                data: c14.map(x => x.minutos),
+                                backgroundColor: isDark ? '#818CF8' : '#4F46E5',
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Questões de Revisão',
+                                data: c14.map(x => x.questoes),
+                                backgroundColor: isDark ? '#34D399' : '#10B981',
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' } } }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                            y: { beginAtZero: true, ticks: { color: textColor, font: { size: 10 } }, grid: { color: gridColor } }
+                        }
+                    }
+                });
+            }
+
+            // 3. Gráfico Vulnerabilidade por Disciplina (Acerto nos Ciclos vs Retenção Estimada)
+            const elVuln = document.getElementById('chartRevisoesVulnerabilidade');
+            if (elVuln && revisoesData.value.graficos.vulnerabilidade_disciplinas) {
+                if (chartRevVulnerabilidadeInstance) {
+                    chartRevVulnerabilidadeInstance.destroy();
+                    chartRevVulnerabilidadeInstance = null;
+                }
+                const vd = revisoesData.value.graficos.vulnerabilidade_disciplinas;
+                chartRevVulnerabilidadeInstance = new Chart(elVuln.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: vd.map(x => x.disciplina_nome.length > 18 ? x.disciplina_nome.substring(0, 18) + '…' : x.disciplina_nome),
+                        datasets: [
+                            {
+                                label: '% Acerto nos Ciclos',
+                                data: vd.map(x => x.taxa_acerto_media_perc),
+                                backgroundColor: isDark ? '#38BDF8' : '#2563EB',
+                                borderRadius: 6
+                            },
+                            {
+                                label: '% Retenção de Memória (Ebbinghaus)',
+                                data: vd.map(x => x.retencao_media_perc),
+                                backgroundColor: isDark ? '#F59E0B' : '#D97706',
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { labels: { color: textColor, font: { size: 11, weight: 'bold' } } }
+                        },
+                        scales: {
+                            x: { ticks: { color: textColor, font: { size: 10 } }, grid: { display: false } },
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: { color: textColor, font: { size: 10 }, callback: (v) => `${v}%` },
+                                grid: { color: gridColor }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+
+        // ==========================================
         // 15. EXPOSIÇÃO DE PROPRIEDADES PARA O TEMPLATE
         // ==========================================
         return {
@@ -5088,7 +5321,18 @@ const app = createApp({
             fecharOuProximaMedalhaCelebracao,
             celebrarMedalhaManual,
             abrirGaleriaMedalhas,
-            resgatarDesafioDiarioXP
+            resgatarDesafioDiarioXP,
+
+            // Central de Revisões & Anki (SM-2 / Ebbinghaus)
+            revisoesData,
+            carregandoRevisoes,
+            subAbaRevisoes,
+            filtroStatusRevisao,
+            filaSequencialAnkiFiltrada,
+            carregarCentralRevisoes,
+            abrirCentralRevisoes,
+            iniciarRevisaoAnkiDoTopico,
+            renderGraficosRevisoes
         };
     }
 });

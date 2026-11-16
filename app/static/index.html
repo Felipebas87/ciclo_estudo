@@ -433,6 +433,14 @@
                             <span class="flex-1 text-left">Diário de Sessões</span>
                         </button>
 
+                        <!-- 4.5 Revisões (abaixo do Diário de Sessões) -->
+                        <button @click="navegarPara('revisoes')"
+                            :class="abaAtiva === 'revisoes' ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/25 font-bold' : 'text-slate-600 dark:text-[#94A3B8] hover:text-slate-900 dark:hover:text-[#F1F5F9] hover:bg-slate-100/80 dark:hover:bg-[#1B2638] font-semibold'"
+                            class="w-full flex items-center space-x-3 px-3.5 py-2.5 rounded-xl text-xs sm:text-sm transition-all duration-150">
+                            <i class="fa-solid fa-brain text-base w-5 text-center" :class="abaAtiva === 'revisoes' ? 'text-white' : 'text-purple-500 dark:text-[#C4B5FD]'"></i>
+                            <span class="flex-1 text-left">Revisões</span>
+                        </button>
+
                         <p class="sidebar-section-title px-3 text-xs font-bold text-slate-400 dark:text-[#94A3B8] uppercase tracking-widest pt-4 mb-2">Inteligência &amp; Métricas</p>
 
                         <!-- 5. Dashboard -->
@@ -525,10 +533,10 @@
                         
                         <div>
                             <h2 class="text-base sm:text-lg font-extrabold text-slate-900 dark:text-[#F1F5F9] capitalize leading-tight truncate">
-                                {{ abaAtiva === 'ciclo' ? 'Ciclo de Estudos' : (abaAtiva === 'roteiro_estudo' ? 'Roteiro de Estudo' : (abaAtiva === 'editais' ? 'Editais & Matérias' : (abaAtiva === 'verticalizado' ? 'Edital Verticalizado' : (abaAtiva === 'diario' ? 'Diário de Sessões' : (abaAtiva === 'dashboard' ? 'Performance & Dashboard' : (abaAtiva === 'heatmap' ? 'Constância de Estudos' : (abaAtiva === 'mapa_aprovacao' ? 'Mapa da Aprovação' : (abaAtiva === 'gestao_temporal' ? 'Gestão Temporal (Projeto da Aprovação)' : 'Resultados & Raio-X')))))))) }}
+                                {{ abaAtiva === 'ciclo' ? 'Ciclo de Estudos' : (abaAtiva === 'roteiro_estudo' ? 'Roteiro de Estudo' : (abaAtiva === 'editais' ? 'Editais & Matérias' : (abaAtiva === 'verticalizado' ? 'Edital Verticalizado' : (abaAtiva === 'diario' ? 'Diário de Sessões' : (abaAtiva === 'revisoes' ? 'Central de Revisões & Memorização Espaçada' : (abaAtiva === 'dashboard' ? 'Performance & Dashboard' : (abaAtiva === 'heatmap' ? 'Constância de Estudos' : (abaAtiva === 'mapa_aprovacao' ? 'Mapa da Aprovação' : (abaAtiva === 'gestao_temporal' ? 'Gestão Temporal (Projeto da Aprovação)' : 'Resultados & Raio-X'))))))))) }}
                             </h2>
                             <p class="text-[11px] text-slate-400 dark:text-[#94A3B8] hidden sm:block">
-                                {{ abaAtiva === 'ciclo' ? 'Acompanhe a esteira de matérias e cronometre sua sessão' : (abaAtiva === 'roteiro_estudo' ? 'Missões diárias sincronizadas com o Ciclo, calendário visual e projeção do edital verticalizado até a prova' : (abaAtiva === 'editais' ? 'Gerencie disciplinas, pesos e cargas horárias' : (abaAtiva === 'verticalizado' ? 'Controle de tópicos estudados e revisões' : (abaAtiva === 'diario' ? 'Histórico completo de sessões cumpridas' : (abaAtiva === 'dashboard' ? 'Métricas de horas e aproveitamento geral' : (abaAtiva === 'heatmap' ? 'Visualização da frequência diária' : (abaAtiva === 'mapa_aprovacao' ? 'Nota estimada na prova com margem de incerteza, pesos das disciplinas e critérios eliminatórios' : (abaAtiva === 'gestao_temporal' ? 'Gerenciamento de projeto até a prova: ritmo semanal do edital, fase de revisão e simulados' : 'Comparativos com nota de corte e estatísticas')))))))) }}
+                                {{ abaAtiva === 'ciclo' ? 'Acompanhe a esteira de matérias e cronometre sua sessão' : (abaAtiva === 'roteiro_estudo' ? 'Missões diárias sincronizadas com o Ciclo, calendário visual e projeção do edital verticalizado até a prova' : (abaAtiva === 'editais' ? 'Gerencie disciplinas, pesos e cargas horárias' : (abaAtiva === 'verticalizado' ? 'Controle de tópicos estudados e revisões' : (abaAtiva === 'diario' ? 'Histórico completo de sessões cumpridas' : (abaAtiva === 'revisoes' ? 'Sequência inteligente do Anki, diagnóstico de pior rendimento nos ciclos, curva de Ebbinghaus e técnicas de memorização' : (abaAtiva === 'dashboard' ? 'Métricas de horas e aproveitamento geral' : (abaAtiva === 'heatmap' ? 'Visualização da frequência diária' : (abaAtiva === 'mapa_aprovacao' ? 'Nota estimada na prova com margem de incerteza, pesos das disciplinas e critérios eliminatórios' : (abaAtiva === 'gestao_temporal' ? 'Gerenciamento de projeto até a prova: ritmo semanal do edital, fase de revisão e simulados' : 'Comparativos com nota de corte e estatísticas'))))))))) }}
                             </p>
                         </div>
                     </div>
@@ -701,8 +709,16 @@
                                             
                                             <!-- LINHA SUPERIOR: TAGS DO TÓPICO À ESQUERDA + ENGRENAGEM À DIREITA (SEM SOBREPOSIÇÃO) -->
                                             <div class="flex items-center justify-between gap-2 mb-2 pb-1 border-b border-slate-200/50 dark:border-slate-700/40">
-                                                <div class="text-[10.5px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex flex-wrap items-center gap-1.5">
-                                                    <span>🎯 Próximo Tópico da Trilha</span>
+                                                <div class="text-[10.5px] font-extrabold uppercase tracking-wider flex flex-wrap items-center gap-1.5"
+                                                    :class="proximoTopicoBlocoAtual.eh_revisao_anki ? 'text-purple-600 dark:text-purple-300' : 'text-blue-600 dark:text-blue-400'">
+                                                    <span v-if="proximoTopicoBlocoAtual.eh_revisao_anki">
+                                                        🧠 Revisão Anki Recomendada — {{ proximoTopicoBlocoAtual.disciplina_nome }}
+                                                    </span>
+                                                    <span v-else>🎯 Próximo Tópico da Trilha</span>
+                                                    <span v-if="proximoTopicoBlocoAtual.eh_revisao_anki && proximoTopicoBlocoAtual.taxa_acerto_perc !== null && proximoTopicoBlocoAtual.taxa_acerto_perc !== undefined"
+                                                        class="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/30 font-black text-[9.5px]">
+                                                        Acerto: {{ proximoTopicoBlocoAtual.taxa_acerto_perc }}% &bull; Retenção: {{ proximoTopicoBlocoAtual.retencao_estimada_perc }}%
+                                                    </span>
                                                     <span v-if="proximoTopicoBlocoAtual.prioridade === 1" class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-300 dark:border-rose-500/30 font-black text-[9.5px]">
                                                         <i class="fa-solid fa-bolt text-[8px]"></i> P1 - ALTA
                                                     </span>
@@ -920,6 +936,21 @@
                                             <p class="text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-tight">
                                                 {{ (b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.titulo }}
                                             </p>
+                                        </div>
+                                        <!-- Indicação inteligente quando o bloco da esteira é REVISÃO ANKI -->
+                                        <div v-else-if="b.disciplina.categoria === 'REVISAO_ANKI' && b.proximo_topico"
+                                            class="mt-1.5 p-1.5 sm:p-2 rounded-lg bg-purple-50/90 dark:bg-purple-950/35 border border-purple-200/90 dark:border-purple-500/40 text-[10.5px]"
+                                            :title="b.proximo_topico.disciplina_nome + ' — ' + b.proximo_topico.titulo">
+                                            <div class="flex items-center justify-between gap-1 font-extrabold text-purple-700 dark:text-purple-300 mb-0.5">
+                                                <span class="truncate"><i class="fa-solid fa-brain text-[9px] mr-1"></i>{{ b.proximo_topico.disciplina_nome }}</span>
+                                                <span class="text-[9.5px] font-mono-timer text-rose-600 dark:text-rose-300 shrink-0">{{ b.proximo_topico.taxa_acerto_perc }}%</span>
+                                            </div>
+                                            <p class="text-slate-700 dark:text-slate-200 font-semibold line-clamp-2 leading-tight">
+                                                {{ b.proximo_topico.titulo }}
+                                            </p>
+                                            <div class="text-[9px] text-purple-600 dark:text-purple-300 font-bold mt-0.5 truncate">
+                                                Retenção: {{ b.proximo_topico.retencao_estimada_perc }}% &bull; {{ b.proximo_topico.tecnica_recomendada }}
+                                            </div>
                                         </div>
                                     </div>
                                     <div class="mt-2 flex justify-between items-center text-[11px] font-semibold"
@@ -2459,6 +2490,531 @@
                         <p class="font-bold text-slate-600 dark:text-[#F1F5F9] text-sm">Nenhuma sessão de estudo registrada ainda.</p>
                         <p class="text-xs text-slate-400 dark:text-[#94A3B8] mt-1">Conclua um bloco do ciclo ou registre um check-in avulso.
                         </p>
+                    </div>
+                </div>
+
+                <!-- ======================================================================= -->
+                <!-- ABA 4.5: CENTRAL DE REVISÕES & MEMORIZAÇÃO ESPAÇADA (ANKI / EBBINGHAUS) -->
+                <!-- ======================================================================= -->
+                <div v-if="abaAtiva === 'revisoes'" class="space-y-6">
+                    <div v-if="carregandoRevisoes && !revisoesData"
+                        class="bg-white dark:bg-[#141D2E] p-12 rounded-3xl border border-slate-200 dark:border-[#24324A] text-center shadow-xs">
+                        <i class="fa-solid fa-spinner fa-spin text-3xl text-blue-500 mb-3"></i>
+                        <p class="text-sm font-bold text-slate-600 dark:text-[#94A3B8]">Calculando Curva de Ebbinghaus, rendimento nos ciclos e sequência inteligente de revisões do Anki...</p>
+                    </div>
+
+                    <div v-else-if="revisoesData && !revisoesData.erro" class="space-y-6">
+
+                        <!-- 1. CARDS DE KPIs GLOBAIS DE REVISÃO E MEMORIZAÇÃO -->
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <!-- KPI 1: Total de Revisões Feitas -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                        Revisões Realizadas
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                        {{ revisoesData.kpis.horas_revisoes_total }}h acumuladas
+                                    </span>
+                                </div>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-3xl font-black font-mono-timer text-blue-600 dark:text-[#60A5FA]">
+                                        {{ revisoesData.kpis.total_revisoes_feitas }}
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">sessões de revisão</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                    Questões em revisões: <strong>{{ revisoesData.kpis.questoes_em_revisoes }} questões</strong>
+                                </div>
+                            </div>
+
+                            <!-- KPI 2: Índice Médio de Retenção Mnêmica (Ebbinghaus) -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                        Retenção Média (Ebbinghaus)
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-emerald-500/15 text-emerald-600 dark:text-[#34D399]">
+                                        {{ revisoesData.kpis.total_topicos_mapeados }} tópicos vistos
+                                    </span>
+                                </div>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-3xl font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                        {{ revisoesData.kpis.retencao_media_global_perc }}%
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">memória ativa</span>
+                                </div>
+                                <div class="w-full h-2 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden">
+                                    <div class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                        :style="{ width: Math.min(100, revisoesData.kpis.retencao_media_global_perc) + '%' }"></div>
+                                </div>
+                            </div>
+
+                            <!-- KPI 3: Fila Urgente / Atrasadas -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                        Fila de Revisão Urgente
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-black bg-rose-500/15 text-rose-600 dark:text-rose-400">
+                                        {{ revisoesData.kpis.qtd_revisoes_criticas }} críticas
+                                    </span>
+                                </div>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-3xl font-black font-mono-timer text-rose-600 dark:text-rose-400">
+                                        {{ revisoesData.kpis.qtd_urgent_total }}
+                                    </span>
+                                    <span class="text-xs font-bold text-slate-500 dark:text-[#94A3B8]">tópicos pedindo Anki</span>
+                                </div>
+                                <div class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                    Priorizados automaticamente nos blocos <strong>REVISÃO ANKI</strong> do Ciclo.
+                                </div>
+                            </div>
+
+                            <!-- KPI 4: Próximo Bloco REVISÃO ANKI na Esteira -->
+                            <div v-if="revisoesData.proxima_revisao_anki_esteira"
+                                class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-[#60A5FA]">
+                                        <i class="fa-solid fa-brain mr-1"></i>Alvo #1 do Anki no Ciclo
+                                    </span>
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-mono-timer font-black bg-rose-500/15 text-rose-600 dark:text-rose-300">
+                                        Acerto: {{ revisoesData.proxima_revisao_anki_esteira.taxa_acerto_perc }}%
+                                    </span>
+                                </div>
+                                <div>
+                                    <div class="text-xs font-black text-slate-900 dark:text-white truncate">
+                                        {{ revisoesData.proxima_revisao_anki_esteira.disciplina_nome }}
+                                    </div>
+                                    <div class="text-xs font-semibold text-slate-600 dark:text-[#CBD5E1] line-clamp-2 mt-0.5"
+                                        :title="revisoesData.proxima_revisao_anki_esteira.topico_titulo">
+                                        {{ revisoesData.proxima_revisao_anki_esteira.topico_titulo }}
+                                    </div>
+                                </div>
+                                <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8] truncate">
+                                    Técnica: <strong>{{ revisoesData.proxima_revisao_anki_esteira.tecnica_recomendada.nome }}</strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 2. CARD DE DESTAQUE: ALERTA DE PIOR RENDIMENTO NOS CICLOS & PRÓXIMOS BLOCOS ANKI DA ESTEIRA -->
+                        <div v-if="revisoesData.destaque_pior_rendimento"
+                            class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-5">
+                            <div class="space-y-4 border-b border-slate-100 dark:border-[#24324A] pb-5">
+                                <div class="flex flex-wrap items-start justify-between gap-4">
+                                    <div class="space-y-1.5 flex-1 min-w-[260px]">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="px-2.5 py-0.5 rounded-md bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30 text-[10px] font-black uppercase tracking-wider">
+                                                <i class="fa-solid fa-triangle-exclamation mr-1"></i>Matéria &amp; Tópico de Pior Rendimento nos Ciclos
+                                            </span>
+                                            <span class="px-2.5 py-0.5 rounded-md bg-blue-500/15 text-blue-700 dark:text-[#60A5FA] text-[10px] font-black">
+                                                {{ revisoesData.destaque_pior_rendimento.estagio_revisao }}
+                                            </span>
+                                            <span class="px-2.5 py-0.5 rounded-md bg-slate-100 dark:bg-[#1B2638] text-slate-700 dark:text-[#CBD5E1] text-[10px] font-mono-timer font-bold">
+                                                Score de Urgência Anki: {{ revisoesData.destaque_pior_rendimento.score_prioridade_anki }}/100
+                                            </span>
+                                        </div>
+                                        <h3 class="text-base sm:text-xl font-black text-slate-900 dark:text-white leading-snug">
+                                            <span class="text-rose-600 dark:text-rose-400">{{ revisoesData.destaque_pior_rendimento.disciplina_nome }}</span>
+                                            &mdash; {{ revisoesData.destaque_pior_rendimento.topico_titulo }}
+                                        </h3>
+                                    </div>
+
+                                    <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                        <button type="button"
+                                            @click="iniciarRevisaoAnkiDoTopico(revisoesData.destaque_pior_rendimento)"
+                                            class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5">
+                                            <i class="fa-solid fa-check"></i>
+                                            <span>Registrar Revisão Anki Agora</span>
+                                        </button>
+                                        <button type="button"
+                                            @click="navegarPara('ciclo')"
+                                            class="px-3.5 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] text-slate-700 dark:text-[#CBD5E1] font-bold text-xs border border-slate-200 dark:border-[#24324A] cursor-pointer">
+                                            Ver na Esteira do Ciclo
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <p class="w-full text-sm text-slate-700 dark:text-[#CBD5E1] leading-relaxed">
+                                    <strong class="text-slate-900 dark:text-white">Diagnóstico nos Ciclos:</strong> Taxa de acerto de <strong class="text-slate-900 dark:text-white">{{ revisoesData.destaque_pior_rendimento.taxa_acerto_perc }}%</strong>
+                                    ({{ revisoesData.destaque_pior_rendimento.acertos }} acertos e {{ revisoesData.destaque_pior_rendimento.erros }} erros em {{ revisoesData.destaque_pior_rendimento.questoes_resolvidas }} questões),
+                                    com retenção estimada hoje em <strong class="text-slate-900 dark:text-white">{{ revisoesData.destaque_pior_rendimento.retencao_estimada_perc }}%</strong> ({{ revisoesData.destaque_pior_rendimento.dias_desde_ultimo_estudo }} dias desde o último estudo).
+                                </p>
+
+                                <div class="w-full p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                                    <strong class="text-slate-900 dark:text-white">
+                                        <i class="fa-solid fa-wand-magic-sparkles text-blue-500 mr-1.5"></i>Técnica de Memorização Indicada ({{ revisoesData.destaque_pior_rendimento.tecnica_recomendada.nome }}):
+                                    </strong>
+                                    {{ revisoesData.destaque_pior_rendimento.tecnica_recomendada.orientacao_curta }}
+                                </div>
+                            </div>
+
+                            <!-- Mapeamento dos Blocos REVISÃO ANKI na Esteira Sequencial do Ciclo -->
+                            <div v-if="revisoesData.mapeamento_esteira_anki && revisoesData.mapeamento_esteira_anki.length > 0" class="space-y-2.5">
+                                <h4 class="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                    <i class="fa-solid fa-arrows-spin text-blue-500 mr-1.5"></i>O Que Cada Bloco "REVISÃO ANKI" da Esteira Sequencial do Ciclo Vai Cobrar:
+                                </h4>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    <div v-for="bAnki in revisoesData.mapeamento_esteira_anki" :key="bAnki.bloco_id"
+                                        class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] flex items-center justify-between gap-3">
+                                        <div class="space-y-1 min-w-0">
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                <span class="px-2 py-0.5 rounded bg-blue-600 text-white text-[10px] font-black">
+                                                    {{ bAnki.ordem_encontro_anki }}º Bloco Anki da Esteira (Bloco #{{ bAnki.posicao_esteira_numero }})
+                                                </span>
+                                                <span class="text-[10px] font-mono-timer font-bold text-slate-500 dark:text-[#94A3B8]">
+                                                    {{ bAnki.eh_bloco_atual ? 'EM FOCO AGORA NO CICLO' : `Faltam ${bAnki.distancia_blocos_ate_ele} bloco(s)` }}
+                                                </span>
+                                            </div>
+                                            <div class="text-xs font-black text-slate-900 dark:text-white truncate">
+                                                {{ bAnki.disciplina_nome }}
+                                            </div>
+                                            <div class="text-xs font-semibold text-slate-600 dark:text-[#CBD5E1] truncate" :title="bAnki.topico_titulo">
+                                                {{ bAnki.topico_titulo }}
+                                            </div>
+                                            <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8]">
+                                                Acerto: <strong>{{ bAnki.taxa_acerto_perc }}%</strong> &bull; Retenção: <strong>{{ bAnki.retencao_estimada_perc }}%</strong> &bull; {{ bAnki.tecnica_recomendada }}
+                                            </div>
+                                        </div>
+                                        <button type="button"
+                                            @click="iniciarRevisaoAnkiDoTopico(bAnki)"
+                                            class="px-3 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-[#60A5FA] font-black text-xs shrink-0 cursor-pointer">
+                                            Revisar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 3. PAINEL VISUAL DE GRÁFICOS (CURVA DE EBBINGHAUS, CONSTÂNCIA 14 DIAS E VULNERABILIDADE POR DISCIPLINA) -->
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                            <!-- Gráfico 1: Curva de Esquecimento de Ebbinghaus vs Revisão Espaçada Anki -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-3">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-wave-square text-emerald-500"></i>
+                                        Curva de Ebbinghaus vs. Revisão Anki
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                        Efeito das revisões espaçadas (24h, 7d, 15d, 30d) blindando a retenção acima de 85%.
+                                    </p>
+                                </div>
+                                <div class="h-56 relative">
+                                    <canvas id="chartRevisoesEbbinghaus"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Gráfico 2: Constância de Revisões (Últimos 14 Dias) -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-3">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-calendar-check text-indigo-500"></i>
+                                        Constância de Revisão (14 Dias)
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                        Minutos de revisão e questões de fixação realizadas diariamente.
+                                    </p>
+                                </div>
+                                <div class="h-56 relative">
+                                    <canvas id="chartRevisoesConstancia"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Gráfico 3: Rendimento nos Ciclos vs Retenção por Disciplina -->
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-3">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                        <i class="fa-solid fa-chart-column text-amber-500"></i>
+                                        Rendimento vs. Retenção por Matéria
+                                    </h4>
+                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                        Identifica as disciplinas com maior queda de memória nos ciclos.
+                                    </p>
+                                </div>
+                                <div class="h-56 relative">
+                                    <canvas id="chartRevisoesVulnerabilidade"></canvas>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 4. NAVEGAÇÃO INTERNA: SEQUÊNCIA ANKI | PIOR RENDIMENTO | HISTÓRICO | TÉCNICAS DE MEMORIZAÇÃO -->
+                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-5">
+                            <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-[#24324A] pb-4">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button type="button" @click="subAbaRevisoes = 'sequencia_anki'"
+                                        class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRevisoes === 'sequencia_anki' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-list-ol mr-1.5"></i>Sequência de Próximas Revisões do Anki ({{ (revisoesData.fila_sequencial_anki || []).length }})
+                                    </button>
+                                    <button type="button" @click="subAbaRevisoes = 'pior_rendimento'"
+                                        class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRevisoes === 'pior_rendimento' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-arrow-trend-down mr-1.5"></i>Ranking de Pior Rendimento nos Ciclos
+                                    </button>
+                                    <button type="button" @click="subAbaRevisoes = 'historico'"
+                                        class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRevisoes === 'historico' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-clock-rotate-left mr-1.5"></i>Todas as Revisões Feitas ({{ (revisoesData.historico_revisoes_feitas || []).length }})
+                                    </button>
+                                    <button type="button" @click="subAbaRevisoes = 'tecnicas'"
+                                        class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRevisoes === 'tecnicas' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-graduation-cap mr-1.5"></i>Técnicas de Memorização &amp; Aprendizado
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 1: SEQUÊNCIA DE PRÓXIMAS REVISÕES DO ANKI -->
+                            <div v-if="subAbaRevisoes === 'sequencia_anki'" class="space-y-4">
+                                <div class="flex flex-wrap items-center justify-between gap-2">
+                                    <div>
+                                        <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                            Fila Sequencial Inteligente de Revisões (Algoritmo SM-2 + Rendimento nos Ciclos)
+                                        </h4>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                            Esta é a ordem exata das próximas revisões que o Anki puxará automaticamente nos blocos de revisão da esteira do seu Ciclo.
+                                        </p>
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        <button v-for="st in [{k:'TODAS', l:'Todas'}, {k:'ATRASADA_CRITICA', l:'Urgentes / Críticas'}, {k:'PARA_HOJE', l:'Para Este Ciclo'}, {k:'PROGRAMADA', l:'Programadas'}, {k:'CONSOLIDADA', l:'Estáveis'}]"
+                                            :key="st.k"
+                                            type="button"
+                                            @click="filtroStatusRevisao = st.k"
+                                            class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer"
+                                            :class="filtroStatusRevisao === st.k ? 'bg-blue-600 text-white' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8]'">
+                                            {{ st.l }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="space-y-3">
+                                    <div v-for="item in filaSequencialAnkiFiltrada" :key="item.topico_id"
+                                        class="p-4 rounded-2xl border bg-slate-50 dark:bg-[#1B2638] border-slate-200 dark:border-[#24324A] flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                                        <div class="space-y-1.5">
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="px-2.5 py-0.5 rounded-md bg-slate-800 dark:bg-slate-700 text-white text-[10px] font-black">
+                                                    #{{ item.ordem_fila_anki }} na Fila do Anki
+                                                </span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
+                                                    :class="{
+                                                        'bg-rose-500/15 text-rose-600 dark:text-rose-300': item.status_revisao === 'ATRASADA_CRITICA',
+                                                        'bg-amber-500/15 text-amber-600 dark:text-amber-300': item.status_revisao === 'PARA_HOJE',
+                                                        'bg-blue-500/15 text-blue-600 dark:text-blue-300': item.status_revisao === 'PROGRAMADA',
+                                                        'bg-emerald-500/15 text-emerald-600 dark:text-emerald-300': item.status_revisao === 'CONSOLIDADA'
+                                                    }">
+                                                    {{ item.status_label }}
+                                                </span>
+                                                <span class="px-2 py-0.5 rounded bg-white dark:bg-[#141D2E] text-slate-600 dark:text-[#CBD5E1] text-[10px] font-bold border border-slate-200 dark:border-[#24324A]">
+                                                    {{ item.estagio_revisao }} (EF {{ item.ease_factor }})
+                                                </span>
+                                                <span v-if="item.prioridade === 1" class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black">⚡ P1</span>
+                                                <span v-if="item.mais_cobrado" class="px-2 py-0.5 rounded bg-rose-500/15 text-rose-700 dark:text-rose-300 text-[10px] font-black">🔥 Mais Cobrado</span>
+                                            </div>
+
+                                            <div class="text-sm font-black text-slate-900 dark:text-white">
+                                                <span class="text-blue-600 dark:text-[#60A5FA]">{{ item.disciplina_nome }}</span> &mdash; {{ item.topico_titulo }}
+                                            </div>
+
+                                            <div class="flex flex-wrap items-center gap-3 text-xs text-slate-600 dark:text-[#CBD5E1]">
+                                                <span>Rendimento no Ciclo: <strong :class="badgeTextTaxa(item.taxa_acerto_perc)">{{ item.taxa_acerto_perc }}%</strong> ({{ item.acertos }}/{{ item.questoes_resolvidas }}q • {{ item.erros }} erros)</span>
+                                                <span>&bull;</span>
+                                                <span>Retenção Hoje: <strong class="text-emerald-600 dark:text-[#34D399]">{{ item.retencao_estimada_perc }}%</strong></span>
+                                                <span>&bull;</span>
+                                                <span>Último estudo: <strong>{{ item.ultima_data_fmt }}</strong> ({{ item.dias_desde_ultimo_estudo }}d atrás)</span>
+                                            </div>
+
+                                            <div class="text-[11px] text-slate-600 dark:text-[#94A3B8]">
+                                                <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i><strong class="text-slate-800 dark:text-slate-200">Técnica Recomendada ({{ item.tecnica_recomendada.nome }}):</strong>
+                                                {{ item.tecnica_recomendada.orientacao_curta }}
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center gap-2 shrink-0">
+                                            <button type="button"
+                                                @click="iniciarRevisaoAnkiDoTopico(item)"
+                                                class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
+                                                <i class="fa-solid fa-check"></i>
+                                                <span>Revisar Tópico</span>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 2: RANKING DE PIOR RENDIMENTO NOS CICLOS -->
+                            <div v-if="subAbaRevisoes === 'pior_rendimento'" class="space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                        Mapeamento de Matérias e Tópicos Vistos nos Ciclos com Pior Rendimento
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                        Ordenados do menor percentual de acerto e maior número de erros para orientar o reforço imediato de memorização.
+                                    </p>
+                                </div>
+
+                                <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead class="bg-slate-50 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] uppercase border-b border-slate-200 dark:border-[#24324A]">
+                                            <tr>
+                                                <th class="py-3 px-4 font-bold">#</th>
+                                                <th class="py-3 px-4 font-bold">Disciplina &amp; Tópico</th>
+                                                <th class="py-3 px-4 font-bold text-center">Questões (C / E)</th>
+                                                <th class="py-3 px-4 font-bold text-center">% Acerto</th>
+                                                <th class="py-3 px-4 font-bold text-center">Retenção Memória</th>
+                                                <th class="py-3 px-4 font-bold">Técnica de Memorização</th>
+                                                <th class="py-3 px-4 font-bold text-right">Ação</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100 dark:divide-[#24324A]">
+                                            <tr v-for="(rTop, rIdx) in revisoesData.ranking_pior_rendimento" :key="rTop.topico_id"
+                                                class="hover:bg-slate-50/80 dark:hover:bg-[#1B2638]/50">
+                                                <td class="py-3 px-4 font-mono-timer font-black text-slate-400">{{ rIdx + 1 }}º</td>
+                                                <td class="py-3 px-4">
+                                                    <div class="font-black text-slate-900 dark:text-white">{{ rTop.disciplina_nome }}</div>
+                                                    <div class="text-slate-600 dark:text-[#CBD5E1] font-medium">{{ rTop.topico_titulo }}</div>
+                                                </td>
+                                                <td class="py-3 px-4 text-center font-mono-timer">
+                                                    <strong>{{ rTop.questoes_resolvidas }}q</strong>
+                                                    <span class="text-emerald-600 ml-1">{{ rTop.acertos }}C</span> /
+                                                    <span class="text-rose-500">{{ rTop.erros }}E</span>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span class="px-2.5 py-1 rounded-lg font-mono-timer font-black" :class="badgeTaxaAcertoBg(rTop.taxa_acerto_perc)">
+                                                        {{ rTop.taxa_acerto_perc }}%
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-4 text-center font-mono-timer font-bold text-emerald-600 dark:text-[#34D399]">
+                                                    {{ rTop.retencao_estimada_perc }}%
+                                                </td>
+                                                <td class="py-3 px-4 text-slate-600 dark:text-[#CBD5E1] font-semibold">
+                                                    {{ rTop.tecnica_recomendada.nome }}
+                                                </td>
+                                                <td class="py-3 px-4 text-right">
+                                                    <button type="button"
+                                                        @click="iniciarRevisaoAnkiDoTopico(rTop)"
+                                                        class="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs cursor-pointer">
+                                                        Revisar
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 3: HISTÓRICO DE TODAS AS REVISÕES FEITAS -->
+                            <div v-if="subAbaRevisoes === 'historico'" class="space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                        Histórico Completo de Revisões Realizadas ({{ (revisoesData.historico_revisoes_feitas || []).length }})
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                        Inclui todos os blocos de Revisão Anki cumpridos na esteira e todas as repetições espaçadas de tópicos nos ciclos.
+                                    </p>
+                                </div>
+
+                                <div v-if="(revisoesData.historico_revisoes_feitas || []).length === 0"
+                                    class="p-8 text-center text-xs text-slate-400">
+                                    Nenhuma revisão registrada até o momento.
+                                </div>
+
+                                <div v-else class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead class="bg-slate-50 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] uppercase border-b border-slate-200 dark:border-[#24324A]">
+                                            <tr>
+                                                <th class="py-3 px-4 font-bold">Data</th>
+                                                <th class="py-3 px-4 font-bold">Tipo de Revisão</th>
+                                                <th class="py-3 px-4 font-bold">Disciplina &amp; Tópico</th>
+                                                <th class="py-3 px-4 font-bold text-center">Duração</th>
+                                                <th class="py-3 px-4 font-bold text-center">Questões</th>
+                                                <th class="py-3 px-4 font-bold text-center">% Acerto</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100 dark:divide-[#24324A]">
+                                            <tr v-for="hRev in revisoesData.historico_revisoes_feitas" :key="hRev.sessao_id"
+                                                class="hover:bg-slate-50/80 dark:hover:bg-[#1B2638]/50">
+                                                <td class="py-3 px-4 font-mono-timer font-bold text-slate-600 dark:text-[#CBD5E1]">{{ hRev.data_fmt }}</td>
+                                                <td class="py-3 px-4">
+                                                    <span class="px-2 py-0.5 rounded bg-blue-500/15 text-blue-700 dark:text-[#60A5FA] font-bold text-[10px]">
+                                                        {{ hRev.tipo_revisao }}
+                                                    </span>
+                                                </td>
+                                                <td class="py-3 px-4">
+                                                    <div class="font-bold text-slate-900 dark:text-white">{{ hRev.disciplina_nome }}</div>
+                                                    <div class="text-slate-500 dark:text-[#94A3B8]">{{ hRev.topico_titulo }}</div>
+                                                </td>
+                                                <td class="py-3 px-4 text-center font-mono-timer font-bold text-blue-600 dark:text-[#60A5FA]">
+                                                    {{ hRev.tempo_minutos }} min
+                                                </td>
+                                                <td class="py-3 px-4 text-center font-mono-timer">
+                                                    <span v-if="hRev.questoes_total > 0">{{ hRev.acertos }}/{{ hRev.questoes_total }}q</span>
+                                                    <span v-else class="text-slate-400">Cards Anki</span>
+                                                </td>
+                                                <td class="py-3 px-4 text-center">
+                                                    <span v-if="hRev.questoes_total > 0" class="px-2 py-0.5 rounded font-mono-timer font-bold" :class="badgeTaxaAcertoBg(hRev.percentual_acerto)">
+                                                        {{ hRev.percentual_acerto }}%
+                                                    </span>
+                                                    <span v-else class="text-emerald-500 font-bold">✓ Revisado</span>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 4: TÉCNICAS DE MEMORIZAÇÃO & NEUROAPRENDIZAGEM APLICADAS AOS SEUS TÓPICOS -->
+                            <div v-if="subAbaRevisoes === 'tecnicas'" class="space-y-4">
+                                <div>
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                        Arsenal de Técnicas de Memorização &amp; Aprendizado (Mapeadas para os Seus Tópicos)
+                                    </h4>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                        Cada técnica abaixo agrupa automaticamente os tópicos do seu edital que mais se beneficiam daquele método hoje.
+                                    </p>
+                                </div>
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div v-for="tec in revisoesData.tecnicas_memorizacao" :key="tec.codigo"
+                                        class="p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-3">
+                                        <div class="flex items-start justify-between gap-2">
+                                            <div>
+                                                <span class="px-2.5 py-0.5 rounded text-[10px] font-black uppercase bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                                    {{ tec.faixa_ideal }}
+                                                </span>
+                                                <h5 class="text-sm font-black text-slate-900 dark:text-white mt-1 flex items-center gap-2">
+                                                    <i class="fa-solid text-blue-500" :class="tec.icone"></i>
+                                                    <span>{{ tec.nome }}</span>
+                                                </h5>
+                                            </div>
+                                            <span class="px-2.5 py-1 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200 dark:border-[#24324A] text-xs font-mono-timer font-black text-slate-700 dark:text-white">
+                                                {{ tec.qtd_topicos_recomendados }} tópico(s)
+                                            </span>
+                                        </div>
+
+                                        <p class="text-xs text-slate-600 dark:text-[#CBD5E1] leading-relaxed">
+                                            <strong>Como executar:</strong> {{ tec.como_aplicar }}
+                                        </p>
+                                        <p class="text-[11px] text-emerald-600 dark:text-[#34D399] font-semibold">
+                                            <i class="fa-solid fa-brain mr-1"></i>{{ tec.beneficio_neuro }}
+                                        </p>
+
+                                        <div v-if="tec.topicos_recomendados && tec.topicos_recomendados.length > 0" class="pt-2 border-t border-slate-200/80 dark:border-[#24324A] space-y-1.5">
+                                            <div class="text-[10px] font-black uppercase text-slate-400">Tópicos seus indicados para esta técnica:</div>
+                                            <div v-for="tRec in tec.topicos_recomendados" :key="tRec.topico_id"
+                                                class="p-2 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/70 dark:border-[#24324A] flex items-center justify-between gap-2 text-xs">
+                                                <div class="truncate">
+                                                    <strong class="text-slate-900 dark:text-white">{{ tRec.disciplina_nome }}:</strong>
+                                                    <span class="text-slate-600 dark:text-slate-300 ml-1">{{ tRec.topico_titulo }}</span>
+                                                </div>
+                                                <span class="font-mono-timer font-bold text-[10px] shrink-0" :class="badgeTextTaxa(tRec.taxa_acerto_perc)">
+                                                    {{ tRec.taxa_acerto_perc }}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -6470,7 +7026,7 @@
     </div>
 
     
-            <script src="/static/js/app.js?v=20261116_roteiro_gamificacao_v21"></script>
+            <script src="/static/js/app.js?v=20261116_revisoes_anki_v22"></script>
 </body>
 
 </html>

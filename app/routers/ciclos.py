@@ -10,6 +10,7 @@ from app.models.tec_taxonomia import TopicoEstudoTecDePara
 from app.schemas.ciclo import CicloResponse, CicloGerarRequest, AvancarCicloResponse, BlocoCicloResponse
 from app.services.ciclo_service import gerar_ciclo_para_edital
 from app.services.trilha_ia_service import obter_proximo_topico_trilha_disciplina
+from app.services.revisoes_service import mapear_topicos_para_blocos_anki_do_ciclo
 
 router = APIRouter(prefix="/api/ciclos", tags=["Ciclos de Estudo"])
 
@@ -32,11 +33,12 @@ def _enriquecer_ciclo_com_topicos_trilha(db: Session, ciclo: Optional[CicloEstud
         .all()
     )
     topicos_vistos_ids = set(r[0] for r in sessoes if r[0] is not None)
+    mapa_anki = mapear_topicos_para_blocos_anki_do_ciclo(db, ciclo)
     for b in ciclo.blocos:
         if b.disciplina and b.disciplina.categoria != "REVISAO_ANKI":
             b.proximo_topico = obter_proximo_topico_trilha_disciplina(b.disciplina, topicos_vistos_ids)
         else:
-            b.proximo_topico = None
+            b.proximo_topico = mapa_anki.get(b.id)
     return ciclo
 
 @router.get("", response_model=List[CicloResponse])

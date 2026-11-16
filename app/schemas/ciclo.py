@@ -14,6 +14,13 @@ class TopicoApontadoCiclo(BaseModel):
     concluido: bool = False
     visto: bool = False
     tec_vinculo: Optional[Dict[str, Any]] = None
+    disciplina_id: Optional[int] = None
+    disciplina_nome: Optional[str] = None
+    taxa_acerto_perc: Optional[float] = None
+    retencao_estimada_perc: Optional[float] = None
+    estagio_revisao: Optional[str] = None
+    tecnica_recomendada: Optional[str] = None
+    eh_revisao_anki: bool = False
 
 class BlocoCicloResponse(BaseModel):
     id: int
