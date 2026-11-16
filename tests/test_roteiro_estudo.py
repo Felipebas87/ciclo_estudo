@@ -27,7 +27,9 @@ class TestRoteiroEstudo(unittest.TestCase):
         self.assertEqual(rot["parametros_roteiro"]["missoes_por_dia"], 2)
         self.assertEqual(len(rot["agenda_hoje"]["missoes_hoje"]), 2)
         for m in rot["agenda_hoje"]["missoes_hoje"]:
-            self.assertEqual(m["duracao_minutos"], 60)
+            self.assertGreater(m["duracao_minutos"], 0)
+            if not m.get("is_revisao_anki"):
+                self.assertEqual(m["duracao_minutos"], 60)
             self.assertTrue(bool(m["disciplina_nome"]))
             self.assertTrue(bool(m["topico_titulo"]))
 

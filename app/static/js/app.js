@@ -4814,7 +4814,7 @@ const app = createApp({
 
             formSessao.value = {
                 id: null,
-                is_revisao_anki: false,
+                is_revisao_anki: Boolean(missao.is_revisao_anki),
                 disciplina_id: dId,
                 bloco_ciclo_id: bId,
                 topico_id: tId,

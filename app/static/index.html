@@ -1225,9 +1225,9 @@
                                     <div class="flex flex-wrap items-center justify-between gap-2">
                                         <div class="flex flex-wrap items-center gap-1.5">
                                             <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider"
-                                                :class="missao.concluida ? 'bg-emerald-500 text-white' : 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/30 dark:text-blue-200 border border-blue-500/25 dark:border-blue-400/30'">
-                                                <i :class="missao.concluida ? 'fa-solid fa-check-double mr-1' : 'fa-regular fa-clock mr-1'"></i>
-                                                Missão {{ missao.ordem_dia }} &bull; 1 Hora ({{ missao.duracao_minutos }} min)
+                                                :class="missao.concluida ? 'bg-emerald-500 text-white' : (missao.is_revisao_anki ? 'bg-purple-500/15 text-purple-700 dark:bg-purple-500/30 dark:text-purple-200 border border-purple-500/25 dark:border-purple-400/30' : 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/30 dark:text-blue-200 border border-blue-500/25 dark:border-blue-400/30')">
+                                                <i :class="missao.concluida ? 'fa-solid fa-check-double mr-1' : (missao.is_revisao_anki ? 'fa-solid fa-brain mr-1' : 'fa-regular fa-clock mr-1')"></i>
+                                                Missão {{ missao.ordem_dia }} &bull; {{ missao.is_revisao_anki ? 'Revisão Anki' : '1 Hora' }} ({{ missao.duracao_minutos }} min)
                                             </span>
                                             <span v-if="missao.prioridade === 1" class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black">
                                                 ⚡ Prioridade Alta (P1)
@@ -1548,9 +1548,9 @@
                                         <div class="flex flex-wrap items-center justify-between gap-2">
                                             <div class="flex flex-wrap items-center gap-1.5">
                                                 <span class="px-2.5 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider"
-                                                    :class="missao.concluida ? 'bg-emerald-500 text-white' : 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/30 dark:text-blue-200 border border-blue-500/25 dark:border-blue-400/30'">
-                                                    <i :class="missao.concluida ? 'fa-solid fa-check-double mr-1' : 'fa-regular fa-clock mr-1'"></i>
-                                                    Missão {{ missao.ordem_dia }} &bull; 1 Hora ({{ missao.duracao_minutos }} min)
+                                                    :class="missao.concluida ? 'bg-emerald-500 text-white' : (missao.is_revisao_anki ? 'bg-purple-500/15 text-purple-700 dark:bg-purple-500/30 dark:text-purple-200 border border-purple-500/25 dark:border-purple-400/30' : 'bg-blue-500/15 text-blue-700 dark:bg-blue-500/30 dark:text-blue-200 border border-blue-500/25 dark:border-blue-400/30')">
+                                                    <i :class="missao.concluida ? 'fa-solid fa-check-double mr-1' : (missao.is_revisao_anki ? 'fa-solid fa-brain mr-1' : 'fa-regular fa-clock mr-1')"></i>
+                                                    Missão {{ missao.ordem_dia }} &bull; {{ missao.is_revisao_anki ? 'Revisão Anki' : '1 Hora' }} ({{ missao.duracao_minutos }} min)
                                                 </span>
                                                 <span v-if="missao.prioridade === 1" class="px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-black">
                                                     ⚡ Prioridade Alta (P1)

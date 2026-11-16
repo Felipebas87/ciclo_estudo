@@ -12,6 +12,7 @@ from app.models.topico import Topico
 from app.models.ciclo import CicloEstudos, BlocoCiclo
 from app.models.sessao import SessaoEstudo
 from app.services.gamificacao_service import calcular_gamificacao_aluno
+from app.services.revisoes_service import mapear_topicos_para_blocos_anki_do_ciclo
 
 
 DIAS_SEMANA_NOMES_CURTOS = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
@@ -297,15 +298,32 @@ def calcular_roteiro_estudo(
     vistos_mc_atual = sum(1 for t in topicos_mc_lista if t.id in topicos_concluidos_hoje_set)
     vistos_elite_atual = sum(1 for t in topicos_elite_lista if t.id in topicos_concluidos_hoje_set)
 
-    # 6. Sequência da Esteira do Ciclo Atual (excluindo ou incluindo blocos conforme esteira)
+    # 6. Sequência da Esteira do Ciclo Atual (incluindo blocos de Revisão Anki na ordem exata da esteira)
     sequencia_blocos: List[Dict[str, Any]] = []
     if ciclo and ciclo.blocos:
+        mapa_anki = mapear_topicos_para_blocos_anki_do_ciclo(db, ciclo)
         blocos_ordenados = sorted(ciclo.blocos, key=lambda b: b.ordem)
         idx_inicial = (ciclo.bloco_atual_index or 0) % len(blocos_ordenados)
         # Rotaciona a lista para começar exatamente do bloco_atual_index da esteira
         blocos_rotacionados = blocos_ordenados[idx_inicial:] + blocos_ordenados[:idx_inicial]
         for b in blocos_rotacionados:
-            if b.disciplina and b.disciplina.categoria != "REVISAO_ANKI" and b.disciplina.nome != "REVISÃO ANKI":
+            if not b.disciplina:
+                continue
+            eh_anki = b.disciplina.categoria == "REVISAO_ANKI" or b.disciplina.nome == "REVISÃO ANKI"
+            if eh_anki:
+                anki_info = mapa_anki.get(b.id)
+                sequencia_blocos.append({
+                    "bloco_id": b.id,
+                    "ordem_ciclo": b.ordem,
+                    "disciplina_id": anki_info["disciplina_id"] if anki_info else b.disciplina_id,
+                    "disciplina_nome": f"REVISÃO ANKI • {anki_info['disciplina_nome']}" if anki_info else "REVISÃO ANKI",
+                    "grupo_conhecimento": b.disciplina.grupo_conhecimento,
+                    "peso_prova": b.disciplina.peso_prova,
+                    "is_revisao_anki": True,
+                    "anki_info": anki_info,
+                    "duracao_minutos": int(b.duracao_minutos or 30),
+                })
+            else:
                 sequencia_blocos.append({
                     "bloco_id": b.id,
                     "ordem_ciclo": b.ordem,
@@ -313,6 +331,9 @@ def calcular_roteiro_estudo(
                     "disciplina_nome": b.disciplina.nome,
                     "grupo_conhecimento": b.disciplina.grupo_conhecimento,
                     "peso_prova": b.disciplina.peso_prova,
+                    "is_revisao_anki": False,
+                    "anki_info": None,
+                    "duracao_minutos": int(b.duracao_minutos or 60),
                 })
 
     if not sequencia_blocos:
@@ -341,13 +362,14 @@ def calcular_roteiro_estudo(
             "duracao_minutos": int(s_hoje.tempo_estudado_minutos or 60),
             "bloco_ciclo_id": s_hoje.bloco_ciclo_id,
             "disciplina_id": s_hoje.disciplina_id,
-            "disciplina_nome": d_obj.nome if d_obj else "Revisão / Anki",
+            "disciplina_nome": (f"REVISÃO ANKI • {d_obj.nome}" if (s_hoje.is_revisao_anki and d_obj) else (d_obj.nome if d_obj else "Revisão / Anki")),
             "grupo_conhecimento": d_obj.grupo_conhecimento if d_obj else "BASICOS",
             "topico_id": t_obj.id if t_obj else None,
             "topico_titulo": t_obj.titulo if t_obj else "Revisão Geral / Questões",
             "prioridade": t_obj.prioridade if t_obj else None,
             "mais_cobrado": bool(t_obj.mais_cobrado) if t_obj else False,
-            "modo_estudo": "Concluído no Ciclo",
+            "modo_estudo": "Revisão Anki Concluída" if s_hoje.is_revisao_anki else "Concluído no Ciclo",
+            "is_revisao_anki": bool(s_hoje.is_revisao_anki),
             "concluida": True,
             "sessao_id": s_hoje.id,
             "questoes_realizadas": int(s_hoje.qtd_questoes_total or 0),
@@ -366,25 +388,48 @@ def calcular_roteiro_estudo(
         ponteiro_esteira += 1
 
         did = item_ciclo["disciplina_id"]
-        fila_pend = filas_pendentes_por_disc.get(did, [])
-        fila_todos = filas_todos_por_disc.get(did, [])
-        idx_p = cursor_pendentes.get(did, 0)
+        is_anki = bool(item_ciclo.get("is_revisao_anki"))
 
-        if idx_p < len(fila_pend):
-            topico_escolhido = fila_pend[idx_p]
-            cursor_pendentes[did] = idx_p + 1
-            modo = "Avanço Verticalizado (Inédito)"
-            inedito = True
-        elif fila_todos:
-            idx_r = cursor_revisao.get(did, 0)
-            topico_escolhido = fila_todos[idx_r % len(fila_todos)]
-            cursor_revisao[did] = idx_r + 1
-            modo = "Revisão & Bateria P1/🔥 (Edital Fechado)"
+        if is_anki:
+            anki_info = item_ciclo.get("anki_info")
+            topico_id_esc = anki_info["id"] if anki_info else None
+            topico_titulo_esc = anki_info["titulo"] if anki_info else "Revisão Espaçada Anki (SM-2 / Ebbinghaus)"
+            prioridade_esc = anki_info.get("prioridade") if anki_info else None
+            mais_cobrado_esc = bool(anki_info.get("mais_cobrado")) if anki_info else False
+            ordem_trilha_esc = anki_info.get("ordem_trilha") if anki_info else None
+            tecnica_nome = anki_info.get("tecnica_recomendada") if anki_info else None
+            modo = f"Revisão Anki • {tecnica_nome}" if tecnica_nome else "Revisão Anki (SM-2 / Ebbinghaus)"
             inedito = False
+            duracao_min = int(item_ciclo.get("duracao_minutos") or 30)
+            questoes_est = max(5, int(round(questoes_por_hora * (duracao_min / 60.0))))
         else:
-            topico_escolhido = None
-            modo = "Estudo Geral & Questões"
-            inedito = False
+            fila_pend = filas_pendentes_por_disc.get(did, [])
+            fila_todos = filas_todos_por_disc.get(did, [])
+            idx_p = cursor_pendentes.get(did, 0)
+
+            if idx_p < len(fila_pend):
+                topico_escolhido = fila_pend[idx_p]
+                cursor_pendentes[did] = idx_p + 1
+                modo = "Avanço Verticalizado (Inédito)"
+                inedito = True
+            elif fila_todos:
+                idx_r = cursor_revisao.get(did, 0)
+                topico_escolhido = fila_todos[idx_r % len(fila_todos)]
+                cursor_revisao[did] = idx_r + 1
+                modo = "Revisão & Bateria P1/🔥 (Edital Fechado)"
+                inedito = False
+            else:
+                topico_escolhido = None
+                modo = "Estudo Geral & Questões"
+                inedito = False
+
+            topico_id_esc = topico_escolhido.id if topico_escolhido else None
+            topico_titulo_esc = topico_escolhido.titulo if topico_escolhido else "Tópico Geral da Disciplina"
+            prioridade_esc = topico_escolhido.prioridade if topico_escolhido else None
+            mais_cobrado_esc = bool(topico_escolhido.mais_cobrado) if topico_escolhido else False
+            ordem_trilha_esc = topico_escolhido.ordem_trilha if topico_escolhido else None
+            duracao_min = 60
+            questoes_est = int(round(questoes_por_hora))
 
         return {
             "id": f"rot-{data_alvo.isoformat()}-{ordem_no_dia}",
@@ -395,23 +440,24 @@ def calcular_roteiro_estudo(
             "dia_semana_curto": DIAS_SEMANA_NOMES_CURTOS[data_alvo.weekday()],
             "dia_semana_nome": DIAS_SEMANA_NOMES_COMPLETOS[data_alvo.weekday()],
             "hora_referencia": f"{ordem_no_dia}ª Hora ({ordem_no_dia}h/{missoes_por_dia}h)",
-            "duracao_minutos": 60,
+            "duracao_minutos": duracao_min,
             "bloco_ciclo_id": item_ciclo["bloco_id"],
             "ordem_ciclo": item_ciclo["ordem_ciclo"],
             "disciplina_id": did,
             "disciplina_nome": item_ciclo["disciplina_nome"],
             "grupo_conhecimento": item_ciclo["grupo_conhecimento"],
             "peso_prova": item_ciclo["peso_prova"],
-            "topico_id": topico_escolhido.id if topico_escolhido else None,
-            "topico_titulo": topico_escolhido.titulo if topico_escolhido else "Tópico Geral da Disciplina",
-            "prioridade": topico_escolhido.prioridade if topico_escolhido else None,
-            "mais_cobrado": bool(topico_escolhido.mais_cobrado) if topico_escolhido else False,
-            "ordem_trilha": topico_escolhido.ordem_trilha if topico_escolhido else None,
+            "topico_id": topico_id_esc,
+            "topico_titulo": topico_titulo_esc,
+            "prioridade": prioridade_esc,
+            "mais_cobrado": mais_cobrado_esc,
+            "ordem_trilha": ordem_trilha_esc,
             "modo_estudo": modo,
+            "is_revisao_anki": is_anki,
             "topico_inedito": inedito,
             "concluida": False,
             "sessao_id": None,
-            "questoes_estimadas": int(round(questoes_por_hora)),
+            "questoes_estimadas": questoes_est,
         }
 
     # Quantas missões faltam hoje para completar a meta diária (ex.: se meta é 2h/dia e já fez 1h hoje, falta 1h hoje)
