@@ -239,10 +239,11 @@ def diagnosticar_fila_revisoes_anki(
             contagem_topico_vista[tid_efetivo] += 1
 
         # Uma sessão é contabilizada no histórico de revisões se:
-        # (a) foi marcada explicitamente como Revisão Anki (is_revisao_anki == True), OU
+        # (a) foi marcada explicitamente como Revisão Anki (is_revisao_anki == True) ou pertence à disciplina REVISÃO ANKI, OU
         # (b) é a 2ª+ passagem pelo mesmo tópico (revisão prática de tópico já visto)
+        eh_bloco_anki_disc = s.disciplina_id not in mapa_disc
         eh_revisao_pratica = bool(tid_efetivo and contagem_topico_vista[tid_efetivo] >= 2)
-        if bool(s.is_revisao_anki) or eh_revisao_pratica:
+        if bool(s.is_revisao_anki) or eh_bloco_anki_disc or eh_revisao_pratica:
             d_obj = mapa_disc.get(s.disciplina_id)
             t_obj = mapa_topico.get(tid_efetivo) if tid_efetivo else None
             historico_revisoes_feitas.append({
@@ -258,7 +259,7 @@ def diagnosticar_fila_revisoes_anki(
                 "acertos": int(s.qtd_acertos or 0),
                 "erros": int(s.qtd_erros or 0),
                 "percentual_acerto": round(float(s.percentual_acerto or 0.0), 1),
-                "tipo_revisao": "Revisão Anki (Esteira)" if s.is_revisao_anki else f"{contagem_topico_vista[tid_efetivo]}ª Passagem no Tópico",
+                "tipo_revisao": "Revisão Anki (Esteira)" if (s.is_revisao_anki or eh_bloco_anki_disc) else f"{contagem_topico_vista[tid_efetivo]}ª Passagem no Tópico",
                 "observacoes": s.observacoes or "",
             })
 
@@ -525,12 +526,42 @@ def diagnosticar_fila_revisoes_anki(
         else:
             curva_com_anki.append(round(98.0 * math.exp(-(d - 15) / 65.0), 1))
 
-    # (B) Constância de Revisões nos últimos 14 dias
+    # (B) Constância de Revisões (14 dias recentes ou janela ancorada na última revisão/sessão registrada)
+    inicio_recente_14d = hoje - timedelta(days=13)
+    tem_revisao_recente = any(
+        r["data_iso"] >= inicio_recente_14d.isoformat() for r in historico_revisoes_feitas
+    )
+    if tem_revisao_recente:
+        data_fim_janela = hoje
+        fonte_constancia = historico_revisoes_feitas
+    elif historico_revisoes_feitas:
+        # Ancora a janela de 14 dias na data da última revisão registrada no servidor
+        try:
+            data_fim_janela = date.fromisoformat(historico_revisoes_feitas[0]["data_iso"][:10])
+        except Exception:
+            data_fim_janela = hoje
+        fonte_constancia = historico_revisoes_feitas
+    elif todas_sessoes:
+        # Fallback: se não houver revisões marcadas ainda, usa a janela das últimas sessões de estudo
+        datas_sessoes = [s.data for s in todas_sessoes if s.data]
+        data_fim_janela = max(datas_sessoes) if datas_sessoes else hoje
+        fonte_constancia = [
+            {
+                "data_iso": s.data.isoformat() if s.data else hoje.isoformat(),
+                "tempo_minutos": int(s.tempo_estudado_minutos or 0),
+                "questoes_total": int(s.qtd_questoes_total or 0),
+            }
+            for s in todas_sessoes
+        ]
+    else:
+        data_fim_janela = hoje
+        fonte_constancia = []
+
     constancia_14d = []
     for offset_d in range(13, -1, -1):
-        dt_ref = hoje - timedelta(days=offset_d)
+        dt_ref = data_fim_janela - timedelta(days=offset_d)
         dt_iso = dt_ref.isoformat()
-        revs_dia = [r for r in historico_revisoes_feitas if r["data_iso"] == dt_iso]
+        revs_dia = [r for r in fonte_constancia if r["data_iso"] == dt_iso]
         min_dia = sum(r["tempo_minutos"] for r in revs_dia)
         q_dia = sum(r["questoes_total"] for r in revs_dia)
         constancia_14d.append({
