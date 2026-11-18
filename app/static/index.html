@@ -44,7 +44,7 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css?v=20261016">
+    <link rel="stylesheet" href="/static/css/style.css?v=20261118_esteira_pulse_v4">
 </head>
 
 <body
@@ -894,7 +894,7 @@
                                 </span>
                             </div>
                             <div id="esteira-container"
-                                class="flex space-x-3 overflow-x-auto pb-3 pt-1 snap-x esteira-scroll">
+                                class="flex space-x-3 overflow-x-auto pb-5 pt-4 px-2 -mx-2 snap-x esteira-scroll">
                                 <div v-for="(b, idx) in cicloAtivo.blocos" :key="b.id" :id="'bloco-' + idx"
                                     @click="selecionarBlocoManual(idx)"
                                     :class="idx === cicloAtivo.bloco_atual_index ? 'bloco-ativo border-l-4 border-l-blue-600 dark:border-l-[#22D3EE] border-blue-600/30 dark:border-[#3D5A82] bg-blue-50/70 dark:bg-[#162335] shadow-lg ring-2 ring-blue-500/20 dark:ring-[#22D3EE]/30 pulse-active' : (idx < cicloAtivo.bloco_atual_index ? 'bloco-concluido border-l-4 border-l-emerald-500 dark:border-l-[#34D399] border-slate-200 dark:border-[#3D5A82] bg-slate-50/70 dark:bg-[#162335] hover:border-slate-300 dark:hover:border-[#4C6F9F]' : 'bloco-pendente border-l-4 border-l-slate-300 dark:border-l-[#3D5A82] border-slate-200 dark:border-[#3D5A82] bg-white dark:bg-[#162335] hover:border-slate-300 dark:hover:border-[#4C6F9F]')"
@@ -957,8 +957,11 @@
                                         :class="idx < cicloAtivo.bloco_atual_index ? 'text-slate-400 dark:text-[#CBD5E1]' : 'text-slate-500 dark:text-[#CBD5E1]'">
                                         <span><i class="fa-regular fa-clock mr-1"></i>{{ b.duracao_minutos }}m</span>
                                         <span v-if="idx === cicloAtivo.bloco_atual_index"
-                                            class="text-blue-600 dark:text-[#22D3EE] font-extrabold uppercase tracking-wider text-[11px] flex items-center">
-                                            Em Foco <i class="fa-solid fa-arrow-right ml-1"></i>
+                                            class="text-blue-600 dark:text-[#60A5FA] font-extrabold uppercase tracking-wider text-[11px] flex items-center gap-1.5">
+                                            <span class="relative flex h-2 w-2">
+                                                <span class="relative inline-flex rounded-full h-2 w-2 bg-blue-600 dark:bg-blue-400 animate-pulse"></span>
+                                            </span>
+                                            Em Foco <i class="fa-solid fa-arrow-right"></i>
                                         </span>
                                         <span v-else-if="idx < cicloAtivo.bloco_atual_index"
                                             class="text-emerald-600 dark:text-[#34D399] font-bold text-[11px] flex items-center">

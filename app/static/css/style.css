@@ -123,21 +123,26 @@ html.dark .transition-card:hover {
     scrollbar-width: thin;
 }
 
-/* Animação do bloco ativo (Glow Ciano SaaS) */
+/* Animação do bloco ativo (Pulso Azul Suave em Foco) */
 .pulse-active {
-    box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.6);
-    animation: pulse-ring-cyan 2s infinite cubic-bezier(0.4, 0, 0.6, 1);
+    animation: pulse-foco-azul 3.6s infinite ease-in-out;
 }
 
-@keyframes pulse-ring-cyan {
-    0% {
-        box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.6);
+@keyframes pulse-foco-azul {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.70), 0 6px 18px -2px rgba(37, 99, 235, 0.30);
     }
-    70% {
-        box-shadow: 0 0 0 10px rgba(34, 211, 238, 0);
+    50% {
+        box-shadow: 0 0 0 9px rgba(37, 99, 235, 0), 0 10px 26px -2px rgba(37, 99, 235, 0.48);
     }
-    100% {
-        box-shadow: 0 0 0 0 rgba(34, 211, 238, 0);
+}
+
+@keyframes pulse-foco-azul-dark {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.75), 0 0 16px rgba(37, 99, 235, 0.40);
+    }
+    50% {
+        box-shadow: 0 0 0 9px rgba(59, 130, 246, 0), 0 0 28px rgba(59, 130, 246, 0.60);
     }
 }
 
@@ -195,11 +200,14 @@ html:not(.dark) .modal-subcard {
 html:not(.dark) #esteira-container .card-subcard {
     background-color: #FFFFFF !important;
     border: 1px solid #CBD5E1 !important;
-    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.04) !important;
     transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                 box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
                 border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
     position: relative;
+}
+
+html:not(.dark) #esteira-container .card-subcard:not(.bloco-ativo) {
+    box-shadow: 0 2px 8px -2px rgba(15, 23, 42, 0.06), 0 1px 3px 0 rgba(15, 23, 42, 0.04) !important;
 }
 
 /* Efeito Hover na Esteira no Tema Claro: Aumentam e Sombreiam (idêntico ao tema escuro) */
@@ -216,14 +224,12 @@ html:not(.dark) #esteira-container .bloco-ativo {
     border-color: #3B82F6 !important;
     border-left-width: 4px !important;
     border-left-color: #2563EB !important;
-    box-shadow: 0 4px 14px 0 rgba(37, 99, 235, 0.16) !important;
+    animation: pulse-foco-azul 3.6s infinite ease-in-out !important;
 }
 
 html:not(.dark) #esteira-container .bloco-ativo:hover {
     transform: translateY(-4px) scale(1.02) !important;
     border-color: #2563EB !important;
-    box-shadow: 0 16px 32px -4px rgba(37, 99, 235, 0.25),
-                0 0 16px rgba(37, 99, 235, 0.18) !important;
     z-index: 10;
 }
 
@@ -629,9 +635,8 @@ html.dark .bloco-concluido p {
 
 html.dark .bloco-ativo {
     background-color: #243247 !important;
-    border-color: #2D3D54 !important;
-    border-left: 4px solid #22D3EE !important;
-    box-shadow: 0 0 16px rgba(34, 211, 238, 0.2) !important;
+    border-color: #3B82F6 !important;
+    border-left: 4px solid #3B82F6 !important;
     opacity: 1 !important;
 }
 
@@ -1019,9 +1024,9 @@ html.dark #esteira-container .card-subcard:hover {
 
 html.dark #esteira-container .bloco-ativo {
     background-color: rgba(28, 44, 68, 0.98) !important;
-    border-color: #3D5A82 !important;
-    border-left: 4px solid #22D3EE !important;
-    box-shadow: 0 0 16px rgba(34, 211, 238, 0.3) !important;
+    border-color: #3B82F6 !important;
+    border-left: 4px solid #3B82F6 !important;
+    animation: pulse-foco-azul-dark 3.6s infinite ease-in-out !important;
 }
 
 html.dark #esteira-container .bloco-concluido {
