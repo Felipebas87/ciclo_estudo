@@ -2618,6 +2618,56 @@
 
                     <div v-else-if="revisoesData && !revisoesData.erro" class="space-y-6">
 
+                        <!-- 0. BARRA DE STATUS E CONTROLE DA INTEGRAÇÃO ANKICONNECT -->
+                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 border"
+                                    :class="ankiConectado ? 'bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border-emerald-500/30' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-400 border-slate-200 dark:border-[#24324A]'">
+                                    <i class="fa-solid fa-plug-circle-check" v-if="ankiConectado"></i>
+                                    <i class="fa-solid fa-plug-circle-xmark" v-else></i>
+                                </div>
+                                <div>
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                            Integração Anki Desktop (AnkiConnect)
+                                        </span>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                            :class="ankiConectado ? 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border border-emerald-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'">
+                                            {{ ankiConectado ? `Online • ${ankiBaralhos.length} baralhos` : 'Offline (abra o Anki no PC)' }}
+                                        </span>
+                                    </div>
+                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8] mt-0.5">
+                                        Correlaciona automaticamente cada matéria e tópico da fila de revisão ao baralho correspondente do seu Anki.
+                                    </p>
+                                </div>
+                            </div>
+
+                            <div class="flex flex-wrap items-center gap-2">
+                                <button type="button"
+                                    @click="alternarAutoAbrirAnki()"
+                                    class="px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5"
+                                    :class="ankiConfig.auto_abrir
+                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border-emerald-500/30'
+                                        : 'bg-slate-100 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                    <i class="fa-solid" :class="ankiConfig.auto_abrir ? 'fa-toggle-on text-sm' : 'fa-toggle-off text-sm'"></i>
+                                    <span>Auto-abrir Anki ao revisar: <strong>{{ ankiConfig.auto_abrir ? 'SIM' : 'NÃO' }}</strong></span>
+                                </button>
+                                <button type="button"
+                                    @click="conectarAnkiDesktop(false)"
+                                    :disabled="ankiCarregando"
+                                    class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] dark:hover:bg-[#24324A] text-slate-700 dark:text-[#F1F5F9] font-bold text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer flex items-center gap-1.5">
+                                    <i class="fa-solid fa-rotate" :class="ankiCarregando ? 'fa-spin' : ''"></i>
+                                    <span>{{ ankiConectado ? 'Sincronizar Baralhos' : 'Conectar ao Anki' }}</span>
+                                </button>
+                                <button type="button"
+                                    @click="subAbaRevisoes = 'integracao_anki'"
+                                    class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5">
+                                    <i class="fa-solid fa-sliders"></i>
+                                    <span>Mapear Baralhos (De-Para)</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <!-- 1. CARDS DE KPIs GLOBAIS DE REVISÃO E MEMORIZAÇÃO -->
                         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <!-- KPI 1: Total de Revisões Feitas -->
@@ -2731,9 +2781,21 @@
                                             <span class="text-rose-600 dark:text-rose-400">{{ revisoesData.destaque_pior_rendimento.disciplina_nome }}</span>
                                             &mdash; {{ revisoesData.destaque_pior_rendimento.topico_titulo }}
                                         </h3>
+                                        <div v-if="resolverBaralhoAnki(revisoesData.destaque_pior_rendimento).deck"
+                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-[#60A5FA] border border-blue-500/20 text-xs font-bold">
+                                            <i class="fa-solid fa-layer-group"></i>
+                                            <span>Baralho Anki: <strong>{{ resolverBaralhoAnki(revisoesData.destaque_pior_rendimento).deck }}</strong></span>
+                                        </div>
                                     </div>
 
                                     <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                        <button type="button"
+                                            @click="abrirBaralhoNoAnki(revisoesData.destaque_pior_rendimento)"
+                                            class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5"
+                                            title="Abre diretamente este baralho no seu Anki Desktop">
+                                            <i class="fa-solid fa-up-right-from-square"></i>
+                                            <span>Abrir Baralho no Anki</span>
+                                        </button>
                                         <button type="button"
                                             @click="iniciarRevisaoAnkiDoTopico(revisoesData.destaque_pior_rendimento)"
                                             class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5">
@@ -2788,12 +2850,23 @@
                                             <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8]">
                                                 Acerto: <strong>{{ bAnki.taxa_acerto_perc }}%</strong> &bull; Retenção: <strong>{{ bAnki.retencao_estimada_perc }}%</strong> &bull; {{ bAnki.tecnica_recomendada }}
                                             </div>
+                                            <div v-if="resolverBaralhoAnki(bAnki).deck" class="text-[10.5px] font-bold text-blue-600 dark:text-[#60A5FA] truncate" :title="resolverBaralhoAnki(bAnki).deck">
+                                                <i class="fa-solid fa-layer-group mr-1"></i>{{ resolverBaralhoAnki(bAnki).deck }}
+                                            </div>
                                         </div>
-                                        <button type="button"
-                                            @click="iniciarRevisaoAnkiDoTopico(bAnki)"
-                                            class="px-3 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-[#60A5FA] font-black text-xs shrink-0 cursor-pointer">
-                                            Revisar
-                                        </button>
+                                        <div class="flex items-center gap-1.5 shrink-0">
+                                            <button type="button"
+                                                @click="abrirBaralhoNoAnki(bAnki)"
+                                                class="px-2.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-700 dark:text-[#34D399] font-black text-xs cursor-pointer"
+                                                title="Abrir este baralho direto no Anki Desktop">
+                                                <i class="fa-solid fa-up-right-from-square mr-1"></i>Anki
+                                            </button>
+                                            <button type="button"
+                                                @click="iniciarRevisaoAnkiDoTopico(bAnki)"
+                                                class="px-3 py-2 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-700 dark:text-[#60A5FA] font-black text-xs cursor-pointer">
+                                                Revisar
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -2874,6 +2947,11 @@
                                         :class="subAbaRevisoes === 'tecnicas' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
                                         <i class="fa-solid fa-graduation-cap mr-1.5"></i>Técnicas de Memorização &amp; Aprendizado
                                     </button>
+                                    <button type="button" @click="subAbaRevisoes = 'integracao_anki'"
+                                        class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                        :class="subAbaRevisoes === 'integracao_anki' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-plug mr-1.5"></i>Integração &amp; Baralhos Anki ({{ ankiBaralhos.length }})
+                                    </button>
                                 </div>
                             </div>
 
@@ -2940,9 +3018,23 @@
                                                 <i class="fa-solid fa-lightbulb text-amber-500 mr-1"></i><strong class="text-slate-800 dark:text-slate-200">Técnica Recomendada ({{ item.tecnica_recomendada.nome }}):</strong>
                                                 {{ item.tecnica_recomendada.orientacao_curta }}
                                             </div>
+
+                                            <div v-if="resolverBaralhoAnki(item).deck"
+                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-[#60A5FA] border border-blue-500/20 text-[11px] font-bold">
+                                                <i class="fa-solid fa-layer-group"></i>
+                                                <span>Baralho Anki: <strong>{{ resolverBaralhoAnki(item).deck }}</strong></span>
+                                                <span v-if="resolverBaralhoAnki(item).origem.startsWith('manual')" class="px-1.5 py-0.2 rounded bg-blue-600 text-white text-[9px] uppercase">Fixado</span>
+                                            </div>
                                         </div>
 
-                                        <div class="flex items-center gap-2 shrink-0">
+                                        <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                            <button type="button"
+                                                @click="abrirBaralhoNoAnki(item)"
+                                                class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                                                title="Abre diretamente o baralho correlacionado no seu Anki Desktop">
+                                                <i class="fa-solid fa-up-right-from-square"></i>
+                                                <span>Abrir no Anki</span>
+                                            </button>
                                             <button type="button"
                                                 @click="iniciarRevisaoAnkiDoTopico(item)"
                                                 class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
@@ -3125,6 +3217,87 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                            </div>
+
+                            <!-- SUB-ABA 5: INTEGRAÇÃO & MAPEAMENTO DE BARALHOS DO ANKI (DE-PARA) -->
+                            <div v-if="subAbaRevisoes === 'integracao_anki'" class="space-y-5">
+                                <div class="flex flex-wrap items-center justify-between gap-3">
+                                    <div>
+                                        <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                            Mapeamento De-Para: Tópicos da Fila de Revisão &rarr; Baralhos do seu Anki Desktop
+                                        </h4>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                            O sistema correlaciona automaticamente os seus {{ ankiBaralhos.length }} baralhos do Anki por disciplina e palavra-chave, mas você pode fixar qualquer baralho manualmente abaixo.
+                                        </p>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <input type="text"
+                                            v-model="ankiFiltroBuscaBaralho"
+                                            placeholder="Filtrar lista de baralhos nas opções..."
+                                            class="px-3 py-2 rounded-xl text-xs bg-slate-100 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] text-slate-800 dark:text-white outline-none w-64">
+                                    </div>
+                                </div>
+
+                                <div v-if="!ankiConectado" class="p-6 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800 dark:text-amber-200 flex items-center justify-between gap-4">
+                                    <div>
+                                        <strong>Anki Desktop não detectado em 127.0.0.1:8765.</strong> Certifique-se de que o Anki está aberto no computador com o add-on AnkiConnect ativo.
+                                    </div>
+                                    <button type="button" @click="conectarAnkiDesktop(false)"
+                                        class="px-4 py-2 rounded-xl bg-amber-500 text-slate-950 font-black text-xs cursor-pointer shrink-0">
+                                        Tentar Conectar Agora
+                                    </button>
+                                </div>
+
+                                <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                                    <table class="w-full text-left text-xs border-collapse">
+                                        <thead class="bg-slate-50 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] uppercase border-b border-slate-200 dark:border-[#24324A]">
+                                            <tr>
+                                                <th class="py-3 px-4 font-bold">#</th>
+                                                <th class="py-3 px-4 font-bold">Disciplina &amp; Tópico na Fila de Revisão</th>
+                                                <th class="py-3 px-4 font-bold">Baralho Correlacionado no Anki</th>
+                                                <th class="py-3 px-4 font-bold text-right">Testar / Abrir</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-slate-100 dark:divide-[#24324A]">
+                                            <tr v-for="item in (revisoesData.fila_sequencial_anki || [])" :key="'map-anki-' + item.topico_id"
+                                                class="hover:bg-slate-50/80 dark:hover:bg-[#1B2638]/50">
+                                                <td class="py-3 px-4 font-mono-timer font-black text-slate-400">#{{ item.ordem_fila_anki }}</td>
+                                                <td class="py-3 px-4">
+                                                    <div class="font-black text-blue-600 dark:text-[#60A5FA]">{{ item.disciplina_nome }}</div>
+                                                    <div class="text-slate-800 dark:text-white font-semibold">{{ item.topico_titulo }}</div>
+                                                </td>
+                                                <td class="py-3 px-4">
+                                                    <div class="space-y-1">
+                                                        <select
+                                                            :value="ankiConfig.mapa_topicos[String(item.topico_id)] || ''"
+                                                            @change="salvarVinculoBaralhoAnki('topico', item.topico_id, $event.target.value)"
+                                                            class="w-full max-w-md px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-[#141D2E] border border-slate-200 dark:border-[#24324A] text-slate-800 dark:text-white outline-none">
+                                                            <option value="">
+                                                                ✨ Automático: {{ resolverBaralhoAnki({ ...item, topico_id: null }).deck || 'Sem baralho detectado' }}
+                                                            </option>
+                                                            <option v-for="b in baralhosAnkiFiltradosSelect" :key="b" :value="b">
+                                                                📌 {{ b }}
+                                                            </option>
+                                                        </select>
+                                                        <div class="text-[10px] text-slate-500 dark:text-[#94A3B8]">
+                                                            Ativo: <strong class="text-slate-700 dark:text-slate-200">{{ resolverBaralhoAnki(item).deck || '—' }}</strong>
+                                                            <span v-if="ankiConfig.mapa_topicos[String(item.topico_id)]" class="ml-1 text-blue-600 dark:text-[#60A5FA] font-bold">(Fixado manualmente)</span>
+                                                            <span v-else class="ml-1 text-emerald-600 dark:text-[#34D399] font-bold">(Correlação automática)</span>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="py-3 px-4 text-right">
+                                                    <button type="button"
+                                                        @click="abrirBaralhoNoAnki(item)"
+                                                        class="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs cursor-pointer inline-flex items-center gap-1.5">
+                                                        <i class="fa-solid fa-up-right-from-square"></i>
+                                                        <span>Abrir no Anki</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                 </div>
                             </div>
                         </div>
@@ -7220,7 +7393,7 @@
     </div>
 
     
-            <script src="/static/js/app.js?v=20261118_modal_progresso_ia_v2"></script>
+            <script src="/static/js/app.js?v=20261118_ankiconnect_v1"></script>
 </body>
 
 </html>

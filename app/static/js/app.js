@@ -4861,6 +4861,9 @@ const app = createApp({
             const acEst = Math.round(qEst * 0.8);
             const erEst = Math.max(0, qEst - acEst);
 
+            if (Boolean(missao.is_revisao_anki) && ankiConfig.value?.auto_abrir) {
+                abrirBaralhoNoAnki(missao, true);
+            }
             formSessao.value = {
                 id: null,
                 is_revisao_anki: Boolean(missao.is_revisao_anki),
@@ -4878,12 +4881,343 @@ const app = createApp({
         };
 
         // ==========================================
-        // 14.10 CENTRAL DE REVISÕES & MEMORIZAÇÃO ESPAÇADA (ANKI / EBBINGHAUS / SM-2)
+        // 14.10 CENTRAL DE REVISÕES & MEMORIZAÇÃO ESPAÇADA (ANKI / EBBINGHAUS / SM-2 + ANKICONNECT)
         // ==========================================
         const revisoesData = ref(null);
         const carregandoRevisoes = ref(false);
-        const subAbaRevisoes = ref('sequencia_anki'); // 'sequencia_anki' | 'pior_rendimento' | 'historico' | 'tecnicas'
+        const subAbaRevisoes = ref('sequencia_anki'); // 'sequencia_anki' | 'pior_rendimento' | 'historico' | 'tecnicas' | 'integracao_anki'
         const filtroStatusRevisao = ref('TODAS'); // 'TODAS' | 'ATRASADA_CRITICA' | 'PARA_HOJE' | 'PROGRAMADA' | 'CONSOLIDADA'
+
+        // Estado da Integração AnkiConnect (http://127.0.0.1:8765)
+        const ankiConectado = ref(false);
+        const ankiCarregando = ref(false);
+        const ankiBaralhos = ref([]);
+        const ankiFiltroBuscaBaralho = ref('');
+        const ankiConfig = ref({
+            auto_abrir: true,
+            url: 'http://127.0.0.1:8765',
+            mapa_disciplinas: {},
+            mapa_topicos: {}
+        });
+
+        try {
+            const salvoLocal = localStorage.getItem('orbis_anki_config');
+            if (salvoLocal) {
+                const parsed = JSON.parse(salvoLocal);
+                if (parsed && typeof parsed === 'object') {
+                    ankiConfig.value = {
+                        auto_abrir: parsed.auto_abrir !== false,
+                        url: parsed.url || 'http://127.0.0.1:8765',
+                        mapa_disciplinas: parsed.mapa_disciplinas || {},
+                        mapa_topicos: parsed.mapa_topicos || {}
+                    };
+                }
+            }
+        } catch (e) { /* ignore */ }
+
+        const _normAnkiTexto = (str) => {
+            return String(str || '')
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase()
+                .replace(/[^a-z0-9\s]/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+
+        const baralhosAnkiFiltradosSelect = computed(() => {
+            const q = _normAnkiTexto(ankiFiltroBuscaBaralho.value);
+            if (!q) return ankiBaralhos.value;
+            return ankiBaralhos.value.filter(b => _normAnkiTexto(b).includes(q));
+        });
+
+        const conectarAnkiDesktop = async (silencioso = false) => {
+            ankiCarregando.value = true;
+            const urlAnki = ankiConfig.value?.url || 'http://127.0.0.1:8765';
+            const ctrl = new AbortController();
+            const tid = setTimeout(() => ctrl.abort(), 3500);
+            try {
+                const res = await fetch(urlAnki, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'deckNames', version: 6 }),
+                    signal: ctrl.signal
+                });
+                const data = await res.json();
+                if (data && Array.isArray(data.result)) {
+                    ankiBaralhos.value = data.result.slice().sort((a, b) => a.localeCompare(b));
+                    ankiConectado.value = true;
+                    if (!silencioso) {
+                        mostrarAlerta(`🟢 Anki Desktop conectado (${ankiBaralhos.value.length} baralhos sincronizados)!`, 'sucesso');
+                    }
+                    return true;
+                }
+                throw new Error(data?.error || 'Resposta inesperada do AnkiConnect');
+            } catch (e) {
+                ankiConectado.value = false;
+                if (!silencioso) {
+                    mostrarAlerta('🔴 Não foi possível conectar ao Anki Desktop (127.0.0.1:8765). Verifique se o Anki está aberto no PC.', 'aviso');
+                }
+                return false;
+            } finally {
+                clearTimeout(tid);
+                ankiCarregando.value = false;
+            }
+        };
+
+        const persistirAnkiConfig = async () => {
+            try {
+                localStorage.setItem('orbis_anki_config', JSON.stringify(ankiConfig.value));
+                await fetch('/api/revisoes/anki-config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(ankiConfig.value)
+                });
+            } catch (e) {
+                console.warn('Aviso ao salvar anki_config:', e);
+            }
+        };
+
+        const salvarVinculoBaralhoAnki = async (tipo, idChave, deckName) => {
+            if (!idChave) return;
+            const chave = String(idChave);
+            if (tipo === 'topico') {
+                if (!deckName) {
+                    delete ankiConfig.value.mapa_topicos[chave];
+                } else {
+                    ankiConfig.value.mapa_topicos[chave] = deckName;
+                }
+            } else if (tipo === 'disciplina') {
+                if (!deckName) {
+                    delete ankiConfig.value.mapa_disciplinas[chave];
+                } else {
+                    ankiConfig.value.mapa_disciplinas[chave] = deckName;
+                }
+            }
+            await persistirAnkiConfig();
+            mostrarAlerta(deckName ? `🔗 Baralho vinculado: ${deckName}` : 'Vínculo restaurado para correlação automática.', 'sucesso');
+        };
+
+        const alternarAutoAbrirAnki = async () => {
+            ankiConfig.value.auto_abrir = !ankiConfig.value.auto_abrir;
+            await persistirAnkiConfig();
+        };
+
+        // Motor de Correlação (De-Para Automático + Manual) entre Disciplina/Tópico do Orbis e os Baralhos do Anki
+        const resolverBaralhoAnki = (item) => {
+            if (!item) return { deck: '', origem: 'nenhum' };
+            const tId = item.topico_id || item.id || '';
+            const dId = item.disciplina_id || '';
+            const discRaw = String(item.disciplina_nome || '').replace(/^REVISÃO ANKI\s*•\s*/i, '').trim();
+            const topRaw = String(item.topico_titulo || item.titulo || '').trim();
+
+            // 1. Vínculo manual explícito por tópico
+            if (tId && ankiConfig.value?.mapa_topicos?.[String(tId)]) {
+                return { deck: ankiConfig.value.mapa_topicos[String(tId)], origem: 'manual_topico' };
+            }
+
+            const decks = ankiBaralhos.value || [];
+            if (!decks.length) {
+                if (dId && ankiConfig.value?.mapa_disciplinas?.[String(dId)]) {
+                    return { deck: ankiConfig.value.mapa_disciplinas[String(dId)], origem: 'manual_disciplina' };
+                }
+                return { deck: '', origem: 'offline' };
+            }
+
+            const discNorm = _normAnkiTexto(discRaw);
+            const topNorm = _normAnkiTexto(topRaw);
+
+            // Regras diretas de alta precisão para padrões clássicos dos baralhos do aluno
+            const findDeck = (pred) => decks.find(d => pred(_normAnkiTexto(d), d));
+
+            // Reforma Tributária (EC 132 / LC 214)
+            if (discNorm.includes('reforma tributaria') || topNorm.includes('132 2023') || topNorm.includes('214 2025')) {
+                if (topNorm.includes('214')) {
+                    const d214 = findDeck((dn) => dn.includes('reforma tributaria') && dn.includes('214'));
+                    if (d214) return { deck: d214, origem: 'auto_topico' };
+                }
+                if (topNorm.includes('132')) {
+                    const d132 = findDeck((dn) => dn.includes('reforma tributaria') && dn.includes('132'));
+                    if (d132) return { deck: d132, origem: 'auto_topico' };
+                }
+            }
+
+            // Mapa de ramos-raiz no Anki por disciplina do edital
+            const ramosPorDisciplina = [
+                { match: 'reforma tributaria', ramos: ['dir tributario 2 reforma tributaria', 'reforma tributaria'] },
+                { match: 'auditoria', ramos: ['sefaz conhecimento especifico auditoria', 'auditoria governamental', 'auditoria'] },
+                { match: 'financas publicas', ramos: ['sefaz conhecimento especifico financas publicas', 'sefaz conhecimento especifico dir financeiro', 'financas publicas'] },
+                { match: 'contabilidade publica', ramos: ['sefaz conhecimento gerais contabilidade', 'sefaz conhecimento especifico contabilidade avancada', 'contabilidade'] },
+                { match: 'contabilidade geral', ramos: ['sefaz conhecimento gerais contabilidade', 'sefaz conhecimento especifico contabilidade avancada', 'contabilidade'] },
+                { match: 'direito tributario', ramos: ['sefaz conhecimento especifico dir tributario'] },
+                { match: 'legislacao tributaria', ramos: ['sefaz conhecimento especifico legislacao tributaria'] },
+                { match: 'economia', ramos: ['sefaz conhecimento especifico economia', 'sefaz conhecimento gerais economia', 'economia'] },
+                { match: 'estatistica', ramos: ['conhecimentos gerais estatistica', 'estatistica'] },
+                { match: 'direito administrativo', ramos: ['conhecimentos gerais direito administrativo'] },
+                { match: 'direito constitucional', ramos: ['conhecimentos gerais direito constitucional'] },
+                { match: 'ciencia de dados', ramos: ['ciencias de dados', 'banco de dados'] },
+                { match: 'inteligencia artificial', ramos: ['inteligencia artificial e aprendizado de maquina', 'inteligencia artificial'] },
+                { match: 'desenvolvimento de sistemas', ramos: ['desenvolvimento', 'engenharia de software', 'webservices', 'testes de software', 'mensageria'] },
+                { match: 'infraestrutura de tic', ramos: ['computacao em nuvem', 'seguranca da informacao', 'redes de computadores', 'containers', 'virtualizacao', 'infraestrutura como codigo', 'ferramentas monitoramento', 'governanca de ti', 'resiliencia de aplicacoes', 'arquitetura computacional'] },
+                { match: 'matematica financeira', ramos: ['matematica financeira', 'estatistica', 'sefaz conhecimento gerais'] }
+            ];
+
+            let ramosAlvo = [];
+            for (const r of ramosPorDisciplina) {
+                if (discNorm.includes(r.match)) {
+                    ramosAlvo = r.ramos;
+                    break;
+                }
+            }
+
+            // Atalhos semânticos por palavras-chave do tópico dentro de TI / Fiscal
+            const atalhosTopico = [
+                { kw: ['serverless', 'migracao', 'nuvem', 'cloud', 'iaas', 'paas', 'saas', 'responsabilidade compartilhada'], deckSub: 'computacao em nuvem' },
+                { kw: ['aws', 'vmware', 'hyper v', 'virtualizacao'], deckSub: 'virtualizacao' },
+                { kw: ['docker', 'kubernetes', 'container', 'containers', 'orquestracao'], deckSub: 'containers' },
+                { kw: ['terraform', 'ansible', 'iac', 'infraestrutura como codigo'], deckSub: 'infraestrutura como codigo' },
+                { kw: ['firewall', 'waf', 'ids', 'ips', 'siem', 'edr', 'vpn', 'proxy', 'wpa', '802 1x'], deckSub: 'seguranca de redes de computadores' },
+                { kw: ['owasp', 'mitre', 'iso 27001', '27002', '27005', 'nist', 'cis controls', 'csirt', 'soc', 'oauth', 'fido2', 'keycloak', 'sso', 'criptografia', 'certificado digital'], deckSub: 'seguranca da informacao' },
+                { kw: ['devops', 'devsecops', 'scrum', 'xp', 'kanban', 'ageis'], deckSub: 'engenharia de software' },
+                { kw: ['rest', 'soap', 'graphql', 'api gateway', 'swagger', 'webservice'], deckSub: 'webservices' },
+                { kw: ['tdd', 'bdd', 'junit', 'teste'], deckSub: 'testes de software' },
+                { kw: ['sped', 'escrituracao fiscal digital', 'efd'], deckSub: '1 sistema publico de escrituracao digital sped' },
+                { kw: ['fluxo de caixa', 'recomposicao'], deckSub: '10 recomposicao contabil do fluxo de caixa' },
+                { kw: ['ocultacao de ativos', 'saldo credor', 'suprimento', 'irregularidades'], deckSub: '12 irregularidades frequentemente apuradas' },
+                { kw: ['ppa', 'ldo', 'loa', 'orcamento'], deckSub: 'leis orcamentarias ppa ldo e loa' },
+                { kw: ['patrimonio'], deckSub: '2 patrimonio' },
+                { kw: ['demanda', 'oferta', 'microeconomia'], deckSub: '1 1teoria da demanda' }
+            ];
+
+            for (const at of atalhosTopico) {
+                if (at.kw.some(k => topNorm.includes(k))) {
+                    const achouAtalho = findDeck((dn) => dn.includes(at.deckSub));
+                    if (achouAtalho) {
+                        // Verifica se há um sub-baralho ainda mais específico dentro dele
+                        const stopwords = new Set(['de', 'da', 'do', 'das', 'dos', 'em', 'para', 'com', 'por', 'uma', 'sobre', 'entre', 'lei', 'conceitos', 'nocoes']);
+                        const tokensTop = topNorm.split(' ').filter(w => w.length >= 3 && !stopwords.has(w));
+                        let melhorSub = achouAtalho;
+                        let maiorHits = 0;
+                        for (const d of decks) {
+                            if (d.startsWith(achouAtalho + '::')) {
+                                const dn = _normAnkiTexto(d.slice(achouAtalho.length));
+                                const hits = tokensTop.filter(tk => dn.includes(tk)).length;
+                                if (hits > maiorHits) {
+                                    maiorHits = hits;
+                                    melhorSub = d;
+                                }
+                            }
+                        }
+                        return { deck: melhorSub, origem: 'auto_topico' };
+                    }
+                }
+            }
+
+            // 2. Vínculo manual explícito por disciplina (se o usuário definiu um baralho padrão para a matéria)
+            const deckManualDisc = (dId && ankiConfig.value?.mapa_disciplinas?.[String(dId)]) || '';
+
+            // 3. Busca por sobreposição de tokens entre o tópico e os sub-baralhos dos ramos da disciplina
+            const stopwords = new Set(['de', 'da', 'do', 'das', 'dos', 'em', 'para', 'com', 'por', 'uma', 'sobre', 'entre', 'lei', 'conceitos', 'nocoes', 'aplicadas', 'setor', 'publico']);
+            const tokensTop = topNorm.split(' ').filter(w => w.length >= 3 && !stopwords.has(w));
+
+            const candidatosRamo = decks.filter(d => {
+                if (deckManualDisc && (d === deckManualDisc || d.startsWith(deckManualDisc + '::'))) return true;
+                const dn = _normAnkiTexto(d);
+                return ramosAlvo.some(r => dn.includes(r));
+            });
+
+            const poolBusca = candidatosRamo.length > 0 ? candidatosRamo : decks;
+            let melhorDeck = '';
+            let melhorScore = -1;
+
+            for (const d of poolBusca) {
+                const partes = d.split('::');
+                const folhaNorm = _normAnkiTexto(partes[partes.length - 1]);
+                const fullNorm = _normAnkiTexto(d);
+                let score = 0;
+
+                if (ramosAlvo.length > 0 && ramosAlvo.some(r => fullNorm.includes(r))) {
+                    score += 10;
+                }
+                for (const tk of tokensTop) {
+                    if (folhaNorm.includes(tk)) score += 8;
+                    else if (fullNorm.includes(tk)) score += 3;
+                }
+                // Prefere o baralho-pai do ramo quando nenhum token do tópico bateu especificamente em sub-baralhos
+                if (score === 10) {
+                    score += Math.max(0, 5 - partes.length);
+                }
+                if (score > melhorScore) {
+                    melhorScore = score;
+                    melhorDeck = d;
+                }
+            }
+
+            if (melhorScore >= 13 && melhorDeck) {
+                return { deck: melhorDeck, origem: 'auto_topico' };
+            }
+            if (deckManualDisc) {
+                return { deck: deckManualDisc, origem: 'manual_disciplina' };
+            }
+            if (melhorDeck && melhorScore >= 10) {
+                return { deck: melhorDeck, origem: 'auto_disciplina' };
+            }
+            return { deck: decks[0] || '', origem: 'fallback' };
+        };
+
+        const abrirBaralhoNoAnki = async (itemOuDeck, silencioso = false) => {
+            let deckName = '';
+            if (typeof itemOuDeck === 'string') {
+                deckName = itemOuDeck;
+            } else if (itemOuDeck && typeof itemOuDeck === 'object') {
+                if (!ankiConectado.value) {
+                    await conectarAnkiDesktop(true);
+                }
+                deckName = resolverBaralhoAnki(itemOuDeck).deck;
+            }
+            if (!deckName) {
+                if (!silencioso) {
+                    mostrarAlerta('Nenhum baralho correlacionado encontrado. Conecte o Anki Desktop na aba Revisões.', 'aviso');
+                }
+                return false;
+            }
+
+            const urlAnki = ankiConfig.value?.url || 'http://127.0.0.1:8765';
+            try {
+                // 1º tenta abrir diretamente a revisão de cards do baralho (guiDeckReview)
+                const resRev = await fetch(urlAnki, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'guiDeckReview',
+                        version: 6,
+                        params: { name: deckName }
+                    })
+                });
+                const dataRev = await resRev.json();
+                // Se não houver cards vencidos agora (result === false), abre o painel do baralho (guiDeckOverview)
+                if (!dataRev || dataRev.result === false || dataRev.error) {
+                    await fetch(urlAnki, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            action: 'guiDeckOverview',
+                            version: 6,
+                            params: { name: deckName }
+                        })
+                    });
+                }
+                ankiConectado.value = true;
+                mostrarAlerta(`🧠 Anki aberto no baralho: ${deckName}`, 'sucesso');
+                return true;
+            } catch (e) {
+                ankiConectado.value = false;
+                if (!silencioso) {
+                    mostrarAlerta('🔴 Não foi possível abrir o baralho no Anki. Verifique se o Anki Desktop está aberto.', 'erro');
+                }
+                return false;
+            }
+        };
 
         let chartRevEbbinghausInstance = null;
         let chartRevConstanciaInstance = null;
@@ -4904,6 +5238,18 @@ const app = createApp({
                 const res = await fetch(url);
                 if (res.ok) {
                     revisoesData.value = await res.json();
+                    if (revisoesData.value?.anki_config && typeof revisoesData.value.anki_config === 'object') {
+                        const cfgSrv = revisoesData.value.anki_config;
+                        ankiConfig.value = {
+                            auto_abrir: cfgSrv.auto_abrir !== undefined ? Boolean(cfgSrv.auto_abrir) : ankiConfig.value.auto_abrir,
+                            url: cfgSrv.url || ankiConfig.value.url || 'http://127.0.0.1:8765',
+                            mapa_disciplinas: { ...(ankiConfig.value.mapa_disciplinas || {}), ...(cfgSrv.mapa_disciplinas || {}) },
+                            mapa_topicos: { ...(ankiConfig.value.mapa_topicos || {}), ...(cfgSrv.mapa_topicos || {}) }
+                        };
+                    }
+                    if (!ankiConectado.value) {
+                        conectarAnkiDesktop(true);
+                    }
                     if (abaAtiva.value === 'revisoes') {
                         nextTick(() => setTimeout(renderGraficosRevisoes, 100));
                     }
@@ -4923,6 +5269,9 @@ const app = createApp({
 
         const iniciarRevisaoAnkiDoTopico = (item) => {
             if (!item) return;
+            if (ankiConfig.value?.auto_abrir) {
+                abrirBaralhoNoAnki(item, true);
+            }
             const dId = item.disciplina_id || (todasDisciplinas.value[0]?.id || '');
             const tId = item.topico_id || '';
             const blocoAnkiAtual = (blocoAtual.value && blocoAtual.value.disciplina?.categoria === 'REVISAO_ANKI')
@@ -5391,7 +5740,18 @@ const app = createApp({
             carregarCentralRevisoes,
             abrirCentralRevisoes,
             iniciarRevisaoAnkiDoTopico,
-            renderGraficosRevisoes
+            renderGraficosRevisoes,
+            ankiConectado,
+            ankiCarregando,
+            ankiBaralhos,
+            ankiFiltroBuscaBaralho,
+            baralhosAnkiFiltradosSelect,
+            ankiConfig,
+            conectarAnkiDesktop,
+            salvarVinculoBaralhoAnki,
+            alternarAutoAbrirAnki,
+            resolverBaralhoAnki,
+            abrirBaralhoNoAnki
         };
     }
 });
