@@ -13,7 +13,13 @@ from app.models.topico import Topico
 from app.models.ciclo import CicloEstudos, BlocoCiclo
 from app.models.sessao import SessaoEstudo
 from app.models.configuracao_prova import ConfiguracaoPainelProva
-from app.routers.ia_insights import MODELOS_GEMINI_ATIVOS, extrair_json_resiliente
+from app.routers.ia_insights import (
+    MODELOS_GEMINI_ATIVOS,
+    extrair_json_resiliente,
+    selecionar_modelos_gemini_rapidos,
+    rebaixar_modelo_gemini_cache,
+    remover_modelo_gemini_cache,
+)
 
 
 def extrair_chave_numerica_titulo(titulo: str) -> Tuple[List[int], str]:
@@ -573,8 +579,8 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO NO FORMATO:
   ]
 }}"""
 
-    modelos_rest = MODELOS_GEMINI_ATIVOS
-    async with httpx.AsyncClient(timeout=12.0) as http_client:
+    modelos_rest = await selecionar_modelos_gemini_rapidos(api_key, max_modelos=4)
+    async with httpx.AsyncClient(timeout=15.0) as http_client:
         for modelo in modelos_rest:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
@@ -582,34 +588,35 @@ RETORNE ESTRITAMENTE UM JSON VÁLIDO NO FORMATO:
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {
                         "responseMimeType": "application/json",
-                        "temperature": 0.4
+                        "temperature": 0.2,
+                        "thinkingConfig": {"thinkingBudget": 0},
                     }
                 }
                 resp = await http_client.post(url, json=payload)
+                if resp.status_code == 400 and "thinkingConfig" in payload["generationConfig"]:
+                    payload["generationConfig"].pop("thinkingConfig", None)
+                    resp = await http_client.post(url, json=payload)
                 if resp.status_code == 200:
                     resp_json = resp.json()
                     texto = resp_json["candidates"][0]["content"]["parts"][0]["text"].strip()
-                    if texto.startswith("```json"):
-                        texto = texto[7:]
-                    if texto.startswith("```"):
-                        texto = texto[3:]
-                    if texto.endswith("```"):
-                        texto = texto[:-3]
-                    parsed = json.loads(texto.strip())
+                    parsed = extrair_json_resiliente(texto)
                     if isinstance(parsed, dict) and "disciplinas" in parsed:
                         parsed["_modelo_usado"] = f"Google Gemini ({modelo})"
                         print(f"[TRILHA IA] Sucesso via Gemini ({modelo})")
                         return parsed
-                elif resp.status_code in (400, 401, 403):
-                    # Se a chave for inválida ou bloqueada, não repete 5 vezes
+                elif resp.status_code in (401, 403) or "API_KEY_INVALID" in resp.text:
                     print(f"[TRILHA IA] Status {resp.status_code} em {modelo}: {resp.text[:100]}")
-                    if "API_KEY_INVALID" in resp.text or resp.status_code in (401, 403):
-                        break
+                    break
+                elif resp.status_code in (404, 429):
+                    remover_modelo_gemini_cache(api_key, modelo)
+                elif resp.status_code == 503:
+                    rebaixar_modelo_gemini_cache(api_key, modelo)
             except Exception as e_rest:
                 print(f"[TRILHA IA] Aviso REST com {modelo}: {e_rest}")
                 continue
 
     return None
+
 
 
 async def consultar_gemini_topicos_disciplina(
@@ -642,29 +649,30 @@ Analise todos os tópicos da disciplina "{disciplina_nome}":
 {json.dumps(topicos_list, ensure_ascii=False)}
 
 DIRETRIZ ESTRATÉGICA E REGRA DE OURO DA TRILHA DE ESTUDOS:
-O objetivo primordial é que o estudante garanta estudar PRIMEIRO aquilo que for mais cobrado pela banca {banca} na Área {area_concurso}, aplicando a REGRA DE PARETO (80/20).
+Analise criticamente o conteúdo real de cada tópico dentro da disciplina "{disciplina_nome}", avaliando a incidência histórica real da banca {banca} ({estilo_banca}) na Área {area_concurso} (cargo {cargo}, especialidade {especialidade}), aplicando a REGRA DE PARETO (80/20) sem se prender à ordem numérica do edital.
 
 HIERARQUIA OBRIGATÓRIA DA SEQUÊNCIA DE ESTUDO (`ordem_trilha`: 1 a {len(topicos_list)}):
-1. PREFERÊNCIA 01 = MAIS COBRADOS (`mais_cobrado: true`):
-   - A preferência número 1 da trilha DEVE ser o que for MAIS COBRADO pela banca!
-   - EXCEÇÃO ÚNICA: Só pode vir antes de um Mais Cobrado se houver um tópico que seja estritamente um PRÉ-REQUISITO CONCEITUAL INDISPENSÁVEL para entender a matéria (marque `eh_prerequisito: true`).
-   - ATENÇÃO: Tópicos que apenas estão no início numérico do edital mas NÃO são pré-requisito técnico dos temas quentes (ex: "Modelagem de processos / AS-IS TO-BE" em Desenvolvimento de Sistemas) NUNCA devem ter `eh_prerequisito: true` e NUNCA devem entrar nos primeiros passos! Devem ir para P2 ou P3!
-   - Tópicos de altíssima cobrança como "Metodologias ágeis (XP, Scrum, Kanban)", "Microsserviços", "REST", "ICMS", etc., DEVEM entrar logo nos primeiros passos (Passo #1, #2...)!
-2. DEMAIS TÓPICOS P1 (`prioridade: 1`):
-   - Tópicos de alta relevância que não foram marcados como Mais Cobrados entram logo após os Mais Cobrados.
-3. TÓPICOS P2 (`prioridade: 2`):
-   - Tópicos de consolidação intermediária (relevância média, como BPMN, Git, tópicos secundários) entram depois dos P1.
-4. TÓPICOS P3 (`prioridade: 3`):
-   - Tópicos complementares e de menor incidência entram depois dos P2.
-5. SEM MARCAÇÃO (`prioridade: null`):
-   - Tópicos residuais ou de incidência quase nula na {banca} devem ficar POR ÚLTIMO na trilha.
+1. PRÉ-REQUISITO CONCEITUAL INDISPENSÁVEL (`eh_prerequisito: true`) — APENAS SE HOUVER:
+   - Inclua antes dos Mais Cobrados SOMENTE tópicos que sejam estritamente um fundamento conceitual indispensável para compreender e resolver questões dos tópicos Mais Cobrados da disciplina.
+   - Se nenhum tópico for pré-requisito indispensável para os temas Mais Cobrados, NÃO force `eh_prerequisito: true` e comece diretamente pelos Mais Cobrados.
+   - ATENÇÃO: Nunca confunda "primeiro tópico numérico do edital" ou tópico introdutório genérico com pré-requisito conceitual; tópicos apenas descritivos ou introdutórios sem dependência lógica real devem ir para P2 ou P3.
+2. MAIS COBRADOS (`mais_cobrado: true`, `prioridade: 1`):
+   - Logo após eventuais pré-requisitos indispensáveis (ou desde o Passo #1 se não houver pré-requisito), posicione o núcleo de maior recorrência e peso histórico na banca {banca} (~20% a 30% dos tópicos que concentram ~80% da pontuação).
+3. DEMAIS TÓPICOS P1 (`prioridade: 1`, `mais_cobrado: false`):
+   - Tópicos de alta relevância que não compõem o núcleo principal de mais cobrados entram imediatamente após os Mais Cobrados.
+4. TÓPICOS P2 — MÉDIOS (`prioridade: 2`):
+   - Tópicos de relevância intermediária e consolidação entram após todos os P1.
+5. TÓPICOS P3 — BAIXOS (`prioridade: 3`):
+   - Tópicos complementares e de baixa incidência na banca {banca} entram após os P2.
+6. SEM MARCAÇÃO (`prioridade: null`):
+   - Tópicos residuais ou de incidência quase nula na {banca} ficam por último na trilha.
 
 CLASSIFICAÇÃO DE CADA TÓPICO:
-- `mais_cobrado`: true se for do núcleo mais frequente da banca {banca} (~20% a 30% dos tópicos).
+- `mais_cobrado`: true se pertencer ao núcleo mais cobrado pela banca {banca} (~20% a 30% dos tópicos).
 - `prioridade`: 1 (P1 Alta), 2 (P2 Média), 3 (P3 Baixa), ou null (Residual).
-- `eh_prerequisito`: true SOMENTE se for um fundamento estritamente indispensável para destravar a disciplina inteira.
-- `ordem_trilha`: número sequencial (1 a {len(topicos_list)}) respeitando rigorosamente a hierarquia acima.
-- `motivo_ia`: Justificativa técnica e contextualizada de 1 linha mencionando a {banca}.
+- `eh_prerequisito`: true SOMENTE quando o tópico for base conceitual estritamente indispensável para compreender um ou mais tópicos Mais Cobrados.
+- `ordem_trilha`: número sequencial (1 a {len(topicos_list)}) respeitando rigorosamente a ordem: Pré-requisitos (se houver) -> Mais Cobrados -> Demais P1 -> P2 (Médios) -> P3 (Baixos) -> Residuais.
+- `motivo_ia`: Justificativa técnica e contextualizada de 1 linha mencionando a {banca} e o papel real do tópico (pré-requisito, alta incidência, médio ou baixo).
 
 Retorne ESTRITAMENTE um JSON no seguinte formato:
 {{
@@ -680,8 +688,8 @@ Retorne ESTRITAMENTE um JSON no seguinte formato:
   ]
 }}"""
 
-    modelos_rest = MODELOS_GEMINI_ATIVOS
-    async with httpx.AsyncClient(timeout=min(15.0, timeout_segundos)) as http_client:
+    modelos_rest = await selecionar_modelos_gemini_rapidos(api_key, max_modelos=3)
+    async with httpx.AsyncClient(timeout=min(25.0, timeout_segundos)) as http_client:
         for modelo in modelos_rest:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
@@ -716,6 +724,203 @@ Retorne ESTRITAMENTE um JSON no seguinte formato:
     return None
 
 
+async def consultar_gemini_lote_disciplinas(
+    api_key: str,
+    banca: str,
+    estilo_banca: str,
+    concurso: str,
+    cargo: str,
+    especialidade: str,
+    area_concurso: str,
+    disciplinas_lote: List[Dict[str, Any]],
+    timeout_segundos: float = 20.0,
+) -> Tuple[Optional[Dict[int, Dict[str, Any]]], Optional[str]]:
+    """
+    Analisa um lote de 1 ou mais disciplinas (até ~95 tópicos no total) em UMA única chamada
+    ao Gemini com JSON tabular ultra-compacto `{"t":[[id,ordem,prio,mc,pre]]}`,
+    `temperature=0.0` e `thinkingBudget=0`, garantindo:
+    - ~5x a 7x menos tokens de saída (~3s por lote de 74-95 tópicos!)
+    - Zero timeout e baixíssimo risco de rate-limit (apenas 4 lotes para 369 tópicos)
+    - Classificação 100% via IA com determinismo entre execuções
+    Retorna (mapa_por_topico_id, nome_modelo_usado).
+    """
+    if not disciplinas_lote:
+        return {}, None
+
+    total_topicos_lote = sum(len(d["topicos"]) for d in disciplinas_lote)
+    payload_compacto = [
+        {
+            "d": d["nome"],
+            "n": len(d["topicos"]),
+            "mc_alvo": max(1, round(len(d["topicos"]) * 0.22)),
+            "t": [[t["id"], t["titulo"]] for t in d["topicos"]],
+        }
+        for d in disciplinas_lote
+    ]
+
+    prompt = f"""Você é o Estrategista-Chefe de Concursos Públicos do Orbis, especialista absoluto na banca {banca} ({estilo_banca}) para a Área {area_concurso} (concurso {concurso}, cargo {cargo}, especialidade {especialidade}).
+Analise TODOS os {total_topicos_lote} tópicos das disciplinas abaixo de forma independente por disciplina, aplicando a REGRA DE PARETO (80/20) sem se prender à ordem numérica do edital.
+
+HIERARQUIA OBRIGATÓRIA DENTRO DE CADA DISCIPLINA (ordem de 1 até `n` da disciplina):
+1. PRÉ-REQUISITO CONCEITUAL INDISPENSÁVEL (`pre=1`) — APENAS SE HOUVER:
+   - Marque `pre=1` SOMENTE se o tópico for estritamente um fundamento conceitual indispensável para compreender e resolver questões dos tópicos Mais Cobrados daquela disciplina.
+   - Se nenhum tópico for pré-requisito indispensável, não marque nenhum como `pre=1` e comece diretamente pelos Mais Cobrados.
+   - Nunca confunda tópico meramente introdutório ou primeiro item numérico do edital com pré-requisito conceitual.
+2. MAIS COBRADOS (`mc=1`, `prio=1`):
+   - Em CADA disciplina, selecione exatamente `mc_alvo` tópicos (~22% da disciplina, mínimo 1) que representam os assuntos de maior cobrança histórica real na banca {banca}.
+3. DEMAIS TÓPICOS P1 (`prio=1`, `mc=0`): alta relevância na banca {banca} (~15% a 20% adicionais).
+4. TÓPICOS P2 — MÉDIOS (`prio=2`, `mc=0`): relevância intermediária e consolidação (~25% a 30%).
+5. TÓPICOS P3 — BAIXOS (`prio=3`, `mc=0`): tópicos complementares e de baixa incidência (~20% a 25%).
+6. RESIDUAIS (`prio=0`, `mc=0`): incidência quase nula na {banca}, por último na trilha.
+
+RETORNE ESTRITAMENTE UM JSON COMPACTO NO FORMATO:
+{{"t":[[id,ordem,prio,mc,pre]]}}
+Regras do formato:
+- Inclua TODOS os {total_topicos_lote} IDs enviados, sem omitir nenhum.
+- `id`: inteiro exato do tópico recebido.
+- `ordem`: inteiro 1..n dentro da respectiva disciplina (pré-requisitos -> mais cobrados -> demais P1 -> P2 -> P3 -> residuais).
+- `prio`: 1 (P1 Alta), 2 (P2 Média), 3 (P3 Baixa) ou 0 (Residual).
+- `mc`: 1 (Mais Cobrado) ou 0.
+- `pre`: 1 (Pré-requisito conceitual indispensável) ou 0.
+
+DISCIPLINAS DO LOTE (`d`=nome, `n`=qtd, `mc_alvo`=qtd exata de Mais Cobrados, `t`=[[id,titulo]]):
+{json.dumps(payload_compacto, ensure_ascii=False)}"""
+
+    def _gerar_motivo_ia_classificado(pri: Optional[int], mc: bool, pre: bool) -> str:
+        if pre and not mc:
+            return f"🧱 Pré-requisito conceitual indispensável (IA • {banca}): base necessária para os tópicos mais cobrados."
+        if mc and pri == 1:
+            return f"🔥 Núcleo Pareto 80/20 (IA • {banca}): altíssima incidência histórica para {area_concurso}."
+        if mc:
+            return f"🔥 Recorrente na {banca} (IA): alta frequência histórica em {area_concurso}."
+        if pri == 1:
+            return f"⚡ Prioridade Alta P1 (IA • {banca}): tema relevante de alto custo-benefício."
+        if pri == 2:
+            return f"⭐ Prioridade Média P2 (IA • {banca}): consolidação intermediária após o núcleo P1."
+        if pri == 3:
+            return f"🔹 Prioridade Baixa P3 (IA • {banca}): tópico complementar de menor incidência."
+        return f"📋 Residual (IA • {banca}): baixa incidência histórica; estudar por último."
+
+    def _parse_resposta_lote(texto: str) -> Optional[Dict[int, Dict[str, Any]]]:
+        parsed = extrair_json_resiliente(texto)
+        if not isinstance(parsed, dict):
+            return None
+        lista = parsed.get("t") if isinstance(parsed.get("t"), list) else parsed.get("topicos")
+        if not isinstance(lista, list) or not lista:
+            return None
+        mapa: Dict[int, Dict[str, Any]] = {}
+        for item in lista:
+            if isinstance(item, list) and len(item) >= 5:
+                try:
+                    tid = int(str(item[0]).strip())
+                except Exception:
+                    continue
+                try:
+                    ord_val = int(item[1])
+                except Exception:
+                    ord_val = 999
+                try:
+                    pri_raw = int(item[2]) if item[2] is not None else 0
+                except Exception:
+                    pri_raw = 0
+                pri_val = pri_raw if pri_raw in (1, 2, 3) else None
+                mc_val = bool(int(item[3])) if isinstance(item[3], (int, float, bool)) else str(item[3]).lower() in ("1", "true")
+                pre_val = bool(int(item[4])) if isinstance(item[4], (int, float, bool)) else str(item[4]).lower() in ("1", "true")
+                if mc_val and pri_val is None:
+                    pri_val = 1
+                motivo_val = _gerar_motivo_ia_classificado(pri_val, mc_val, pre_val)
+            elif isinstance(item, dict):
+                raw_id = item.get("id")
+                if raw_id is None:
+                    continue
+                try:
+                    tid = int(str(raw_id).strip())
+                except Exception:
+                    continue
+                pri_raw = item.get("p", item.get("prioridade"))
+                try:
+                    pri_val = int(pri_raw) if pri_raw is not None else None
+                except Exception:
+                    pri_val = None
+                if pri_val not in (1, 2, 3):
+                    pri_val = None
+                mc_val = bool(item.get("mc", item.get("mais_cobrado", False)))
+                if mc_val and pri_val is None:
+                    pri_val = 1
+                pre_val = bool(item.get("pre", item.get("eh_prerequisito", False)))
+                ord_raw = item.get("o", item.get("ordem_trilha"))
+                try:
+                    ord_val = int(ord_raw) if ord_raw is not None else 999
+                except Exception:
+                    ord_val = 999
+                motivo_val = str(item.get("m", item.get("motivo_ia", "")) or "").strip() or _gerar_motivo_ia_classificado(pri_val, mc_val, pre_val)
+            else:
+                continue
+
+            mapa[tid] = {
+                "id": tid,
+                "ordem_trilha": ord_val,
+                "prioridade": pri_val,
+                "mais_cobrado": mc_val,
+                "eh_prerequisito": pre_val,
+                "motivo_ia": motivo_val,
+            }
+        return mapa if mapa else None
+
+    modelos_candidatos = await selecionar_modelos_gemini_rapidos(api_key, max_modelos=3)
+
+    async with httpx.AsyncClient(timeout=timeout_segundos) as http_client:
+        # Até 2 rodadas rápidas para absorver picos momentâneos de 503 sem estourar o orçamento de tempo
+        for rodada in range(2):
+            if rodada > 0:
+                await asyncio.sleep(1.0)
+                modelos_candidatos = await selecionar_modelos_gemini_rapidos(api_key, max_modelos=3)
+
+            for modelo in list(modelos_candidatos):
+                try:
+                    url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+                    payload = {
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {
+                            "responseMimeType": "application/json",
+                            "temperature": 0.0,
+                            "maxOutputTokens": 4096,
+                            "thinkingConfig": {"thinkingBudget": 0},
+                        },
+                    }
+                    resp = await http_client.post(url, json=payload)
+                    if resp.status_code == 400 and "thinkingConfig" in payload["generationConfig"]:
+                        payload["generationConfig"].pop("thinkingConfig", None)
+                        resp = await http_client.post(url, json=payload)
+
+                    if resp.status_code == 200:
+                        resp_json = resp.json()
+                        partes = resp_json.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                        texto = "".join(p.get("text", "") for p in partes if "text" in p).strip()
+                        mapa = _parse_resposta_lote(texto)
+                        if mapa:
+                            return mapa, modelo
+                    elif resp.status_code in (401, 403) or "API_KEY_INVALID" in resp.text:
+                        print(f"[TRILHA IA LOTE] Chave recusada ({resp.status_code}) em {modelo}")
+                        return None, None
+                    elif resp.status_code in (404, 429):
+                        remover_modelo_gemini_cache(api_key, modelo)
+                        print(f"[TRILHA IA LOTE] HTTP {resp.status_code} em {modelo}; removido da fila ativa.")
+                        continue
+                    elif resp.status_code == 503:
+                        rebaixar_modelo_gemini_cache(api_key, modelo)
+                        print(f"[TRILHA IA LOTE] HTTP 503 (alta demanda) em {modelo}; tentando próximo modelo...")
+                        continue
+                    else:
+                        print(f"[TRILHA IA LOTE] HTTP {resp.status_code} em {modelo}: {resp.text[:120]}")
+                except Exception as e:
+                    rebaixar_modelo_gemini_cache(api_key, modelo)
+                    print(f"[TRILHA IA LOTE] Erro com {modelo}: {type(e).__name__}: {e}")
+                    continue
+
+    return None, None
+
+
 
 def obter_proximo_topico_trilha_disciplina(
     disc: Disciplina,
@@ -730,6 +935,7 @@ def obter_proximo_topico_trilha_disciplina(
     """
     if not disc or not disc.topicos or disc.categoria == "REVISAO_ANKI":
         return None
+
 
     vistos = topicos_vistos_ids or set()
 
@@ -760,6 +966,7 @@ def obter_proximo_topico_trilha_disciplina(
 
     if not escolhido:
         return None
+
 
     from app.services.tec_matching_service import montar_dados_vinculo_topico
     return {
@@ -999,23 +1206,106 @@ async def analisar_e_gerar_trilha_edital(
     )
     resumo_estrategico = resumo_estrategico_padrao
 
+    disciplinas_analisadas_ia = 0
+    topicos_analisados_ia = 0
+    total_topicos_edital = sum(len(d.topicos or []) for d in disciplinas_validas)
+    modelos_usados_ia: List[str] = []
+
     if api_key:
-        resposta_ia = await consultar_gemini_para_trilha(
-            api_key=api_key,
-            banca=banca,
-            estilo_banca=estilo_banca,
-            concurso=concurso,
-            cargo=cargo,
-            especialidade=especialidade,
-            disciplinas_info=disciplinas_payload_ia,
-            area_concurso=area_concurso,
-            formato_prova=formato_prova,
-            nota_corte=nota_corte,
-            status_edital=status_edital,
-            dias_restantes=dias_restantes
+        # 3.1 Aquece a descoberta dinâmica do modelo mais rápido UMA única vez antes das chamadas paralelas
+        await selecionar_modelos_gemini_rapidos(api_key, max_modelos=5)
+
+        # 3.2 Empacota as disciplinas em lotes balanceados (~95 tópicos/lote) para reduzir chamadas
+        # (ex.: 16 disciplinas / 369 tópicos -> apenas 4 lotes) e evitar picos de 503/429.
+        MAX_TOPICOS_POR_LOTE = 95
+        discs_com_topicos = sorted(
+            [d for d in disciplinas_validas if d.topicos],
+            key=lambda d: len(d.topicos),
+            reverse=True,
         )
+        lotes_disciplinas: List[List[Disciplina]] = []
+        for d_cur in discs_com_topicos:
+            qtd_cur = len(d_cur.topicos)
+            alocado = False
+            for lote in lotes_disciplinas:
+                soma_lote = sum(len(x.topicos) for x in lote)
+                if soma_lote + qtd_cur <= MAX_TOPICOS_POR_LOTE:
+                    lote.append(d_cur)
+                    alocado = True
+                    break
+            if not alocado:
+                lotes_disciplinas.append([d_cur])
+
+        print(
+            f"[TRILHA IA] Analisando {len(discs_com_topicos)} disciplinas ({total_topicos_edital} tópicos) "
+            f"em {len(lotes_disciplinas)} lote(s) balanceado(s) + visão macro em paralelo..."
+        )
+
+        # Concorrência suave (2 em paralelo) evita picos de 503 na API gratuita e mantém cada lote rápido!
+        sem = asyncio.Semaphore(2)
+        mapa_global_ia: Dict[int, Dict[str, Any]] = {}
+        resposta_ia_holder: Dict[str, Any] = {"val": None}
+
+        async def _executar_macro():
+            async with sem:
+                res_m = await consultar_gemini_para_trilha(
+                    api_key=api_key,
+                    banca=banca,
+                    estilo_banca=estilo_banca,
+                    concurso=concurso,
+                    cargo=cargo,
+                    especialidade=especialidade,
+                    disciplinas_info=disciplinas_payload_ia,
+                    area_concurso=area_concurso,
+                    formato_prova=formato_prova,
+                    nota_corte=nota_corte,
+                    status_edital=status_edital,
+                    dias_restantes=dias_restantes,
+                )
+                resposta_ia_holder["val"] = res_m
+
+        async def _executar_lote(idx_lote: int, lote_discs: List[Disciplina]):
+            lote_payload = [
+                {
+                    "id": d.id,
+                    "nome": d.nome,
+                    "topicos": [{"id": t.id, "titulo": t.titulo} for t in d.topicos],
+                }
+                for d in lote_discs
+            ]
+            async with sem:
+                mapa_res, mod_usado = await consultar_gemini_lote_disciplinas(
+                    api_key=api_key,
+                    banca=banca,
+                    estilo_banca=estilo_banca,
+                    concurso=concurso,
+                    cargo=cargo,
+                    especialidade=especialidade,
+                    area_concurso=area_concurso,
+                    disciplinas_lote=lote_payload,
+                    timeout_segundos=14.0,
+                )
+                if mod_usado and mod_usado not in modelos_usados_ia:
+                    modelos_usados_ia.append(mod_usado)
+                if isinstance(mapa_res, dict):
+                    # Persiste imediatamente no mapa global para que um eventual timeout nunca descarte lotes prontos!
+                    mapa_global_ia.update(mapa_res)
+                    print(f"[TRILHA IA] Lote {idx_lote}/{len(lotes_disciplinas)} OK ({len(mapa_res)} tópicos via {mod_usado})")
+
+        tasks = [asyncio.create_task(_executar_lote(i, lt)) for i, lt in enumerate(lotes_disciplinas, start=1)]
+        tasks.append(asyncio.create_task(_executar_macro()))
+
+        _, pending = await asyncio.wait(tasks, timeout=45.0)
+        if pending:
+            print(f"[TRILHA IA] {len(pending)} tarefa(s) ainda pendente(s) aos 45s; preservando {len(mapa_global_ia)} tópicos já concluídos.")
+            for p_task in pending:
+                p_task.cancel()
+
+        resposta_ia = resposta_ia_holder["val"]
+
         if resposta_ia and isinstance(resposta_ia.get("disciplinas"), list):
-            modelo_origem = resposta_ia.get("_modelo_usado", "Google Gemini")
+            if resposta_ia.get("_modelo_usado"):
+                modelos_usados_ia.append(str(resposta_ia["_modelo_usado"]).replace("Google Gemini (", "").rstrip(")"))
             if resposta_ia.get("resumo_estrategico"):
                 resumo_estrategico = str(resposta_ia["resumo_estrategico"]).strip()
 
@@ -1025,7 +1315,10 @@ async def analisar_e_gerar_trilha_edital(
             for d_ia in resposta_ia["disciplinas"]:
                 if not isinstance(d_ia, dict):
                     continue
-                d_id = d_ia.get("id")
+                try:
+                    d_id = int(str(d_ia.get("id")).strip())
+                except Exception:
+                    continue
                 disc_db = disc_map_db.get(d_id)
                 if not disc_db:
                     continue
@@ -1040,9 +1333,6 @@ async def analisar_e_gerar_trilha_edital(
                 if d_ia.get("justificativa_trilha_ia"):
                     disc_db.justificativa_trilha_ia = str(d_ia["justificativa_trilha_ia"]).strip()
 
-            # Combina a hierarquia de pré-requisitos pedagógicos (Tier 1 -> Tier 2 -> Tier 3)
-            # com o refinamento da IA e o peso Pareto da prova, impedindo que matérias avançadas
-            # fiquem antes de seus pré-requisitos base.
             if ordens_recebidas:
                 ordem_ia_map = {disc_obj.id: ordem_ia for ordem_ia, disc_obj in ordens_recebidas}
                 disc_ja_ordenadas = sorted(
@@ -1051,73 +1341,89 @@ async def analisar_e_gerar_trilha_edital(
                         diag_por_disc[d.id]["nivel_pedagogico"],
                         -diag_por_disc[d.id]["score_pareto_prova"],
                         ordem_ia_map.get(d.id, 999),
-                        d.id
-                    )
+                        d.id,
+                    ),
                 )
                 for idx_d, d_obj in enumerate(disc_ja_ordenadas, start=1):
                     d_obj.ordem_trilha = idx_d
 
-        # B) Análise profunda dos TÓPICOS de cada disciplina com Gemini (em paralelo com concorrência controlada)
-        print(f"[TRILHA IA] Iniciando análise detalhada de tópicos por IA em {len(disciplinas_validas)} disciplinas...")
-        sem = asyncio.Semaphore(4)
+        # 3.3 Recuperação direcionada: se alguma disciplina ou tópico ficou de fora (falha/omissão),
+        # dispara uma rodada de recuperação APENAS para os itens faltantes garantindo 100% IA!
+        discs_faltantes_payload: List[Dict[str, Any]] = []
+        for d in discs_com_topicos:
+            faltantes_d = [{"id": t.id, "titulo": t.titulo} for t in d.topicos if t.id not in mapa_global_ia]
+            if faltantes_d:
+                discs_faltantes_payload.append({"id": d.id, "nome": d.nome, "topicos": faltantes_d})
 
-        async def processar_topicos_disciplina(disc: Disciplina):
-            if not disc.topicos:
-                return (disc.id, None)
-            topicos_payload = [{"id": t.id, "titulo": t.titulo} for t in disc.topicos]
-            async with sem:
-                res_topicos = await consultar_gemini_topicos_disciplina(
-                    api_key=api_key,
-                    banca=banca,
-                    estilo_banca=estilo_banca,
-                    concurso=concurso,
-                    cargo=cargo,
-                    especialidade=especialidade,
-                    area_concurso=area_concurso,
-                    disciplina_nome=disc.nome,
-                    topicos_list=topicos_payload
+        if discs_faltantes_payload:
+            qtd_falt = sum(len(x["topicos"]) for x in discs_faltantes_payload)
+            print(f"[TRILHA IA] Recuperando {qtd_falt} tópico(s) pendente(s) em {len(discs_faltantes_payload)} disciplina(s)...")
+            lotes_rec: List[List[Dict[str, Any]]] = []
+            for item_f in discs_faltantes_payload:
+                aloc = False
+                for lt_r in lotes_rec:
+                    if sum(len(x["topicos"]) for x in lt_r) + len(item_f["topicos"]) <= MAX_TOPICOS_POR_LOTE:
+                        lt_r.append(item_f)
+                        aloc = True
+                        break
+                if not aloc:
+                    lotes_rec.append([item_f])
+
+            async def _exec_rec(lt_r):
+                async with sem:
+                    return await consultar_gemini_lote_disciplinas(
+                        api_key=api_key,
+                        banca=banca,
+                        estilo_banca=estilo_banca,
+                        concurso=concurso,
+                        cargo=cargo,
+                        especialidade=especialidade,
+                        area_concurso=area_concurso,
+                        disciplinas_lote=lt_r,
+                        timeout_segundos=14.0,
+                    )
+
+            try:
+                recs = await asyncio.wait_for(
+                    asyncio.gather(*[_exec_rec(lt_r) for lt_r in lotes_rec], return_exceptions=True),
+                    timeout=25.0,
                 )
-                return (disc.id, res_topicos)
+                for r_rec in recs:
+                    if isinstance(r_rec, tuple) and isinstance(r_rec[0], dict):
+                        mapa_global_ia.update(r_rec[0])
+                        if r_rec[1] and r_rec[1] not in modelos_usados_ia:
+                            modelos_usados_ia.append(r_rec[1])
+            except Exception as e_rec:
+                print(f"[TRILHA IA] Aviso na recuperação de tópicos faltantes: {e_rec}")
 
-        resultados_topicos = await asyncio.gather(
-            *[processar_topicos_disciplina(d) for d in disciplinas_validas],
-            return_exceptions=True
-        )
-
-        for res in resultados_topicos:
-            if isinstance(res, Exception):
-                print(f"[TRILHA IA] Exceção em análise de tópicos: {res}")
-                continue
-            if not isinstance(res, tuple) or len(res) != 2:
-                continue
-            d_id, topicos_ia = res
-            if not topicos_ia or not isinstance(topicos_ia, list):
+        # 3.4 Aplica os resultados da IA em cada disciplina preservando estritamente a hierarquia:
+        # Pré-requisito indispensável (se houver) -> Mais Cobrados -> Demais P1 -> P2 -> P3 -> Residual
+        for disc_db in discs_com_topicos:
+            qtd_match_d = sum(1 for t in disc_db.topicos if t.id in mapa_global_ia)
+            if qtd_match_d == 0:
                 continue
 
-            disc_db = next((d for d in disciplinas_validas if d.id == d_id), None)
-            if not disc_db:
-                continue
-
-            topicos_ia_map = {
-                item.get("id"): item
-                for item in topicos_ia
-                if isinstance(item, dict) and item.get("id") is not None
-            }
+            disciplinas_analisadas_ia += 1
+            topicos_analisados_ia += qtd_match_d
 
             itens_preparados = []
             for t_obj in disc_db.topicos:
-                t_ia = topicos_ia_map.get(t_obj.id, {})
-                pri = t_ia.get("prioridade")
-                if pri not in (1, 2, 3):
-                    pri = None
-                mc = bool(t_ia.get("mais_cobrado", False))
-                eh_prereq = bool(t_ia.get("eh_prerequisito", False))
-                ord_ia = t_ia.get("ordem_trilha")
-                try:
-                    ord_ia = int(ord_ia) if ord_ia is not None else 999
-                except Exception:
-                    ord_ia = 999
-                motivo = t_ia.get("motivo_ia") or t_obj.motivo_ia
+                t_ia = mapa_global_ia.get(t_obj.id)
+                if t_ia:
+                    pri = t_ia.get("prioridade")
+                    if pri not in (1, 2, 3):
+                        pri = None
+                    mc = bool(t_ia.get("mais_cobrado", False))
+                    eh_prereq = bool(t_ia.get("eh_prerequisito", False))
+                    ord_ia = t_ia.get("ordem_trilha", 999)
+                    motivo = t_ia.get("motivo_ia") or t_obj.motivo_ia
+                else:
+                    # Fallback seguro apenas se 1 tópico isolado não veio no JSON
+                    pri = t_obj.prioridade
+                    mc = bool(t_obj.mais_cobrado)
+                    eh_prereq = False
+                    ord_ia = t_obj.ordem_trilha if t_obj.ordem_trilha is not None else 999
+                    motivo = t_obj.motivo_ia
 
                 itens_preparados.append({
                     "t_obj": t_obj,
@@ -1126,55 +1432,34 @@ async def analisar_e_gerar_trilha_edital(
                     "eh_prerequisito": eh_prereq,
                     "ordem_trilha_ia": ord_ia,
                     "idx_edital": t_obj.ordem if t_obj.ordem is not None else 999,
-                    "motivo_ia": motivo
+                    "motivo_ia": motivo,
                 })
 
-            # Regra de Ouro do Usuário:
-            # 1. Pré-requisito conceitual indispensável (Tier 1)
-            # 2. PREFERÊNCIA 01 = Mais Cobrados P1 (Tier 2 - garantem o topo da trilha!)
-            # 3. Mais Cobrados P2 (Tier 3)
-            # 4. P1 restantes (Tier 4)
-            # 5. P2 (Tier 5)
-            # 6. P3 (Tier 6)
-            # 7. Sem prioridade / Residual por último (Tier 7)
-            TERMOS_PREREQUISITO_ESTRITO = (
-                "fundamento", "introduç", "noçõe", "conceito b", "princípio", "disposiçõe", "elementos"
-            )
-
             def chave_trilha_usuario(x):
-                t_obj = x["t_obj"]
-                titulo_lower = (t_obj.titulo or "").lower() if t_obj else ""
                 eh_p = x["eh_prerequisito"]
                 mc = x["mais_cobrado"]
                 pri = x["prioridade"]
 
-                # Só pode vir antes de Mais Cobrado se for estritamente um fundamento/introdução indispensável
-                eh_prereq_estrito = (
-                    eh_p
-                    and pri == 1
-                    and not mc
-                    and any(tp in titulo_lower for tp in TERMOS_PREREQUISITO_ESTRITO)
-                )
-
-                if eh_prereq_estrito:
+                if eh_p and not mc:
+                    # Tier 1: Pré-requisito conceitual indispensável apontado pela IA
                     tier = 1
                 elif mc and pri == 1:
-                    # Preferência 01 absoluta: Mais Cobrados P1 (o que mais cai na banca!)
+                    # Tier 2: Mais Cobrados P1 (núcleo Pareto 80/20)
                     tier = 2
                 elif mc:
-                    # Mais Cobrados P2/P3
+                    # Tier 3: Mais Cobrados P2/P3
                     tier = 3
                 elif pri == 1:
-                    # Depois P1 restantes
+                    # Tier 4: Demais P1 (Alta relevância)
                     tier = 4
                 elif pri == 2:
-                    # Depois P2
+                    # Tier 5: P2 (Média relevância)
                     tier = 5
                 elif pri == 3:
-                    # Depois P3
+                    # Tier 6: P3 (Baixa relevância)
                     tier = 6
                 else:
-                    # Por último sem marcação / residual
+                    # Tier 7: Residual / sem marcação
                     tier = 7
                 return (tier, x["ordem_trilha_ia"], x["idx_edital"])
 
@@ -1189,10 +1474,23 @@ async def analisar_e_gerar_trilha_edital(
                 else:
                     t_obj.motivo_ia = f"Tópico complementar conforme edital {banca}."
 
-        print("[TRILHA IA] Concluída a análise e persistência dos tópicos via IA!")
+        if modelos_usados_ia:
+            modelo_origem = f"Google Gemini ({', '.join(dict.fromkeys(modelos_usados_ia))})"
+
+        print(
+            f"[TRILHA IA] Concluída! Cobertura IA: {disciplinas_analisadas_ia}/{len(discs_com_topicos)} disciplinas "
+            f"({topicos_analisados_ia}/{total_topicos_edital} tópicos) via {modelo_origem}"
+        )
 
     # 4. Atualiza os metadados da Trilha IA no Edital
     agora = datetime.now(timezone.utc)
+    cobertura_ia = {
+        "disciplinas_analisadas_ia": disciplinas_analisadas_ia,
+        "total_disciplinas": len([d for d in disciplinas_validas if d.topicos]),
+        "topicos_analisados_ia": topicos_analisados_ia,
+        "total_topicos": total_topicos_edital,
+        "percentual_cobertura_ia": round((topicos_analisados_ia / total_topicos_edital) * 100.0, 1) if total_topicos_edital else 0.0,
+    }
     resumo_json = {
         "resumo_estrategico": resumo_estrategico,
         "banca": banca,
@@ -1207,6 +1505,7 @@ async def analisar_e_gerar_trilha_edital(
         "dias_restantes": dias_restantes,
         "total_vagas": total_vagas,
         "modelo_origem": modelo_origem,
+        "cobertura_ia": cobertura_ia,
         "data_analise": agora.isoformat()
     }
     edital.ia_trilha_analisada = True
@@ -1300,6 +1599,7 @@ def montar_resumo_retorno_trilha(
         "ia_trilha_area": resumo_meta.get("area_concurso", "Fiscal"),
         "ia_trilha_data": edital.ia_trilha_data.isoformat() if edital.ia_trilha_data else None,
         "modelo_origem": modelo_origem or resumo_meta.get("modelo_origem", "Google Gemini"),
+        "cobertura_ia": resumo_meta.get("cobertura_ia"),
         "resumo_estrategico": resumo_meta.get("resumo_estrategico", ""),
         "parametros_prova": {
             "concurso": resumo_meta.get("concurso", "SEFAZ ALAGOAS"),

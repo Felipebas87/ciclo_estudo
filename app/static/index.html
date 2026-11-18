@@ -7144,10 +7144,83 @@
                 </div>
             </div>
         </div>
+
+        <!-- ======================================================================= -->
+        <!-- MODAL 3: PROGRESSO DA ANÁLISE ESTRATÉGICA DO EDITAL NA IA (PARETO)      -->
+        <!-- ======================================================================= -->
+        <div v-if="modalProgressoTrilhaAberto"
+            class="fixed inset-0 z-[98] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs">
+            <div class="bg-white dark:bg-[#141D2E] border border-slate-200 dark:border-[#24324A] rounded-3xl w-full max-w-md shadow-2xl p-6 space-y-5">
+                <div class="flex items-center gap-3.5">
+                    <div class="w-12 h-12 rounded-2xl bg-blue-500/15 text-blue-600 dark:text-[#22D3EE] border border-blue-500/25 flex items-center justify-center text-xl shrink-0">
+                        <i class="fa-solid fa-brain animate-pulse"></i>
+                    </div>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-black text-slate-900 dark:text-white leading-tight">
+                            Analisando Edital com IA
+                        </h3>
+                        <p class="text-xs text-slate-500 dark:text-[#94A3B8] mt-0.5">
+                            Aplicando Regra de Pareto (80/20) e mapeando pré-requisitos para a sua banca.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Barra de Progresso -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between text-xs font-bold">
+                        <span class="text-blue-600 dark:text-[#60A5FA] truncate pr-2">
+                            {{ etapaTrilhaIA || 'Iniciando análise...' }}
+                        </span>
+                        <span class="font-mono-timer font-black text-slate-700 dark:text-white shrink-0">
+                            {{ Math.round(progressoTrilhaIA) }}%
+                        </span>
+                    </div>
+                    <div class="w-full h-3 rounded-full bg-slate-100 dark:bg-[#0B1220] border border-slate-200 dark:border-[#24324A] overflow-hidden">
+                        <div class="h-full rounded-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 transition-all duration-300"
+                            :style="{ width: Math.min(100, Math.round(progressoTrilhaIA)) + '%' }"></div>
+                    </div>
+                    <div class="flex items-center justify-between text-[11px] text-slate-400 dark:text-[#94A3B8]">
+                        <span>Tempo decorrido: <strong class="font-mono-timer text-slate-600 dark:text-slate-200">{{ tempoDecorridoTrilhaIA }}s</strong></span>
+                        <span>Estimativa: ~25s a 40s</span>
+                    </div>
+                </div>
+
+                <!-- Checklist visual das etapas -->
+                <div class="rounded-2xl bg-slate-50 dark:bg-[#0E1622] border border-slate-200/80 dark:border-[#24324A] p-3.5 space-y-2 text-xs">
+                    <div class="flex items-center gap-2.5"
+                        :class="progressoTrilhaIA >= 25 ? 'text-emerald-600 dark:text-[#34D399] font-bold' : 'text-blue-600 dark:text-[#60A5FA] font-semibold'">
+                        <i class="fa-solid w-4 text-center" :class="progressoTrilhaIA >= 25 ? 'fa-circle-check' : 'fa-spinner fa-spin'"></i>
+                        <span>Selecionando o modelo Gemini mais rápido</span>
+                    </div>
+                    <div class="flex items-center gap-2.5"
+                        :class="progressoTrilhaIA >= 60 ? 'text-emerald-600 dark:text-[#34D399] font-bold' : (progressoTrilhaIA >= 25 ? 'text-blue-600 dark:text-[#60A5FA] font-semibold' : 'text-slate-400 dark:text-slate-500')">
+                        <i class="fa-solid w-4 text-center" :class="progressoTrilhaIA >= 60 ? 'fa-circle-check' : (progressoTrilhaIA >= 25 ? 'fa-spinner fa-spin' : 'fa-circle')"></i>
+                        <span>Identificando pré-requisitos indispensáveis</span>
+                    </div>
+                    <div class="flex items-center gap-2.5"
+                        :class="progressoTrilhaIA >= 95 ? 'text-emerald-600 dark:text-[#34D399] font-bold' : (progressoTrilhaIA >= 60 ? 'text-blue-600 dark:text-[#60A5FA] font-semibold' : 'text-slate-400 dark:text-slate-500')">
+                        <i class="fa-solid w-4 text-center" :class="progressoTrilhaIA >= 95 ? 'fa-circle-check' : (progressoTrilhaIA >= 60 ? 'fa-spinner fa-spin' : 'fa-circle')"></i>
+                        <span>Classificando Mais Cobrados (Pareto) e P1/P2/P3</span>
+                    </div>
+                    <div class="flex items-center gap-2.5"
+                        :class="progressoTrilhaIA >= 100 ? 'text-emerald-600 dark:text-[#34D399] font-bold' : (progressoTrilhaIA >= 95 ? 'text-blue-600 dark:text-[#60A5FA] font-semibold' : 'text-slate-400 dark:text-slate-500')">
+                        <i class="fa-solid w-4 text-center" :class="progressoTrilhaIA >= 100 ? 'fa-circle-check' : (progressoTrilhaIA >= 95 ? 'fa-spinner fa-spin' : 'fa-circle')"></i>
+                        <span>Sincronizando Trilha e Esteira do Ciclo</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end pt-1">
+                    <button type="button" @click="modalProgressoTrilhaAberto = false"
+                        class="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-[#94A3B8] hover:bg-slate-100 dark:hover:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer">
+                        Continuar em segundo plano
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     
-            <script src="/static/js/app.js?v=20261116_revisoes_anki_v22"></script>
+            <script src="/static/js/app.js?v=20261118_modal_progresso_ia_v2"></script>
 </body>
 
 </html>

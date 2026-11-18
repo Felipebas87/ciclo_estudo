@@ -1,5 +1,7 @@
 import os
 import json
+import time
+import asyncio
 import random
 import httpx
 from datetime import datetime, date, timezone
@@ -19,14 +21,155 @@ from app.models.topico import Topico
 router = APIRouter(prefix="/api/ia", tags=["Insights de IA"])
 
 MODELOS_GEMINI_ATIVOS = [
-    "gemini-3.6-flash",
-    "gemini-3.5-flash",
+    "gemini-flash-lite-latest",
     "gemini-3.5-flash-lite",
-    "gemini-3.8-flash",
-    "gemini-3.7-flash",
+    "gemini-4-hydrogen",
     "gemini-flash-latest",
-    "gemini-2.5-flash",
+    "gemini-4-argon",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
 ]
+
+_GEMINI_MODELS_CACHE: Dict[str, Dict[str, Any]] = {}
+_GEMINI_CACHE_TTL_SEG = 600
+
+
+def _prioridade_candidato_gemini(nome: str) -> tuple:
+    n = nome.lower()
+    if "flash-lite-latest" in n:
+        cat = 0
+    elif "flash-lite" in n:
+        cat = 1
+    elif "hydrogen" in n:
+        cat = 2
+    elif "flash-latest" in n:
+        cat = 3
+    elif "flash" in n and "preview" not in n:
+        cat = 4
+    elif "argon" in n:
+        cat = 5
+    elif "flash" in n:
+        cat = 6
+    elif "carbon" in n or "pro-latest" in n:
+        cat = 7
+    else:
+        cat = 8
+    return (cat, len(n), n)
+
+
+def remover_modelo_gemini_cache(api_key: str, modelo: str) -> None:
+    """Remove temporariamente (por 10 min) um modelo que retornou 404 (descontinuado) ou 429 (sem cota)."""
+    if not api_key or not modelo:
+        return
+    cache_key = api_key[-8:]
+    cached = _GEMINI_MODELS_CACHE.get(cache_key)
+    if cached and isinstance(cached.get("modelos"), list) and modelo in cached["modelos"]:
+        restantes = [m for m in cached["modelos"] if m != modelo]
+        if restantes:
+            cached["modelos"] = restantes
+
+
+def rebaixar_modelo_gemini_cache(api_key: str, modelo: str) -> None:
+    """Move temporariamente um modelo que retornou 503/timeout para o final da fila de modelos ativos."""
+    if not api_key or not modelo:
+        return
+    cache_key = api_key[-8:]
+    cached = _GEMINI_MODELS_CACHE.get(cache_key)
+    if cached and isinstance(cached.get("modelos"), list) and modelo in cached["modelos"]:
+        lista = [m for m in cached["modelos"] if m != modelo]
+        lista.append(modelo)
+        cached["modelos"] = lista
+
+
+async def selecionar_modelos_gemini_rapidos(api_key: str, max_modelos: int = 4) -> List[str]:
+    """
+    Descobre dinamicamente os modelos Gemini ativos na conta (/v1beta/models),
+    testa os melhores candidatos em paralelo, descarta automaticamente modelos
+    com 404 (descontinuados) ou 429 (sem cota), e retorna os modelos disponíveis
+    ordenados pelo menor tempo de resposta (com cache de 10 minutos).
+    """
+    if not api_key:
+        return MODELOS_GEMINI_ATIVOS[:max_modelos]
+
+    cache_key = api_key[-8:]
+    agora = time.time()
+    cached = _GEMINI_MODELS_CACHE.get(cache_key)
+    if cached and (agora - cached["ts"]) < _GEMINI_CACHE_TTL_SEG and cached.get("modelos"):
+        return cached["modelos"][:max_modelos]
+
+    descobertos: List[str] = []
+    ignorar_tokens = (
+        "embedding", "tts", "image", "transcribe", "omni",
+        "nano-banana", "robotics", "computer", "customtools",
+        "live", "audio", "veo", "aqa", "gemini-2.5", "gemini-2.0", "gemini-1."
+    )
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            r = await client.get(f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}")
+            if r.status_code == 200:
+                for m in r.json().get("models", []):
+                    nome = str(m.get("name", "")).replace("models/", "").strip()
+                    metodos = m.get("supportedGenerationMethods") or []
+                    if (
+                        "generateContent" in metodos
+                        and "gemini" in nome.lower()
+                        and not any(tok in nome.lower() for tok in ignorar_tokens)
+                    ):
+                        descobertos.append(nome)
+    except Exception as e:
+        print(f"[GEMINI DISCOVERY] Falha ao listar modelos ativos: {e}")
+
+    candidatos = sorted(set(descobertos), key=_prioridade_candidato_gemini) if descobertos else list(MODELOS_GEMINI_ATIVOS)
+    top_probe = candidatos[:8]
+
+    async def _sondar_modelo(client: httpx.AsyncClient, modelo: str):
+        t0 = time.monotonic()
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{modelo}:generateContent?key={api_key}"
+            resp = await client.post(
+                url,
+                json={
+                    "contents": [{"parts": [{"text": "OK"}]}],
+                    "generationConfig": {"maxOutputTokens": 2, "temperature": 0.0},
+                },
+            )
+            latencia = time.monotonic() - t0
+            return (modelo, latencia, resp.status_code)
+        except Exception:
+            return (modelo, 99.0, 0)
+
+    rapidos: List[str] = []
+    transitorios_503: List[str] = []
+    mortos_ou_sem_cota: set = set()
+    try:
+        async with httpx.AsyncClient(timeout=4.0) as client:
+            resultados = await asyncio.gather(*[_sondar_modelo(client, m) for m in top_probe])
+        saudaveis = sorted([r for r in resultados if r[2] == 200], key=lambda x: x[1])
+        rapidos = [r[0] for r in saudaveis]
+        transitorios_503 = [r[0] for r in resultados if r[2] == 503]
+        mortos_ou_sem_cota = {r[0] for r in resultados if r[2] in (404, 429)}
+        if saudaveis:
+            resumo_probe = ", ".join(f"{r[0]} ({r[1]:.2f}s)" for r in saudaveis[:4])
+            print(f"[GEMINI DISCOVERY] Modelos mais rápidos disponíveis: {resumo_probe}")
+        elif transitorios_503:
+            print(f"[GEMINI DISCOVERY] Modelos em pico momentâneo (503) disponíveis para retry: {transitorios_503[:4]}")
+    except Exception as e:
+        print(f"[GEMINI DISCOVERY] Erro na sonda paralela: {e}")
+
+    # Prioridade estrita: 1º modelos 200 OK por latência -> 2º modelos em 503 transitório -> 3º outros não-404/429
+    lista_final = list(rapidos)
+    for m in transitorios_503:
+        if m not in lista_final:
+            lista_final.append(m)
+    for c in candidatos:
+        if c not in lista_final and c not in mortos_ou_sem_cota:
+            lista_final.append(c)
+
+    if not lista_final:
+        lista_final = list(MODELOS_GEMINI_ATIVOS)
+
+    _GEMINI_MODELS_CACHE[cache_key] = {"ts": agora, "modelos": lista_final}
+    return lista_final[:max_modelos]
 
 
 def extrair_json_resiliente(texto: str) -> Dict[str, Any]:
@@ -440,7 +583,7 @@ RETORNE ESTRITAMENTE UM JSON NO FORMATO ABAIXO (SEM TEXTO ADICIONAL):
     agora_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
     prompt_completo = f"{prompt}\n\n[SEED TEMPORAL: {agora_timestamp}]"
 
-    modelos_candidatos = MODELOS_GEMINI_ATIVOS
+    modelos_candidatos = await selecionar_modelos_gemini_rapidos(api_key, max_modelos=4)
 
     # Chamada REST assíncrona resiliente com failover automático entre modelos Gemini 3.x / Flash
     async with httpx.AsyncClient(timeout=20.0) as http_client:

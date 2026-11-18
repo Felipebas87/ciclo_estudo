@@ -164,6 +164,10 @@ const app = createApp({
         const filtroVerticalizado = ref({}); // { [discId]: 'todos' | 'mais_cobrados' | 'prioritarios' | 'p1' | 'pendentes' }
         const ordenacaoVerticalizado = ref({}); // { [discId]: 'trilha' | 'edital' }
         const analisandoTrilhaIA = ref(false);
+        const modalProgressoTrilhaAberto = ref(false);
+        const progressoTrilhaIA = ref(0);
+        const etapaTrilhaIA = ref('');
+        const tempoDecorridoTrilhaIA = ref(0);
         const mostrarResumoTrilhaIA = ref(true);
 
         const formSessao = ref({
@@ -1994,11 +1998,40 @@ const app = createApp({
             }
 
             analisandoTrilhaIA.value = true;
+            progressoTrilhaIA.value = 6;
+            tempoDecorridoTrilhaIA.value = 0;
+            etapaTrilhaIA.value = 'Descobrindo o modelo Gemini mais rápido disponível...';
+            if (forcar) {
+                modalProgressoTrilhaAberto.value = true;
+            }
+
+            const inicioMs = Date.now();
+            const timerProgresso = setInterval(() => {
+                const segs = Math.floor((Date.now() - inicioMs) / 1000);
+                tempoDecorridoTrilhaIA.value = segs;
+                const p = progressoTrilhaIA.value;
+                if (p < 25) {
+                    progressoTrilhaIA.value = Math.min(25, p + 4);
+                } else if (p < 60) {
+                    progressoTrilhaIA.value = Math.min(60, p + 1.8);
+                    etapaTrilhaIA.value = 'Analisando disciplinas, pré-requisitos e perfil da banca...';
+                } else if (p < 88) {
+                    progressoTrilhaIA.value = Math.min(88, p + 0.9);
+                    etapaTrilhaIA.value = 'Classificando tópicos Mais Cobrados (Pareto 80/20) e P1/P2/P3...';
+                } else if (p < 95) {
+                    progressoTrilhaIA.value = Math.min(95, p + 0.25);
+                    etapaTrilhaIA.value = 'Validando cobertura 100% dos tópicos e sincronizando ciclo...';
+                }
+            }, 400);
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 150000);
             try {
                 const res = await fetch('/api/ia/gerar-trilha-verticalizado', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ edital_id: targetEditalId, forcar: !!forcar })
+                    body: JSON.stringify({ edital_id: targetEditalId, forcar: !!forcar }),
+                    signal: controller.signal
                 });
                 if (!res.ok) {
                     const err = await res.json().catch(() => ({}));
@@ -2015,11 +2048,21 @@ const app = createApp({
                 if (rCiclo.ok) cicloAtivo.value = await rCiclo.json();
                 await carregarDashboardData(targetEditalId);
 
+                progressoTrilhaIA.value = 100;
+                etapaTrilhaIA.value = 'Análise estratégica concluída com sucesso!';
+                if (modalProgressoTrilhaAberto.value) {
+                    await new Promise(resolve => setTimeout(resolve, 450));
+                }
+
                 if (forcar) {
                     const totMc = dadosTrilha?.metricas_pareto?.total_mais_cobrados || 0;
                     const totP1 = dadosTrilha?.metricas_pareto?.total_p1 || 0;
+                    const cob = dadosTrilha?.cobertura_ia;
+                    const infoCob = cob && cob.total_disciplinas
+                        ? `${cob.disciplinas_analisadas_ia}/${cob.total_disciplinas} disciplinas via IA • `
+                        : '';
                     mostrarAlerta(
-                        `✨ Trilha IA & Pareto 80/20 salva no banco! (${totMc} Mais Cobrados 🔥, ${totP1} P1 ⚡ e Ciclo sincronizado)`,
+                        `✨ Trilha IA & Pareto 80/20 salva! (${infoCob}${totMc} Mais Cobrados 🔥, ${totP1} P1 ⚡ e Ciclo sincronizado)`,
                         'sucesso'
                     );
                 }
@@ -2027,10 +2070,16 @@ const app = createApp({
             } catch (e) {
                 console.error('Erro na análise da Trilha IA:', e);
                 if (forcar) {
-                    mostrarAlerta('Erro ao analisar trilha com IA: ' + (e.message || 'verifique a conexão'), 'erro');
+                    const msgErro = e.name === 'AbortError'
+                        ? 'Tempo limite atingido ao consultar a IA. Tente novamente em instantes.'
+                        : (e.message || 'verifique a conexão');
+                    mostrarAlerta('Erro ao analisar trilha com IA: ' + msgErro, 'erro');
                 }
             } finally {
+                clearInterval(timerProgresso);
+                clearTimeout(timeoutId);
                 analisandoTrilhaIA.value = false;
+                modalProgressoTrilhaAberto.value = false;
             }
         };
 
@@ -5137,6 +5186,10 @@ const app = createApp({
             abrirDashboard,
             carregarEditalVerticalizado,
             analisandoTrilhaIA,
+            modalProgressoTrilhaAberto,
+            progressoTrilhaIA,
+            etapaTrilhaIA,
+            tempoDecorridoTrilhaIA,
             mostrarResumoTrilhaIA,
             toggleResumoTrilhaIA,
             analisarTrilhaVerticalizadoIA,
