@@ -4896,6 +4896,10 @@ const app = createApp({
         const ankiFiltroBuscaBaralho = ref('');
         const modalEstudoAnkiAberto = ref(false);
         const estudoAnkiContexto = ref(null);
+        const modalVinculoAnkiAberto = ref(false);
+        const itemEmVinculacaoAnki = ref(null);
+        const buscaBaralhoModalAnki = ref('');
+        const ramoFiltroModalAnki = ref('TODOS');
         const ankiStatsPorBaralho = ref({});
         const ankiStatsResumo = ref({
             total_baralhos_vinculados: 0,
@@ -4944,6 +4948,116 @@ const app = createApp({
             if (!q) return ankiBaralhos.value;
             return ankiBaralhos.value.filter(b => _normAnkiTexto(b).includes(q));
         });
+
+        const ramosRaizAnki = computed(() => {
+            const setRamos = new Set();
+            for (const b of ankiBaralhos.value || []) {
+                const raiz = String(b || '').split('::')[0].trim();
+                if (raiz) setRamos.add(raiz);
+            }
+            return Array.from(setRamos).sort((a, b) => a.localeCompare(b));
+        });
+
+        const sugerirBaralhosAnkiPorSimilaridade = (item, limite = 6) => {
+            if (!item || !ankiBaralhos.value.length) return [];
+            const discRaw = String(item.disciplina_nome || '').replace(/^REVISÃO ANKI\s*•\s*/i, '').trim();
+            const topRaw = String(item.topico_titulo || item.titulo || '').trim();
+            const discNorm = _normAnkiTexto(discRaw);
+            const topNorm = _normAnkiTexto(topRaw);
+
+            const stopwords = new Set([
+                'de', 'da', 'do', 'das', 'dos', 'em', 'para', 'com', 'por',
+                'uma', 'sobre', 'entre', 'lei', 'conceitos', 'nocoes', 'aplicadas',
+                'setor', 'publico', 'geral', 'basicos', 'especificos'
+            ]);
+            const tokensTop = topNorm.split(' ').filter(w => w.length >= 3 && !stopwords.has(w));
+            const tokensDisc = discNorm.split(' ').filter(w => w.length >= 3 && !stopwords.has(w));
+
+            const melhorAuto = resolverBaralhoAnki({ ...item, topico_id: null }).deck;
+            const resultados = [];
+
+            for (const d of ankiBaralhos.value) {
+                const partes = d.split('::');
+                const folha = partes[partes.length - 1];
+                const folhaNorm = _normAnkiTexto(folha);
+                const fullNorm = _normAnkiTexto(d);
+
+                let pts = 0;
+                if (d === melhorAuto) pts += 40;
+                for (const tk of tokensTop) {
+                    if (folhaNorm.includes(tk)) pts += 18;
+                    else if (fullNorm.includes(tk)) pts += 8;
+                }
+                for (const td of tokensDisc) {
+                    if (fullNorm.includes(td)) pts += 6;
+                }
+                if (pts > 0) {
+                    const scorePerc = Math.min(99, Math.max(42, Math.round(40 + Math.min(59, pts * 0.9))));
+                    resultados.push({
+                        deck: d,
+                        folha,
+                        caminho: partes.join(' › '),
+                        score_perc: d === melhorAuto ? Math.max(88, scorePerc) : scorePerc,
+                        pts
+                    });
+                }
+            }
+
+            resultados.sort((a, b) => b.pts - a.pts || a.deck.length - b.deck.length);
+            return resultados.slice(0, limite);
+        };
+
+        const sugestoesBaralhoModalAnki = computed(() => {
+            return sugerirBaralhosAnkiPorSimilaridade(itemEmVinculacaoAnki.value, 6);
+        });
+
+        const baralhosBuscaModalAnki = computed(() => {
+            const ramo = ramoFiltroModalAnki.value;
+            const q = _normAnkiTexto(buscaBaralhoModalAnki.value);
+            const tokensQ = q ? q.split(' ').filter(Boolean) : [];
+
+            let lista = ankiBaralhos.value || [];
+            if (ramo && ramo !== 'TODOS') {
+                lista = lista.filter(d => d === ramo || d.startsWith(ramo + '::'));
+            }
+            if (tokensQ.length > 0) {
+                lista = lista.filter(d => {
+                    const dn = _normAnkiTexto(d);
+                    return tokensQ.every(tk => dn.includes(tk));
+                });
+            }
+            return lista.slice(0, 60).map(d => {
+                const partes = d.split('::');
+                return {
+                    deck: d,
+                    folha: partes[partes.length - 1],
+                    caminho: partes.join(' › ')
+                };
+            });
+        });
+
+        const abrirModalVinculoAnki = async (item) => {
+            if (!item) return;
+            itemEmVinculacaoAnki.value = item;
+            buscaBaralhoModalAnki.value = '';
+            ramoFiltroModalAnki.value = 'TODOS';
+            modalVinculoAnkiAberto.value = true;
+            if (!ankiConectado.value || ankiBaralhos.value.length === 0) {
+                await conectarAnkiDesktop(true);
+            }
+        };
+
+        const fixarVinculoManualBaralhoAnki = async (deckName) => {
+            if (!itemEmVinculacaoAnki.value || !deckName) return;
+            const tId = itemEmVinculacaoAnki.value.topico_id || itemEmVinculacaoAnki.value.id;
+            await salvarVinculoBaralhoAnki('topico', tId, deckName);
+        };
+
+        const desvincularBaralhoManualAnki = async () => {
+            if (!itemEmVinculacaoAnki.value) return;
+            const tId = itemEmVinculacaoAnki.value.topico_id || itemEmVinculacaoAnki.value.id;
+            await salvarVinculoBaralhoAnki('topico', tId, '');
+        };
 
         const conectarAnkiDesktop = async (silencioso = false) => {
             ankiCarregando.value = true;
@@ -5963,10 +6077,20 @@ const app = createApp({
             ankiStatsResumo,
             modalEstudoAnkiAberto,
             estudoAnkiContexto,
+            modalVinculoAnkiAberto,
+            itemEmVinculacaoAnki,
+            buscaBaralhoModalAnki,
+            ramoFiltroModalAnki,
+            ramosRaizAnki,
+            sugestoesBaralhoModalAnki,
+            baralhosBuscaModalAnki,
             conectarAnkiDesktop,
             carregarEstatisticasBaralhosAnki,
             obterStatsBaralhoAnki,
             salvarVinculoBaralhoAnki,
+            abrirModalVinculoAnki,
+            fixarVinculoManualBaralhoAnki,
+            desvincularBaralhoManualAnki,
             alternarAutoAbrirAnki,
             resolverBaralhoAnki,
             abrirBaralhoNoAnki,

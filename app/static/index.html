@@ -3415,22 +3415,26 @@
                                                     <div class="text-slate-800 dark:text-white font-semibold">{{ item.topico_titulo }}</div>
                                                 </td>
                                                 <td class="py-3 px-4">
-                                                    <div class="space-y-1">
-                                                        <select
-                                                            :value="ankiConfig.mapa_topicos[String(item.topico_id)] || ''"
-                                                            @change="salvarVinculoBaralhoAnki('topico', item.topico_id, $event.target.value)"
-                                                            class="w-full max-w-md px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-[#141D2E] border border-slate-200 dark:border-[#24324A] text-slate-800 dark:text-white outline-none">
-                                                            <option value="">
-                                                                ✨ Automático: {{ resolverBaralhoAnki({ ...item, topico_id: null }).deck || 'Sem baralho detectado' }}
-                                                            </option>
-                                                            <option v-for="b in baralhosAnkiFiltradosSelect" :key="b" :value="b">
-                                                                📌 {{ b }}
-                                                            </option>
-                                                        </select>
+                                                    <div class="space-y-1.5">
+                                                        <div class="flex flex-wrap items-center gap-2">
+                                                            <button type="button"
+                                                                @click="abrirModalVinculoAnki(item)"
+                                                                class="px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-2 max-w-md text-left"
+                                                                :class="ankiConfig.mapa_topicos[String(item.topico_id)]
+                                                                    ? 'bg-blue-500/10 hover:bg-blue-500/20 text-blue-700 dark:text-[#60A5FA] border-blue-500/30'
+                                                                    : 'bg-white hover:bg-slate-100 dark:bg-[#141D2E] dark:hover:bg-[#1B2638] text-slate-800 dark:text-white border-slate-200 dark:border-[#24324A]'">
+                                                                <i class="fa-solid" :class="ankiConfig.mapa_topicos[String(item.topico_id)] ? 'fa-thumbtack text-blue-600 dark:text-[#60A5FA]' : 'fa-wand-magic-sparkles text-emerald-500'"></i>
+                                                                <span class="truncate">{{ resolverBaralhoAnki(item).deck || 'Vincular Baralho Anki...' }}</span>
+                                                                <i class="fa-solid fa-magnifying-glass text-[10px] opacity-60 shrink-0"></i>
+                                                            </button>
+                                                        </div>
                                                         <div class="text-[10px] text-slate-500 dark:text-[#94A3B8]">
-                                                            Ativo: <strong class="text-slate-700 dark:text-slate-200">{{ resolverBaralhoAnki(item).deck || '—' }}</strong>
-                                                            <span v-if="ankiConfig.mapa_topicos[String(item.topico_id)]" class="ml-1 text-blue-600 dark:text-[#60A5FA] font-bold">(Fixado manualmente)</span>
-                                                            <span v-else class="ml-1 text-emerald-600 dark:text-[#34D399] font-bold">(Correlação automática)</span>
+                                                            <span v-if="ankiConfig.mapa_topicos[String(item.topico_id)]" class="text-blue-600 dark:text-[#60A5FA] font-bold">📌 Fixado manualmente</span>
+                                                            <span v-else class="text-emerald-600 dark:text-[#34D399] font-bold">✨ Correlação automática</span>
+                                                            <span class="mx-1">&bull;</span>
+                                                            <button type="button" @click="abrirModalVinculoAnki(item)" class="underline hover:text-blue-600 cursor-pointer">
+                                                                Buscar / trocar baralho
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 </td>
@@ -7649,9 +7653,9 @@
                             <i class="fa-solid fa-rotate"></i>
                             <span>{{ estudoAnkiContexto.status === 'aberto' ? 'Focar / Reabrir Anki' : 'Tentar Novamente' }}</span>
                         </button>
-                        <button type="button" @click="irParaMapeamentoAnkiDoModal()"
+                        <button type="button" @click="abrirModalVinculoAnki(estudoAnkiContexto.item)"
                             class="px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-[#60A5FA] hover:bg-blue-500/10 transition-all cursor-pointer">
-                            Trocar Baralho
+                            Trocar / Buscar Baralho
                         </button>
                     </div>
 
@@ -7663,10 +7667,173 @@
                 </div>
             </div>
         </div>
+
+        <!-- ======================================================================= -->
+        <!-- MODAL 5: DE-PARA BARALHOS DO ANKI (BUSCA TEXTUAL + SUGESTÕES)           -->
+        <!-- ======================================================================= -->
+        <div v-if="modalVinculoAnkiAberto && itemEmVinculacaoAnki"
+            class="fixed inset-0 z-[101] flex items-center justify-center bg-slate-950/75 backdrop-blur-xs p-4 overflow-y-auto"
+            @click.self="modalVinculoAnkiAberto = false">
+            <div class="bg-white dark:bg-[#141D2E] border border-slate-200 dark:border-[#28364E] rounded-3xl max-w-3xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <!-- Cabeçalho -->
+                <div class="px-6 py-4 bg-slate-900 dark:bg-[#0F172A] text-white flex items-center justify-between border-b border-slate-800">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-purple-500/20 text-purple-300 border border-purple-500/30 flex items-center justify-center text-lg">
+                            <i class="fa-solid fa-layer-group"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-extrabold text-sm sm:text-base">Mapeamento De-Para • Baralhos do Anki Desktop</h3>
+                            <p class="text-[11px] text-slate-400">
+                                Escolha uma sugestão por similaridade ou pesquise em todos os {{ ankiBaralhos.length }} baralhos do seu Anki
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" @click="modalVinculoAnkiAberto = false"
+                        class="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Corpo com Scroll -->
+                <div class="p-6 overflow-y-auto space-y-5 flex-1">
+                    <!-- Tópico Selecionado e Vínculo Atual -->
+                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1A2436] border border-slate-200 dark:border-[#2A3A54] space-y-3">
+                        <div>
+                            <span class="text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300">
+                                {{ itemEmVinculacaoAnki.disciplina_nome }}
+                            </span>
+                            <h4 class="text-sm sm:text-base font-extrabold text-slate-800 dark:text-white mt-1.5">
+                                {{ itemEmVinculacaoAnki.topico_titulo || itemEmVinculacaoAnki.titulo }}
+                            </h4>
+                        </div>
+
+                        <div v-if="resolverBaralhoAnki(itemEmVinculacaoAnki).deck"
+                            class="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-700/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 mb-1">
+                                    <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded bg-emerald-600 text-white">
+                                        {{ ankiConfig.mapa_topicos[String(itemEmVinculacaoAnki.topico_id || itemEmVinculacaoAnki.id)] ? 'FIXADO MANUALMENTE' : 'MATCH AUTOMÁTICO' }}
+                                    </span>
+                                    <span v-if="obterStatsBaralhoAnki(itemEmVinculacaoAnki)" class="text-[11px] font-bold text-emerald-700 dark:text-emerald-300">
+                                        {{ obterStatsBaralhoAnki(itemEmVinculacaoAnki).total }} cards &bull; {{ obterStatsBaralhoAnki(itemEmVinculacaoAnki).pendentes }} pendentes
+                                    </span>
+                                </div>
+                                <div class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white break-words">
+                                    {{ resolverBaralhoAnki(itemEmVinculacaoAnki).deck.split('::').slice(-1)[0] }}
+                                </div>
+                                <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                    {{ resolverBaralhoAnki(itemEmVinculacaoAnki).deck.split('::').join(' › ') }}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                                <button type="button"
+                                    @click="abrirBaralhoNoAnki(resolverBaralhoAnki(itemEmVinculacaoAnki).deck)"
+                                    class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer">
+                                    <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
+                                    <span>Abrir no Anki</span>
+                                </button>
+                                <button v-if="ankiConfig.mapa_topicos[String(itemEmVinculacaoAnki.topico_id || itemEmVinculacaoAnki.id)]"
+                                    type="button"
+                                    @click="desvincularBaralhoManualAnki()"
+                                    title="Voltar para correlação automática"
+                                    class="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/40 dark:hover:bg-rose-900/50 dark:text-rose-300 text-xs font-bold cursor-pointer">
+                                    <i class="fa-solid fa-link-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sugestões Automáticas por Similaridade -->
+                    <div class="space-y-2.5">
+                        <h5 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-wand-magic-sparkles text-amber-500"></i>
+                            <span>Sugestões Recomendadas pelo Motor de Similaridade</span>
+                        </h5>
+                        <div v-if="sugestoesBaralhoModalAnki.length === 0" class="text-xs text-slate-400 italic p-3 rounded-xl border border-dashed border-slate-200 dark:border-[#24324A]">
+                            {{ ankiConectado ? 'Nenhuma sugestão automática direta encontrada — utilize a busca textual abaixo.' : 'Conecte o Anki Desktop para listar seus baralhos.' }}
+                        </div>
+                        <div v-else class="space-y-2">
+                            <div v-for="sug in sugestoesBaralhoModalAnki" :key="'sug-' + sug.deck"
+                                class="p-3 rounded-xl border border-slate-200 dark:border-[#2A3A54] bg-white dark:bg-[#162033] flex items-center justify-between gap-3 hover:border-blue-400 dark:hover:border-blue-500/60 transition-colors">
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-xs font-bold text-slate-800 dark:text-white">{{ sug.folha }}</span>
+                                        <span class="px-1.5 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-blue-300 text-[10px] font-bold">
+                                            {{ sug.score_perc }}% match
+                                        </span>
+                                    </div>
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                        {{ sug.caminho }}
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                    <button type="button"
+                                        @click="abrirBaralhoNoAnki(sug.deck)"
+                                        title="Testar abertura no Anki"
+                                        class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs cursor-pointer">
+                                        <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
+                                    </button>
+                                    <button type="button"
+                                        @click="fixarVinculoManualBaralhoAnki(sug.deck)"
+                                        class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold cursor-pointer">
+                                        <i class="fa-solid fa-check mr-1"></i>Vincular
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Busca Textual em Todos os Baralhos do Anki -->
+                    <div class="space-y-2.5 pt-2 border-t border-slate-200 dark:border-[#24324A]">
+                        <h5 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-magnifying-glass text-blue-500"></i>
+                            <span>Buscar em Todos os Baralhos do Anki ({{ ankiBaralhos.length }})</span>
+                        </h5>
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <select v-model="ramoFiltroModalAnki"
+                                class="px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-[#0F1826] border border-slate-200 dark:border-[#2A3A54] text-slate-700 dark:text-slate-200 outline-none">
+                                <option value="TODOS">Todos os Ramos / Pastas</option>
+                                <option v-for="rm in ramosRaizAnki" :key="rm" :value="rm">{{ rm }}</option>
+                            </select>
+                            <input type="text"
+                                v-model="buscaBaralhoModalAnki"
+                                placeholder="Digite parte do nome do baralho ou assunto (ex: dados, tributario, nuvem, sped)..."
+                                class="flex-1 px-3.5 py-2 rounded-xl text-xs bg-slate-50 dark:bg-[#0F1826] border border-slate-200 dark:border-[#2A3A54] text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <div class="max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-[#24324A] rounded-2xl border border-slate-200 dark:border-[#24324A]">
+                            <div v-if="baralhosBuscaModalAnki.length === 0" class="p-6 text-center text-xs text-slate-400">
+                                Nenhum baralho encontrado para os filtros informados.
+                            </div>
+                            <div v-for="itemB in baralhosBuscaModalAnki" :key="'bus-' + itemB.deck"
+                                class="p-3 bg-white hover:bg-slate-50 dark:bg-[#141D2E] dark:hover:bg-[#1B2638] flex items-center justify-between gap-3 transition-colors">
+                                <div class="min-w-0 flex-1">
+                                    <div class="text-xs font-bold text-slate-800 dark:text-white">{{ itemB.folha }}</div>
+                                    <div class="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{{ itemB.caminho }}</div>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                    <button type="button"
+                                        @click="abrirBaralhoNoAnki(itemB.deck)"
+                                        title="Testar abertura no Anki"
+                                        class="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs cursor-pointer">
+                                        <i class="fa-solid fa-up-right-from-square text-[10px]"></i>
+                                    </button>
+                                    <button type="button"
+                                        @click="fixarVinculoManualBaralhoAnki(itemB.deck)"
+                                        class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold cursor-pointer">
+                                        Fixar Vínculo
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     
-            <script src="/static/js/app.js?v=20261119_ebbinghaus_pos_v1"></script>
+            <script src="/static/js/app.js?v=20261119_depara_anki_modal_v1"></script>
 </body>
 
 </html>
