@@ -764,8 +764,25 @@
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <div class="flex items-center gap-2 flex-shrink-0 self-end sm:self-center">
-                                                    <a :href="obterUrlTecTopico(proximoTopicoBlocoAtual)"
+                                                <div class="flex flex-wrap items-center gap-2 flex-shrink-0 self-end sm:self-center">
+                                                    <template v-if="proximoTopicoBlocoAtual.eh_revisao_anki">
+                                                        <button type="button"
+                                                            @click="abrirModalEstudoAnki(proximoTopicoBlocoAtual)"
+                                                            title="Abre o baralho correlacionado diretamente no seu Anki Desktop via AnkiConnect"
+                                                            class="whitespace-nowrap px-3.5 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:text-purple-200 border border-purple-500/25 text-xs sm:text-[13px] font-bold shadow-xs transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
+                                                            <i class="fa-solid fa-up-right-from-square text-[11px]"></i>
+                                                            <span>Anki</span>
+                                                        </button>
+                                                        <a :href="obterUrlTecTopico(proximoTopicoBlocoAtual)"
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            :title="proximoTopicoBlocoAtual.tec_vinculo?.caderno_id ? ('Abrir Caderno #' + proximoTopicoBlocoAtual.tec_vinculo.caderno_id + ' no TEC Concursos') : ('Abrir Questões de ' + (proximoTopicoBlocoAtual.tec_vinculo?.nome_assunto_tec || proximoTopicoBlocoAtual.titulo) + ' no TEC Concursos')"
+                                                            class="whitespace-nowrap px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-[13px] font-bold shadow-sm hover:shadow-blue-500/25 transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer no-underline">
+                                                            <i class="fa-solid fa-play text-[10px]"></i>
+                                                            <span>Questões</span>
+                                                        </a>
+                                                    </template>
+                                                    <a v-else :href="obterUrlTecTopico(proximoTopicoBlocoAtual)"
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         :title="proximoTopicoBlocoAtual.tec_vinculo?.caderno_id ? ('Abrir Caderno #' + proximoTopicoBlocoAtual.tec_vinculo.caderno_id + ' no TEC Concursos') : ('Abrir Questões de ' + (proximoTopicoBlocoAtual.tec_vinculo?.nome_assunto_tec || proximoTopicoBlocoAtual.titulo) + ' no TEC Concursos')"
@@ -2660,7 +2677,7 @@
                                     <span>{{ ankiConectado ? 'Sincronizar Baralhos' : 'Conectar ao Anki' }}</span>
                                 </button>
                                 <button type="button"
-                                    @click="subAbaRevisoes = 'integracao_anki'"
+                                    @click="irParaMapeamentoAnkiDoModal()"
                                     class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5">
                                     <i class="fa-solid fa-sliders"></i>
                                     <span>Mapear Baralhos (De-Para)</span>
@@ -3221,7 +3238,9 @@
                             </div>
 
                             <!-- SUB-ABA 5: INTEGRAÇÃO & MAPEAMENTO DE BARALHOS DO ANKI (DE-PARA) -->
-                            <div v-if="subAbaRevisoes === 'integracao_anki'" class="space-y-5">
+                            <div v-if="subAbaRevisoes === 'integracao_anki'"
+                                id="card-mapeamento-de-para-anki"
+                                class="space-y-5 scroll-mt-24 rounded-2xl transition-all duration-500">
                                 <div class="flex flex-wrap items-center justify-between gap-3">
                                     <div>
                                         <h4 class="text-sm font-black text-slate-900 dark:text-white">
@@ -7390,10 +7409,117 @@
                 </div>
             </div>
         </div>
+
+        <!-- ======================================================================= -->
+        <!-- MODAL 4: ESTUDO NO ANKI DESKTOP (INSTRUTIVO + ABERTURA AUTOMÁTICA)      -->
+        <!-- ======================================================================= -->
+        <div v-if="modalEstudoAnkiAberto && estudoAnkiContexto"
+            class="fixed inset-0 z-[99] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs"
+            @click.self="modalEstudoAnkiAberto = false">
+            <div class="bg-white dark:bg-[#141D2E] border border-slate-200 dark:border-[#24324A] rounded-3xl w-full max-w-lg shadow-2xl p-6 space-y-5">
+                <!-- Cabeçalho -->
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shrink-0 border"
+                            :class="estudoAnkiContexto.status === 'aberto'
+                                ? 'bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border-emerald-500/30'
+                                : (estudoAnkiContexto.status === 'offline'
+                                    ? 'bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/30'
+                                    : 'bg-blue-500/15 text-blue-600 dark:text-[#22D3EE] border-blue-500/30')">
+                            <i v-if="estudoAnkiContexto.status === 'conectando'" class="fa-solid fa-spinner fa-spin"></i>
+                            <i v-else-if="estudoAnkiContexto.status === 'aberto'" class="fa-solid fa-circle-check"></i>
+                            <i v-else class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h3 class="text-base font-black text-slate-900 dark:text-white leading-tight">
+                                <span v-if="estudoAnkiContexto.status === 'conectando'">Conectando ao Anki Desktop...</span>
+                                <span v-else-if="estudoAnkiContexto.status === 'aberto'">Baralho Pronto no Anki Desktop!</span>
+                                <span v-else>Abra o Anki Desktop no seu PC</span>
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-[#94A3B8] mt-0.5">
+                                Integração automática via AnkiConnect (127.0.0.1:8765)
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" @click="modalEstudoAnkiAberto = false"
+                        class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-[#1B2638] text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center cursor-pointer">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Tópico e Baralho Correlacionado -->
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#0E1622] border border-slate-200 dark:border-[#24324A] space-y-2.5">
+                    <div>
+                        <div class="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-[#60A5FA]">
+                            {{ estudoAnkiContexto.item.disciplina_nome }}
+                        </div>
+                        <div class="text-sm font-black text-slate-900 dark:text-white leading-snug mt-0.5">
+                            {{ estudoAnkiContexto.item.topico_titulo }}
+                        </div>
+                    </div>
+                    <div v-if="estudoAnkiContexto.deck"
+                        class="pt-2 border-t border-slate-200/80 dark:border-[#24324A] flex items-start gap-2 text-xs">
+                        <i class="fa-solid fa-layer-group text-emerald-600 dark:text-[#34D399] mt-0.5 shrink-0"></i>
+                        <div class="min-w-0">
+                            <span class="text-slate-500 dark:text-[#94A3B8] font-semibold">Baralho selecionado no Anki:</span>
+                            <div class="font-black text-emerald-700 dark:text-[#34D399] break-words mt-0.5">
+                                {{ estudoAnkiContexto.deck }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Orientação Amigável -->
+                <div v-if="estudoAnkiContexto.status === 'aberto'"
+                    class="p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-xs text-slate-700 dark:text-slate-200 space-y-1.5 leading-relaxed">
+                    <p>
+                        <strong class="text-emerald-700 dark:text-[#34D399]">✅ Integração concluída!</strong>
+                        Mantenha o <strong>Anki Desktop aberto</strong> no computador — o baralho desta matéria já foi carregado automaticamente para sua revisão.
+                    </p>
+                    <p v-if="estudoAnkiContexto.focadoWindows" class="text-[11px] text-emerald-700 dark:text-[#34D399] font-bold">
+                        <i class="fa-solid fa-window-restore mr-1"></i>A janela do Anki foi restaurada / sinalizada na sua barra de tarefas do Windows.
+                    </p>
+                    <p v-else class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                        <i class="fa-solid fa-keyboard mr-1"></i>Alterne para a janela do Anki (<strong>Alt+Tab</strong> ou clique no ícone na barra de tarefas) para iniciar seus flashcards.
+                    </p>
+                </div>
+
+                <div v-else-if="estudoAnkiContexto.status === 'offline'"
+                    class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-900 dark:text-amber-200 space-y-1.5 leading-relaxed">
+                    <p>
+                        <strong>Para abrir o baralho automaticamente:</strong> deixe o aplicativo <strong>Anki Desktop aberto</strong> no computador (com o add-on <strong>AnkiConnect</strong> ativo) e clique em <strong>Tentar Novamente</strong> abaixo.
+                    </p>
+                    <p class="text-[11px] opacity-90">
+                        Assim que o Anki estiver aberto, o Orbis selecionará automaticamente o baralho correspondente a este tópico.
+                    </p>
+                </div>
+
+                <!-- Botões de Ação -->
+                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <button type="button" @click="abrirModalEstudoAnki(estudoAnkiContexto.item)"
+                            class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] dark:hover:bg-[#24324A] text-slate-700 dark:text-[#F1F5F9] font-bold text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer flex items-center gap-1.5">
+                            <i class="fa-solid fa-rotate"></i>
+                            <span>{{ estudoAnkiContexto.status === 'aberto' ? 'Focar / Reabrir Anki' : 'Tentar Novamente' }}</span>
+                        </button>
+                        <button type="button" @click="irParaMapeamentoAnkiDoModal()"
+                            class="px-3 py-2 rounded-xl text-xs font-bold text-blue-600 dark:text-[#60A5FA] hover:bg-blue-500/10 transition-all cursor-pointer">
+                            Trocar Baralho
+                        </button>
+                    </div>
+
+                    <button type="button" @click="concluirDoModalEstudoAnki()"
+                        class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-md transition-all cursor-pointer flex items-center gap-1.5">
+                        <i class="fa-solid fa-check"></i>
+                        <span>Registrar Revisão Concluída</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     
-            <script src="/static/js/app.js?v=20261118_ankiconnect_v1"></script>
+            <script src="/static/js/app.js?v=20261119_modal_anki_foco_v2"></script>
 </body>
 
 </html>

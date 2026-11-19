@@ -1,4 +1,5 @@
 import json
+import sys
 from typing import Optional, Dict, Any
 from fastapi import APIRouter, Depends, Query, Body
 from sqlalchemy.orm import Session
@@ -74,3 +75,83 @@ def salvar_anki_config(
     cfg.marcos_alertados = json.dumps(marcos, ensure_ascii=False)
     db.commit()
     return {"sucesso": True, "anki_config": atual}
+
+
+@router.post("/anki-focar-janela")
+def focar_ou_piscar_janela_anki() -> Dict[str, Any]:
+    """
+    Quando o backend roda localmente no Windows, localiza a janela Qt do Anki Desktop,
+    restaura caso esteja minimizada, tenta trazer para frente e pisca o ícone na barra
+    de tarefas (FlashWindowEx) para sinalizar que o baralho foi aberto via AnkiConnect.
+    Em servidores remotos (Linux/nuvem), retorna graciosamente sem erro.
+    """
+    if sys.platform != "win32":
+        return {"sucesso": False, "motivo": "disponivel_apenas_local_windows"}
+
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        user32 = ctypes.windll.user32
+        EnumWindows = user32.EnumWindows
+        EnumWindowsProc = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        GetWindowTextLengthW = user32.GetWindowTextLengthW
+        GetWindowTextW = user32.GetWindowTextW
+        GetClassNameW = user32.GetClassNameW
+        IsWindowVisible = user32.IsWindowVisible
+        IsIconic = user32.IsIconic
+        ShowWindow = user32.ShowWindow
+        SetForegroundWindow = user32.SetForegroundWindow
+
+        class FLASHWINFO(ctypes.Structure):
+            _fields_ = [
+                ("cbSize", wintypes.UINT),
+                ("hwnd", wintypes.HWND),
+                ("dwFlags", wintypes.DWORD),
+                ("uCount", wintypes.UINT),
+                ("dwTimeout", wintypes.DWORD),
+            ]
+
+        encontrada = []
+
+        def _callback(hwnd, _lparam):
+            if IsWindowVisible(hwnd):
+                length = GetWindowTextLengthW(hwnd)
+                if length > 0:
+                    buf = ctypes.create_unicode_buffer(length + 1)
+                    GetWindowTextW(hwnd, buf, length + 1)
+                    titulo = buf.value
+                    cls_buf = ctypes.create_unicode_buffer(128)
+                    GetClassNameW(hwnd, cls_buf, 128)
+                    cls_name = cls_buf.value.lower()
+                    t_low = titulo.lower().strip()
+                    # Garante que é a janela Qt do Anki Desktop (evita abas de navegador)
+                    if ("qt" in cls_name) and (t_low == "anki" or t_low.endswith("- anki") or "anki" in t_low):
+                        encontrada.append((hwnd, titulo))
+            return True
+
+        EnumWindows(EnumWindowsProc(_callback), 0)
+        if not encontrada:
+            return {"sucesso": False, "motivo": "janela_anki_nao_encontrada"}
+
+        hwnd, titulo = encontrada[0]
+        SW_RESTORE = 9
+        if IsIconic(hwnd):
+            ShowWindow(hwnd, SW_RESTORE)
+        try:
+            SetForegroundWindow(hwnd)
+        except Exception:
+            pass
+
+        # Pisca o ícone do Anki na barra de tarefas (FLASHW_ALL=3 | FLASHW_TIMERNOFG=12)
+        finfo = FLASHWINFO(
+            cbSize=ctypes.sizeof(FLASHWINFO),
+            hwnd=hwnd,
+            dwFlags=3 | 12,
+            uCount=4,
+            dwTimeout=0,
+        )
+        user32.FlashWindowEx(ctypes.byref(finfo))
+        return {"sucesso": True, "focado": True, "titulo": titulo}
+    except Exception as e:
+        return {"sucesso": False, "motivo": str(e)}

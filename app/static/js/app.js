@@ -4893,6 +4893,8 @@ const app = createApp({
         const ankiCarregando = ref(false);
         const ankiBaralhos = ref([]);
         const ankiFiltroBuscaBaralho = ref('');
+        const modalEstudoAnkiAberto = ref(false);
+        const estudoAnkiContexto = ref(null);
         const ankiConfig = ref({
             auto_abrir: true,
             url: 'http://127.0.0.1:8765',
@@ -5208,14 +5210,94 @@ const app = createApp({
                     });
                 }
                 ankiConectado.value = true;
-                mostrarAlerta(`🧠 Anki aberto no baralho: ${deckName}`, 'sucesso');
-                return true;
+                // Tenta restaurar/focar ou piscar o ícone do Anki na barra de tarefas (quando rodando localmente no Windows)
+                let focadoWin = false;
+                try {
+                    const rFoco = await fetch('/api/revisoes/anki-focar-janela', { method: 'POST' });
+                    if (rFoco.ok) {
+                        const dFoco = await rFoco.json();
+                        focadoWin = Boolean(dFoco?.sucesso);
+                    }
+                } catch (_) { /* silencioso em servidor remoto */ }
+                if (!silencioso) {
+                    mostrarAlerta(`🧠 Anki aberto no baralho: ${deckName}`, 'sucesso');
+                }
+                return { ok: true, deck: deckName, focadoWindows: focadoWin };
             } catch (e) {
                 ankiConectado.value = false;
                 if (!silencioso) {
                     mostrarAlerta('🔴 Não foi possível abrir o baralho no Anki. Verifique se o Anki Desktop está aberto.', 'erro');
                 }
-                return false;
+                return { ok: false, deck: deckName, focadoWindows: false };
+            }
+        };
+
+        const abrirModalEstudoAnki = async (topicoAnki) => {
+            if (!topicoAnki) return;
+            const itemNorm = {
+                topico_id: topicoAnki.topico_id || topicoAnki.id || null,
+                topico_titulo: topicoAnki.topico_titulo || topicoAnki.titulo || 'Revisão Espaçada Anki',
+                disciplina_id: topicoAnki.disciplina_id || blocoAtual.value?.disciplina_id || null,
+                disciplina_nome: topicoAnki.disciplina_nome || 'REVISÃO ANKI',
+                motivo_ia: topicoAnki.motivo_ia || '',
+                taxa_acerto_perc: topicoAnki.taxa_acerto_perc,
+                retencao_estimada_perc: topicoAnki.retencao_estimada_perc
+            };
+
+            estudoAnkiContexto.value = {
+                item: itemNorm,
+                deck: '',
+                status: 'conectando', // 'conectando' | 'aberto' | 'offline'
+                focadoWindows: false
+            };
+            modalEstudoAnkiAberto.value = true;
+
+            if (!ankiConectado.value || ankiBaralhos.value.length === 0) {
+                await conectarAnkiDesktop(true);
+            }
+            const resolvido = resolverBaralhoAnki(itemNorm);
+            estudoAnkiContexto.value.deck = resolvido.deck || '';
+
+            if (!ankiConectado.value || !resolvido.deck) {
+                estudoAnkiContexto.value.status = 'offline';
+                return;
+            }
+
+            const resAbrir = await abrirBaralhoNoAnki(resolvido.deck, true);
+            if (resAbrir && resAbrir.ok) {
+                estudoAnkiContexto.value.status = 'aberto';
+                estudoAnkiContexto.value.focadoWindows = Boolean(resAbrir.focadoWindows);
+            } else {
+                estudoAnkiContexto.value.status = 'offline';
+            }
+        };
+
+        const irParaMapeamentoAnkiDoModal = async () => {
+            modalEstudoAnkiAberto.value = false;
+            subAbaRevisoes.value = 'integracao_anki';
+            if (abaAtiva.value !== 'revisoes') {
+                await abrirCentralRevisoes();
+            }
+            subAbaRevisoes.value = 'integracao_anki';
+            nextTick(() => {
+                setTimeout(() => {
+                    const el = document.getElementById('card-mapeamento-de-para-anki');
+                    if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                        el.classList.add('ring-2', 'ring-blue-500', 'ring-offset-4', 'dark:ring-offset-[#141D2E]');
+                        setTimeout(() => {
+                            el.classList.remove('ring-2', 'ring-blue-500', 'ring-offset-4', 'dark:ring-offset-[#141D2E]');
+                        }, 2200);
+                    }
+                }, 180);
+            });
+        };
+
+        const concluirDoModalEstudoAnki = () => {
+            const item = estudoAnkiContexto.value?.item;
+            modalEstudoAnkiAberto.value = false;
+            if (item) {
+                iniciarRevisaoAnkiDoTopico(item);
             }
         };
 
@@ -5747,11 +5829,16 @@ const app = createApp({
             ankiFiltroBuscaBaralho,
             baralhosAnkiFiltradosSelect,
             ankiConfig,
+            modalEstudoAnkiAberto,
+            estudoAnkiContexto,
             conectarAnkiDesktop,
             salvarVinculoBaralhoAnki,
             alternarAutoAbrirAnki,
             resolverBaralhoAnki,
-            abrirBaralhoNoAnki
+            abrirBaralhoNoAnki,
+            abrirModalEstudoAnki,
+            irParaMapeamentoAnkiDoModal,
+            concluirDoModalEstudoAnki
         };
     }
 });
