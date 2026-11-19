@@ -556,7 +556,12 @@
                         <button type="button" @click="abrirGaleriaMedalhas()"
                             class="relative px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl border border-amber-400/40 dark:border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-700 dark:text-amber-300 font-black text-xs transition-all flex items-center gap-2 shadow-xs active:scale-95 cursor-pointer"
                             title="Ver Galeria de Medalhas, Conquistas e Patentes">
-                            <i class="fa-solid fa-medal text-amber-500 dark:text-amber-400 text-sm sm:text-base"></i>
+                            <img v-if="gamificacaoData && gamificacaoData.rank_atual && gamificacaoData.rank_atual.avatar_url"
+                                :src="gamificacaoData.rank_atual.avatar_url"
+                                :alt="gamificacaoData.rank_atual.personagem"
+                                :title="`${gamificacaoData.rank_atual.titulo} • ${gamificacaoData.rank_atual.personagem}`"
+                                class="w-6 h-6 object-contain shrink-0">
+                            <i v-else class="fa-solid fa-medal text-amber-500 dark:text-amber-400 text-sm sm:text-base"></i>
                             <span class="hidden sm:inline">Medalhas</span>
                             <span v-if="gamificacaoData" class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-200 font-mono-timer text-[10px] font-black">
                                 {{ gamificacaoData.resumo_conquistas.conquistadas }}/{{ gamificacaoData.resumo_conquistas.total }}
@@ -7231,7 +7236,7 @@
                                 Central de Conquistas, Medalhas &amp; Patentes ORBiS
                             </h3>
                             <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
-                                Clique em qualquer medalha conquistada para visualizar sua animação e soltar fogos!
+                                Evolução exclusiva desta preparação (nova preparação inicia do Nível 1). Clique em uma medalha conquistada para celebrar!
                             </p>
                         </div>
                     </div>
@@ -7245,29 +7250,14 @@
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
                     <div class="lg:col-span-7 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-4">
                         <div class="flex items-center gap-4">
-                            <!-- Emblema Roseta Estilo Anki/Orbis -->
-                            <div class="relative flex flex-col items-center shrink-0">
-                                <div class="w-20 h-20 rounded-full flex items-center justify-center shadow-lg border-4"
-                                    :class="{
-                                        'bg-gradient-to-br from-orange-400 via-amber-500 to-red-500 border-orange-200': gamificacaoData.rank_atual.cor === 'bronze',
-                                        'bg-gradient-to-br from-slate-300 via-slate-400 to-slate-600 border-slate-100': gamificacaoData.rank_atual.cor === 'prata',
-                                        'bg-gradient-to-br from-yellow-300 via-amber-400 to-amber-600 border-yellow-100': gamificacaoData.rank_atual.cor === 'ouro',
-                                        'bg-gradient-to-br from-sky-300 via-blue-500 to-indigo-700 border-sky-100': gamificacaoData.rank_atual.cor === 'platina',
-                                        'bg-gradient-to-br from-cyan-300 via-teal-400 to-indigo-800 border-cyan-100': gamificacaoData.rank_atual.cor === 'diamante',
-                                        'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200': gamificacaoData.rank_atual.cor === 'lendario',
-                                        'bg-gradient-to-br from-emerald-300 via-violet-600 to-slate-950 border-emerald-200': gamificacaoData.rank_atual.cor === 'mitico'
-                                    }">
-                                    <div class="w-12 h-12 rounded-full bg-indigo-950 border-2 border-amber-200 flex items-center justify-center">
-                                        <i class="fa-solid fa-star text-amber-300 text-xl"></i>
-                                    </div>
-                                </div>
-                                <div class="flex -mt-1.5">
-                                    <div class="w-3.5 h-5 bg-blue-700 transform -skew-x-12 rounded-b-xs"></div>
-                                    <div class="w-3.5 h-5 bg-indigo-500 transform skew-x-12 rounded-b-xs"></div>
-                                </div>
+                            <!-- Avatar Humano do Personagem do Nível (sem medalha em volta) -->
+                            <div class="relative flex flex-col items-center justify-center shrink-0">
+                                <img :src="gamificacaoData.rank_atual.avatar_url || '/static/img/avatars/rank_01.svg'"
+                                    :alt="gamificacaoData.rank_atual.personagem || gamificacaoData.rank_atual.titulo"
+                                    class="w-24 h-24 object-contain drop-shadow-md select-none">
                             </div>
 
-                            <!-- Nome do Rank + Nível + Barra de XP -->
+                            <!-- Nome do Rank + Nível + Personagem + Barra de XP -->
                             <div class="flex-1 min-w-0 space-y-2">
                                 <div class="flex flex-wrap items-center gap-2">
                                     <h4 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white truncate">
@@ -7275,6 +7265,10 @@
                                     </h4>
                                     <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
                                         Nível {{ gamificacaoData.rank_atual.nivel }}
+                                    </span>
+                                    <span v-if="gamificacaoData.rank_atual.personagem"
+                                        class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
+                                        {{ gamificacaoData.rank_atual.personagem }}
                                     </span>
                                 </div>
                                 <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden">
@@ -7494,28 +7488,21 @@
                                 : (rk.desbloqueado
                                     ? 'bg-slate-50 dark:bg-[#1B2638] border-slate-200 dark:border-[#24324A]'
                                     : 'bg-slate-100/40 dark:bg-[#0E1622]/40 border-slate-200/40 dark:border-[#1B2638] opacity-55')">
-                            <div class="relative flex flex-col items-center">
-                                <div class="w-12 h-12 rounded-full flex items-center justify-center border-2 shadow-xs"
-                                    :class="!rk.desbloqueado
-                                        ? 'bg-slate-300 dark:bg-slate-700 border-slate-400 text-slate-500'
-                                        : {
-                                            'bg-gradient-to-br from-orange-400 to-red-500 border-amber-200 text-white': rk.cor === 'bronze',
-                                            'bg-gradient-to-br from-slate-300 to-slate-600 border-white text-white': rk.cor === 'prata',
-                                            'bg-gradient-to-br from-yellow-300 to-amber-600 border-yellow-100 text-slate-950': rk.cor === 'ouro',
-                                            'bg-gradient-to-br from-sky-300 to-indigo-700 border-sky-100 text-white': rk.cor === 'platina',
-                                            'bg-gradient-to-br from-cyan-300 to-indigo-800 border-cyan-100 text-white': rk.cor === 'diamante',
-                                            'bg-gradient-to-br from-yellow-300 via-rose-500 to-purple-800 border-yellow-200 text-white': rk.cor === 'lendario',
-                                            'bg-gradient-to-br from-emerald-300 via-violet-600 to-slate-950 border-emerald-200 text-white': rk.cor === 'mitico'
-                                        }">
-                                    <i class="fa-solid text-sm" :class="rk.desbloqueado ? 'fa-star' : 'fa-lock'"></i>
-                                </div>
-                                <div class="flex -mt-1">
-                                    <div class="w-2.5 h-3.5 transform -skew-x-12" :class="rk.desbloqueado ? 'bg-blue-600' : 'bg-slate-400'"></div>
-                                    <div class="w-2.5 h-3.5 transform skew-x-12" :class="rk.desbloqueado ? 'bg-indigo-500' : 'bg-slate-500'"></div>
-                                </div>
+                            <div class="relative flex flex-col items-center justify-center">
+                                <img :src="rk.avatar_url || '/static/img/avatars/rank_01.svg'"
+                                    :alt="rk.personagem || rk.titulo"
+                                    class="w-16 h-16 object-contain select-none transition-all"
+                                    :class="rk.desbloqueado ? 'drop-shadow-sm' : 'grayscale opacity-45'">
+                                <span v-if="!rk.desbloqueado"
+                                    class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-white dark:bg-[#141D2E] border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[9px] text-slate-500">
+                                    <i class="fa-solid fa-lock"></i>
+                                </span>
                             </div>
                             <div class="text-[11px] font-black text-slate-800 dark:text-white leading-tight">
                                 {{ rk.titulo }}
+                            </div>
+                            <div v-if="rk.personagem" class="text-[10px] font-semibold text-blue-600 dark:text-[#60A5FA] leading-tight">
+                                {{ rk.personagem }}
                             </div>
                             <div class="text-[10px] font-mono-timer text-slate-400">
                                 Nível {{ rk.nivel }} &bull; {{ rk.xp_min }} XP
@@ -7871,7 +7858,7 @@
     </div>
 
     
-            <script src="/static/js/app.js?v=20261119_anki_questoes_evolucao_v1"></script>
+            <script src="/static/js/app.js?v=20261119_avatar_humano_v2"></script>
 </body>
 
 </html>

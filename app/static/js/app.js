@@ -4673,7 +4673,10 @@ const app = createApp({
                     await fetch('/api/roteiro-estudo/gamificacao/marcar-vistas', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ medalha_ids: [atual.id] })
+                        body: JSON.stringify({
+                            medalha_ids: [atual.id],
+                            edital_id: cicloAtivo.value?.edital_id || null
+                        })
                     });
                     if (gamificacaoData.value && Array.isArray(gamificacaoData.value.medalhas)) {
                         const mObj = gamificacaoData.value.medalhas.find(x => x.id === atual.id);
@@ -4716,7 +4719,11 @@ const app = createApp({
             if (resgatandoDesafioDiario.value) return;
             resgatandoDesafioDiario.value = true;
             try {
-                const res = await fetch('/api/roteiro-estudo/gamificacao/resgatar-desafio', { method: 'POST' });
+                const edId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
+                const urlDesafio = edId
+                    ? `/api/roteiro-estudo/gamificacao/resgatar-desafio?edital_id=${edId}`
+                    : '/api/roteiro-estudo/gamificacao/resgatar-desafio';
+                const res = await fetch(urlDesafio, { method: 'POST' });
                 if (res.ok) {
                     const novoGam = await res.json();
                     if (roteiroEstudoData.value) {

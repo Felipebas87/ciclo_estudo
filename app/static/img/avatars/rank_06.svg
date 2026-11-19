@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" fill="none">
+<ellipse cx="48" cy="89" rx="22" ry="4.5" fill="rgba(15,23,42,0.22)"/>
+<circle cx="48" cy="50" r="37" fill="#FDE047" opacity="0.14"/><circle cx="48" cy="50" r="32" stroke="#FDE047" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.55"/>
+<rect x="37" y="64" width="9" height="16" rx="3" fill="#1E293B" stroke="#1E293B" stroke-width="2"/><rect x="50" y="64" width="9" height="16" rx="3" fill="#1E293B" stroke="#1E293B" stroke-width="2"/><path d="M35 78 H47 V85 C47 86.5 45.5 87 44 87 H35 Z" fill="#78350F" stroke="#1E293B" stroke-width="2" stroke-linejoin="round"/><path d="M49 78 H61 V87 H52 C50.5 87 49 86.5 49 85 Z" fill="#78350F" stroke="#1E293B" stroke-width="2" stroke-linejoin="round"/>
+<path d="M33 43 C33 40 36 39 48 39 C60 39 63 40 63 43 L65 65 C65 66.5 63.5 67 62 67 H34 C32.5 67 31 66.5 31 65 Z" fill="#F59E0B" stroke="#1E293B" stroke-width="2" stroke-linejoin="round"/><path d="M41 40 L48 53 L55 40" fill="#B45309" stroke="#1E293B" stroke-width="1.8" stroke-linejoin="round"/>
+<rect x="32.5" y="58" width="31" height="3.5" rx="1.5" fill="#1E293B"/>
+<path d="M33 43 L23 56 L27 59 L35 49" fill="#F59E0B" stroke="#1E293B" stroke-width="2" stroke-linejoin="round"/><circle cx="24.5" cy="58" r="4" fill="#F6C9A5" stroke="#1E293B" stroke-width="1.8"/><path d="M63 43 L73 56 L69 59 L61 49" fill="#F59E0B" stroke="#1E293B" stroke-width="2" stroke-linejoin="round"/><circle cx="71.5" cy="58" r="4" fill="#F6C9A5" stroke="#1E293B" stroke-width="1.8"/>
+<rect x="44" y="34" width="8" height="7" fill="#F6C9A5" stroke="#1E293B" stroke-width="1.8"/><circle cx="48" cy="24" r="14" fill="#F6C9A5" stroke="#1E293B" stroke-width="2"/><circle cx="43" cy="24.5" r="2" fill="#0F172A"/><circle cx="53" cy="24.5" r="2" fill="#0F172A"/><circle cx="43.6" cy="23.8" r="0.7" fill="#FFFFFF"/><circle cx="53.6" cy="23.8" r="0.7" fill="#FFFFFF"/>
+<path d="M44.5 29.5 Q48 32 51.5 29.5" stroke="#1E293B" stroke-width="1.8" stroke-linecap="round"/>
+<rect x="38.5" y="21.5" width="7.5" height="5" rx="1.5" fill="rgba(56,189,248,0.35)" stroke="#0F172A" stroke-width="1.5"/><rect x="50" y="21.5" width="7.5" height="5" rx="1.5" fill="rgba(56,189,248,0.35)" stroke="#0F172A" stroke-width="1.5"/><line x1="46" y1="24" x2="50" y2="24" stroke="#0F172A" stroke-width="1.5"/>
+<path d="M33 22 C33 10 40 8 48 8 C56 8 63 10 63 22 C58 16 54 15 48 16 C42 15 38 16 33 22 Z" fill="#FACC15" stroke="#1E293B" stroke-width="1.8"/>
+<polygon points="75,32 67,49 74,49 69,66 82,45 75,45" fill="#FACC15" stroke="#1E293B" stroke-width="1.8" stroke-linejoin="round"/>
+</svg>

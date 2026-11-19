@@ -14,26 +14,26 @@ from app.models.sessao import SessaoEstudo
 
 
 RANKS_SISTEMA = [
-    {"nivel": 1, "titulo": "Iniciante da Trilha", "xp_min": 0, "cor": "bronze", "icone": "star"},
-    {"nivel": 2, "titulo": "Estudante Focado", "xp_min": 250, "cor": "bronze", "icone": "flame"},
-    {"nivel": 3, "titulo": "Estrategista de Ciclo", "xp_min": 600, "cor": "prata", "icone": "compass"},
-    {"nivel": 4, "titulo": "Desbravador de Edital", "xp_min": 1100, "cor": "prata", "icone": "shield"},
-    {"nivel": 5, "titulo": "Caçador de Questões", "xp_min": 1800, "cor": "ouro", "icone": "target"},
-    {"nivel": 6, "titulo": "Especialista Pareto 80/20", "xp_min": 2700, "cor": "ouro", "icone": "bolt"},
-    {"nivel": 7, "titulo": "Veterano da Banca", "xp_min": 3800, "cor": "platina", "icone": "award"},
-    {"nivel": 8, "titulo": "Mestre da Constância", "xp_min": 5200, "cor": "platina", "icone": "gem"},
-    {"nivel": 9, "titulo": "Elite da Aprovação", "xp_min": 7000, "cor": "diamante", "icone": "crown"},
-    {"nivel": 10, "titulo": "Auditor Imortal ORBiS", "xp_min": 9500, "cor": "lendario", "icone": "trophy"},
-    {"nivel": 11, "titulo": "Auditor Supremo", "xp_min": 13000, "cor": "lendario", "icone": "crown"},
-    {"nivel": 12, "titulo": "Grão-Mestre Fiscal", "xp_min": 17000, "cor": "lendario", "icone": "shield"},
-    {"nivel": 13, "titulo": "Oráculo do Edital", "xp_min": 21500, "cor": "lendario", "icone": "compass"},
-    {"nivel": 14, "titulo": "Arquiteto da Aprovação", "xp_min": 26500, "cor": "mitico", "icone": "gem"},
-    {"nivel": 15, "titulo": "Lenda dos Concursos", "xp_min": 32500, "cor": "mitico", "icone": "flame"},
-    {"nivel": 16, "titulo": "Titã da Banca", "xp_min": 39000, "cor": "mitico", "icone": "bolt"},
-    {"nivel": 17, "titulo": "Soberano do Gabarito", "xp_min": 46500, "cor": "mitico", "icone": "target"},
-    {"nivel": 18, "titulo": "Guardião da Vaga", "xp_min": 55000, "cor": "mitico", "icone": "award"},
-    {"nivel": 19, "titulo": "Entidade da Nomeação", "xp_min": 64500, "cor": "mitico", "icone": "star"},
-    {"nivel": 20, "titulo": "Divindade ORBiS", "xp_min": 75000, "cor": "mitico", "icone": "trophy"},
+    {"nivel": 1, "titulo": "Iniciante da Trilha", "xp_min": 0, "cor": "bronze", "icone": "star", "avatar_url": "/static/img/avatars/rank_01.svg", "personagem": "Viajante Mochileiro"},
+    {"nivel": 2, "titulo": "Estudante Focado", "xp_min": 250, "cor": "bronze", "icone": "flame", "avatar_url": "/static/img/avatars/rank_02.svg", "personagem": "Estudante de Fones"},
+    {"nivel": 3, "titulo": "Estrategista de Ciclo", "xp_min": 600, "cor": "prata", "icone": "compass", "avatar_url": "/static/img/avatars/rank_03.svg", "personagem": "Navegador Tático"},
+    {"nivel": 4, "titulo": "Desbravador de Edital", "xp_min": 1100, "cor": "prata", "icone": "shield", "avatar_url": "/static/img/avatars/rank_04.svg", "personagem": "Explorador de Escudo"},
+    {"nivel": 5, "titulo": "Caçador de Questões", "xp_min": 1800, "cor": "ouro", "icone": "target", "avatar_url": "/static/img/avatars/rank_05.svg", "personagem": "Arqueiro de Questões"},
+    {"nivel": 6, "titulo": "Especialista Pareto 80/20", "xp_min": 2700, "cor": "ouro", "icone": "bolt", "avatar_url": "/static/img/avatars/rank_06.svg", "personagem": "Analista Relâmpago"},
+    {"nivel": 7, "titulo": "Veterano da Banca", "xp_min": 3800, "cor": "platina", "icone": "award", "avatar_url": "/static/img/avatars/rank_07.svg", "personagem": "Mestre de Karatê"},
+    {"nivel": 8, "titulo": "Mestre da Constância", "xp_min": 5200, "cor": "platina", "icone": "gem", "avatar_url": "/static/img/avatars/rank_08.svg", "personagem": "Guardião da Chama"},
+    {"nivel": 9, "titulo": "Elite da Aprovação", "xp_min": 7000, "cor": "diamante", "icone": "crown", "avatar_url": "/static/img/avatars/rank_09.svg", "personagem": "Campeão da Elite"},
+    {"nivel": 10, "titulo": "Auditor Imortal ORBiS", "xp_min": 9500, "cor": "lendario", "icone": "trophy", "avatar_url": "/static/img/avatars/rank_10.svg", "personagem": "Paladino Auditor"},
+    {"nivel": 11, "titulo": "Auditor Supremo", "xp_min": 13000, "cor": "lendario", "icone": "crown", "avatar_url": "/static/img/avatars/rank_11.svg", "personagem": "Monarca Fiscal"},
+    {"nivel": 12, "titulo": "Grão-Mestre Fiscal", "xp_min": 17000, "cor": "lendario", "icone": "shield", "avatar_url": "/static/img/avatars/rank_12.svg", "personagem": "Cavaleiro Imperial"},
+    {"nivel": 13, "titulo": "Oráculo do Edital", "xp_min": 21500, "cor": "lendario", "icone": "compass", "avatar_url": "/static/img/avatars/rank_13.svg", "personagem": "Sábio Oráculo"},
+    {"nivel": 14, "titulo": "Arquiteto da Aprovação", "xp_min": 26500, "cor": "mitico", "icone": "gem", "avatar_url": "/static/img/avatars/rank_14.svg", "personagem": "Arquiteto Mestre"},
+    {"nivel": 15, "titulo": "Lenda dos Concursos", "xp_min": 32500, "cor": "mitico", "icone": "flame", "avatar_url": "/static/img/avatars/rank_15.svg", "personagem": "Guerreiro Lendário"},
+    {"nivel": 16, "titulo": "Titã da Banca", "xp_min": 39000, "cor": "mitico", "icone": "bolt", "avatar_url": "/static/img/avatars/rank_16.svg", "personagem": "Colosso Titânico"},
+    {"nivel": 17, "titulo": "Soberano do Gabarito", "xp_min": 46500, "cor": "mitico", "icone": "target", "avatar_url": "/static/img/avatars/rank_17.svg", "personagem": "Soberano Laureado"},
+    {"nivel": 18, "titulo": "Guardião da Vaga", "xp_min": 55000, "cor": "mitico", "icone": "award", "avatar_url": "/static/img/avatars/rank_18.svg", "personagem": "Sentinela Guardião"},
+    {"nivel": 19, "titulo": "Entidade da Nomeação", "xp_min": 64500, "cor": "mitico", "icone": "star", "avatar_url": "/static/img/avatars/rank_19.svg", "personagem": "Arquimago Cósmico"},
+    {"nivel": 20, "titulo": "Divindade ORBiS", "xp_min": 75000, "cor": "mitico", "icone": "trophy", "avatar_url": "/static/img/avatars/rank_20.svg", "personagem": "Zeus — Divindade ORBiS"},
 ]
 
 
@@ -47,49 +47,91 @@ def _garantir_config(db: Session) -> ConfiguracaoPainelProva:
     return config
 
 
-def _carregar_estado_gamificacao(config: ConfiguracaoPainelProva) -> Dict[str, Any]:
+def _resolver_edital_ativo_id(db: Session, edital_id: Optional[int] = None) -> Optional[int]:
+    if edital_id:
+        return int(edital_id)
+    ciclo = db.query(CicloEstudos).filter(CicloEstudos.ativo == True).first()
+    if ciclo:
+        return int(ciclo.edital_id)
+    ed = db.query(Edital).filter(Edital.encerrado == False).order_by(Edital.id.desc()).first()
+    if not ed:
+        ed = db.query(Edital).order_by(Edital.id.desc()).first()
+    return int(ed.id) if ed else None
+
+
+def _carregar_estado_gamificacao(config: ConfiguracaoPainelProva, edital_id: Optional[int] = None) -> Dict[str, Any]:
+    """
+    Carrega o estado de gamificação isolado por preparação (`edital_id`), garantindo que
+    ao iniciar uma nova preparação o progresso de XP bônus e medalhas vistas comece do zero.
+    """
+    padrao = {"medalhas_vistas": [], "desafio_diario_resgatado_data": None, "xp_bonus_desafios": 0}
     try:
         dados = json.loads(config.marcos_alertados or "{}")
-        if isinstance(dados, dict) and isinstance(dados.get("gamificacao"), dict):
+        if not isinstance(dados, dict):
+            return dict(padrao)
+        por_edital = dados.get("gamificacao_por_edital")
+        chave = str(edital_id) if edital_id is not None else "default"
+        if isinstance(por_edital, dict) and isinstance(por_edital.get(chave), dict):
+            return por_edital[chave]
+        # Migração suave: se ainda não existe registro por edital e só havia o legado global
+        if not isinstance(por_edital, dict) and isinstance(dados.get("gamificacao"), dict):
             return dados["gamificacao"]
     except Exception:
         pass
-    return {"medalhas_vistas": [], "desafio_diario_resgatado_data": None, "xp_bonus_desafios": 0}
+    return dict(padrao)
 
 
-def _salvar_estado_gamificacao(db: Session, config: ConfiguracaoPainelProva, estado_gam: Dict[str, Any]) -> None:
+def _salvar_estado_gamificacao(
+    db: Session,
+    config: ConfiguracaoPainelProva,
+    estado_gam: Dict[str, Any],
+    edital_id: Optional[int] = None,
+) -> None:
     try:
         dados = json.loads(config.marcos_alertados or "{}")
         if not isinstance(dados, dict):
             dados = {}
     except Exception:
         dados = {}
-    dados["gamificacao"] = estado_gam
+    if not isinstance(dados.get("gamificacao_por_edital"), dict):
+        dados["gamificacao_por_edital"] = {}
+    chave = str(edital_id) if edital_id is not None else "default"
+    dados["gamificacao_por_edital"][chave] = estado_gam
     config.marcos_alertados = json.dumps(dados, ensure_ascii=False)
     db.commit()
 
 
-def marcar_medalhas_como_vistas(db: Session, medalha_ids: List[str]) -> Dict[str, Any]:
+def marcar_medalhas_como_vistas(
+    db: Session,
+    medalha_ids: List[str],
+    edital_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    ed_id = _resolver_edital_ativo_id(db, edital_id)
     config = _garantir_config(db)
-    estado = _carregar_estado_gamificacao(config)
+    estado = _carregar_estado_gamificacao(config, ed_id)
     vistas = set(estado.get("medalhas_vistas") or [])
     for mid in medalha_ids:
         if mid:
             vistas.add(str(mid))
     estado["medalhas_vistas"] = sorted(list(vistas))
-    _salvar_estado_gamificacao(db, config, estado)
-    return {"sucesso": True, "medalhas_vistas": estado["medalhas_vistas"]}
+    _salvar_estado_gamificacao(db, config, estado, ed_id)
+    return {"sucesso": True, "medalhas_vistas": estado["medalhas_vistas"], "edital_id": ed_id}
 
 
-def resgatar_desafio_diario_xp(db: Session, hoje_ref: Optional[date] = None) -> Dict[str, Any]:
+def resgatar_desafio_diario_xp(
+    db: Session,
+    hoje_ref: Optional[date] = None,
+    edital_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    ed_id = _resolver_edital_ativo_id(db, edital_id)
     hoje_str = (hoje_ref or date.today()).isoformat()
     config = _garantir_config(db)
-    estado = _carregar_estado_gamificacao(config)
+    estado = _carregar_estado_gamificacao(config, ed_id)
     if estado.get("desafio_diario_resgatado_data") != hoje_str:
         estado["desafio_diario_resgatado_data"] = hoje_str
         estado["xp_bonus_desafios"] = int(estado.get("xp_bonus_desafios") or 0) + 150
-        _salvar_estado_gamificacao(db, config, estado)
-    return calcular_gamificacao_aluno(db, hoje_ref=hoje_ref)
+        _salvar_estado_gamificacao(db, config, estado, ed_id)
+    return calcular_gamificacao_aluno(db, edital_id=ed_id, hoje_ref=hoje_ref)
 
 
 def calcular_gamificacao_aluno(
@@ -103,7 +145,6 @@ def calcular_gamificacao_aluno(
     """
     hoje = hoje_ref or date.today()
     config = _garantir_config(db)
-    estado_gam = _carregar_estado_gamificacao(config)
 
     # Preferência de horas/missões por dia do Roteiro
     horas_meta_dia = 2
@@ -133,6 +174,8 @@ def calcular_gamificacao_aluno(
         edital = edital_q.filter(Edital.encerrado == False).order_by(Edital.id.desc()).first()
         if not edital:
             edital = edital_q.order_by(Edital.id.desc()).first()
+
+    estado_gam = _carregar_estado_gamificacao(config, edital.id if edital else edital_id)
 
     todas_sessoes: List[SessaoEstudo] = []
     if edital:
@@ -164,6 +207,20 @@ def calcular_gamificacao_aluno(
     minutos_hoje = sum(int(s.tempo_estudado_minutos or 0) for s in sessoes_por_data.get(hoje, []))
     max_missoes_num_unico_dia = max((len(lista) for lista in sessoes_por_data.values()), default=0)
     dias_com_meta_cumprida = sum(1 for lista in sessoes_por_data.values() if len(lista) >= horas_meta_dia)
+    total_missoes_atendidas = sum(min(len(lista), horas_meta_dia) for lista in sessoes_por_data.values())
+
+    # Maior sequência consecutiva de dias cumprindo 100% das missões diárias
+    datas_meta_cumprida = sorted(dt_m for dt_m, lista in sessoes_por_data.items() if len(lista) >= horas_meta_dia)
+    maior_sequencia_meta_cumprida = 0
+    seq_meta_temp = 0
+    dt_meta_ant: Optional[date] = None
+    for dt_m in datas_meta_cumprida:
+        if dt_meta_ant is None or (dt_m - dt_meta_ant).days == 1:
+            seq_meta_temp += 1
+        elif (dt_m - dt_meta_ant).days > 1:
+            seq_meta_temp = 1
+        maior_sequencia_meta_cumprida = max(maior_sequencia_meta_cumprida, seq_meta_temp)
+        dt_meta_ant = dt_m
 
     # Missões nos últimos 7 dias (semana atual)
     inicio_janela_7d = hoje - timedelta(days=6)
@@ -293,6 +350,110 @@ def calcular_gamificacao_aluno(
             "progresso_atual": dias_com_meta_cumprida,
             "meta": 5,
             "unidade": "dias com meta",
+        },
+        {
+            "id": "missao_regularidade_3_dias",
+            "titulo": "Regularidade nas Missões (3 Dias 100%)",
+            "categoria": "Missões & Roteiro",
+            "tier": "prata",
+            "tier_label": "Prata",
+            "icone": "calendar",
+            "xp": 250,
+            "descricao": f"Cumpriu 100% das {horas_meta_dia} missões diárias por 3 dias seguidos.",
+            "progresso_atual": maior_sequencia_meta_cumprida,
+            "meta": 3,
+            "unidade": "dias seguidos 100%",
+        },
+        {
+            "id": "missao_regularidade_7_dias",
+            "titulo": "Semana Perfeita de Missões (7 Dias)",
+            "categoria": "Missões & Roteiro",
+            "tier": "ouro",
+            "tier_label": "Ouro",
+            "icone": "calendar",
+            "xp": 450,
+            "descricao": f"Manteve regularidade total cumprindo todas as {horas_meta_dia} missões diárias por 7 dias seguidos.",
+            "progresso_atual": maior_sequencia_meta_cumprida,
+            "meta": 7,
+            "unidade": "dias seguidos 100%",
+        },
+        {
+            "id": "missao_qtd_50_atendidas",
+            "titulo": "50 Missões Diárias Atendidas",
+            "categoria": "Missões & Roteiro",
+            "tier": "ouro",
+            "tier_label": "Ouro",
+            "icone": "target",
+            "xp": 400,
+            "descricao": "Concluiu 50 missões diárias planejadas dentro da sua preparação.",
+            "progresso_atual": total_missoes_atendidas,
+            "meta": 50,
+            "unidade": "missões",
+        },
+        {
+            "id": "missao_meta_20_dias",
+            "titulo": "20 Dias de Meta 100% Batida",
+            "categoria": "Missões & Roteiro",
+            "tier": "platina",
+            "tier_label": "Platina",
+            "icone": "check",
+            "xp": 750,
+            "descricao": f"Atendeu integralmente todas as {horas_meta_dia} missões do dia em 20 dias diferentes.",
+            "progresso_atual": dias_com_meta_cumprida,
+            "meta": 20,
+            "unidade": "dias com meta",
+        },
+        {
+            "id": "missao_regularidade_14_dias",
+            "titulo": "Constância de Ferro (14 Dias 100%)",
+            "categoria": "Missões & Roteiro",
+            "tier": "platina",
+            "tier_label": "Platina",
+            "icone": "flame",
+            "xp": 800,
+            "descricao": "Bateu 100% da meta diária de missões durante 14 dias consecutivos.",
+            "progresso_atual": maior_sequencia_meta_cumprida,
+            "meta": 14,
+            "unidade": "dias seguidos 100%",
+        },
+        {
+            "id": "missao_qtd_150_atendidas",
+            "titulo": "150 Missões Diárias Atendidas",
+            "categoria": "Missões & Roteiro",
+            "tier": "diamante",
+            "tier_label": "Diamante",
+            "icone": "gem",
+            "xp": 1000,
+            "descricao": "Atingiu a marca expressiva de 150 missões diárias cumpridas na preparação.",
+            "progresso_atual": total_missoes_atendidas,
+            "meta": 150,
+            "unidade": "missões",
+        },
+        {
+            "id": "missao_regularidade_30_dias",
+            "titulo": "Mestre da Disciplina (30 Dias 100%)",
+            "categoria": "Missões & Roteiro",
+            "tier": "diamante",
+            "tier_label": "Diamante",
+            "icone": "crown",
+            "xp": 1400,
+            "descricao": "Completou 30 dias seguidos cumprindo 100% das missões diárias sem falhar.",
+            "progresso_atual": maior_sequencia_meta_cumprida,
+            "meta": 30,
+            "unidade": "dias seguidos 100%",
+        },
+        {
+            "id": "missao_qtd_300_atendidas",
+            "titulo": "300 Missões Diárias Atendidas",
+            "categoria": "Missões & Roteiro",
+            "tier": "lendario",
+            "tier_label": "Lendário",
+            "icone": "trophy",
+            "xp": 1800,
+            "descricao": "Cumpriu 300 missões diárias do roteiro com regularidade de alto nível.",
+            "progresso_atual": total_missoes_atendidas,
+            "meta": 300,
+            "unidade": "missões",
         },
         {
             "id": "missao_7_dias_seguidos",

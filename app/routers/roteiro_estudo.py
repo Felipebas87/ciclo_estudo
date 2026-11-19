@@ -68,6 +68,7 @@ def atualizar_parametros_roteiro(
 
 class MarcarMedalhasVistasPayload(BaseModel):
     medalha_ids: List[str]
+    edital_id: Optional[int] = None
 
 
 @router.get("/gamificacao")
@@ -83,11 +84,12 @@ def marcar_medalhas_vistas_endpoint(
     payload: MarcarMedalhasVistasPayload,
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    return marcar_medalhas_como_vistas(db=db, medalha_ids=payload.medalha_ids)
+    return marcar_medalhas_como_vistas(db=db, medalha_ids=payload.medalha_ids, edital_id=payload.edital_id)
 
 
 @router.post("/gamificacao/resgatar-desafio")
 def resgatar_desafio_diario_endpoint(
+    edital_id: Optional[int] = Query(None),
     db: Session = Depends(get_db),
 ) -> Dict[str, Any]:
-    return resgatar_desafio_diario_xp(db=db)
+    return resgatar_desafio_diario_xp(db=db, edital_id=edital_id)
