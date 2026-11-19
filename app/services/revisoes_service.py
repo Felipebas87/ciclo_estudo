@@ -228,6 +228,7 @@ def diagnosticar_fila_revisoes_anki(
             primeiro_topico_por_disc[d.id] = tops_ord[0]
 
     contagem_topico_vista: Dict[int, int] = defaultdict(int)
+    ultimo_rend_por_topico: Dict[int, float] = {}
     for s in todas_sessoes:
         sessoes_por_disc[s.disciplina_id].append(s)
         tid_efetivo = s.topico_id
@@ -237,6 +238,11 @@ def diagnosticar_fila_revisoes_anki(
         if tid_efetivo:
             sessoes_por_topico[tid_efetivo].append(s)
             contagem_topico_vista[tid_efetivo] += 1
+
+        q_sessao = int(s.qtd_questoes_total or 0)
+        perc_sessao = round(float(s.percentual_acerto or 0.0), 1)
+        rend_ant = ultimo_rend_por_topico.get(tid_efetivo) if tid_efetivo else None
+        delta_ant = round(perc_sessao - rend_ant, 1) if (q_sessao > 0 and rend_ant is not None) else None
 
         # Uma sessão é contabilizada no histórico de revisões se:
         # (a) foi marcada explicitamente como Revisão Anki (is_revisao_anki == True) ou pertence à disciplina REVISÃO ANKI, OU
@@ -255,13 +261,18 @@ def diagnosticar_fila_revisoes_anki(
                 "topico_id": t_obj.id if t_obj else None,
                 "topico_titulo": t_obj.titulo if t_obj else "Cards Gerais / Revisão Anki",
                 "tempo_minutos": int(s.tempo_estudado_minutos or 0),
-                "questoes_total": int(s.qtd_questoes_total or 0),
+                "questoes_total": q_sessao,
                 "acertos": int(s.qtd_acertos or 0),
                 "erros": int(s.qtd_erros or 0),
-                "percentual_acerto": round(float(s.percentual_acerto or 0.0), 1),
+                "percentual_acerto": perc_sessao,
+                "rendimento_anterior_perc": rend_ant if q_sessao > 0 else None,
+                "delta_vs_anterior_pp": delta_ant,
                 "tipo_revisao": "Revisão Anki (Esteira)" if (s.is_revisao_anki or eh_bloco_anki_disc) else f"{contagem_topico_vista[tid_efetivo]}ª Passagem no Tópico",
                 "observacoes": s.observacoes or "",
             })
+
+        if tid_efetivo and q_sessao > 0:
+            ultimo_rend_por_topico[tid_efetivo] = perc_sessao
 
     historico_revisoes_feitas.reverse()  # Mais recentes primeiro
 
@@ -348,6 +359,42 @@ def diagnosticar_fila_revisoes_anki(
             from app.services.tec_matching_service import montar_dados_vinculo_topico
             tec_vinc = montar_dados_vinculo_topico(t, getattr(t, "vinculo_tec", None))
 
+            # Linha do tempo de evolução de rendimento do tópico (1º estudo -> revisões sucessivas)
+            evolucao_rendimento = []
+            rev_seq = 0
+            taxa_prev = None
+            for idx_ev, s_ev in enumerate(lista_s):
+                q_ev = int(s_ev.qtd_questoes_total or 0)
+                if q_ev <= 0:
+                    continue
+                ac_ev = int(s_ev.qtd_acertos or 0)
+                taxa_ev = round((ac_ev / q_ev) * 100.0, 1)
+                if len(evolucao_rendimento) == 0 and not bool(s_ev.is_revisao_anki):
+                    etapa_lbl = "1º Estudo"
+                else:
+                    rev_seq += 1
+                    etapa_lbl = f"Rev. Anki #{rev_seq}" if bool(s_ev.is_revisao_anki) else f"Revisão #{rev_seq}"
+                delta_ev = round(taxa_ev - taxa_prev, 1) if taxa_prev is not None else None
+                evolucao_rendimento.append({
+                    "ordem": len(evolucao_rendimento) + 1,
+                    "etapa": etapa_lbl,
+                    "data_fmt": s_ev.data.strftime("%d/%m") if s_ev.data else "",
+                    "taxa_perc": taxa_ev,
+                    "acertos": ac_ev,
+                    "total": q_ev,
+                    "is_revisao_anki": bool(s_ev.is_revisao_anki),
+                    "delta_pp": delta_ev,
+                })
+                taxa_prev = taxa_ev
+
+            primeiro_rend = evolucao_rendimento[0]["taxa_perc"] if evolucao_rendimento else None
+            ultimo_rend = evolucao_rendimento[-1]["taxa_perc"] if evolucao_rendimento else None
+            delta_evolucao_total = (
+                round(ultimo_rend - primeiro_rend, 1)
+                if (len(evolucao_rendimento) >= 2 and primeiro_rend is not None and ultimo_rend is not None)
+                else None
+            )
+
             topicos_analisados.append({
                 "topico_id": t.id,
                 "topico_titulo": t.titulo,
@@ -380,6 +427,10 @@ def diagnosticar_fila_revisoes_anki(
                 "tecnica_recomendada": tecnica,
                 "motivo_escolha": motivo_escolha,
                 "tec_vinculo": tec_vinc,
+                "evolucao_rendimento": evolucao_rendimento,
+                "primeiro_rendimento_perc": primeiro_rend,
+                "ultimo_rendimento_perc": ultimo_rend,
+                "delta_evolucao_pp": delta_evolucao_total,
             })
 
     # Se nenhum tópico foi estudado ainda, cria sugestão inicial com o primeiro tópico P1 do edital

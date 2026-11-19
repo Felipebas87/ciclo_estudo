@@ -2223,12 +2223,11 @@ const app = createApp({
                 return;
             }
 
-            let total_q = formSessao.value.qtd_questoes_total;
-            const a = Number(formSessao.value.qtd_acertos) || 0;
-            const e = Number(formSessao.value.qtd_erros) || 0;
-            if (total_q === 0 && (a > 0 || e > 0)) {
-                formSessao.value.qtd_questoes_total = a + e;
-            }
+            const a = Math.max(0, Number(formSessao.value.qtd_acertos) || 0);
+            const e = Math.max(0, Number(formSessao.value.qtd_erros) || 0);
+            formSessao.value.qtd_acertos = a;
+            formSessao.value.qtd_erros = e;
+            formSessao.value.qtd_questoes_total = a + e;
 
             const oldVoltas = cicloAtivo.value ? (cicloAtivo.value.voltas_completas || 0) : 0;
             let oldPerc = 0;
@@ -4861,19 +4860,20 @@ const app = createApp({
             const acEst = Math.round(qEst * 0.8);
             const erEst = Math.max(0, qEst - acEst);
 
-            if (Boolean(missao.is_revisao_anki) && ankiConfig.value?.auto_abrir) {
+            const ehAnkiMissao = Boolean(missao.is_revisao_anki);
+            if (ehAnkiMissao && ankiConfig.value?.auto_abrir) {
                 abrirBaralhoNoAnki(missao, true);
             }
             formSessao.value = {
                 id: null,
-                is_revisao_anki: Boolean(missao.is_revisao_anki),
+                is_revisao_anki: ehAnkiMissao,
                 disciplina_id: dId,
                 bloco_ciclo_id: bId,
                 topico_id: tId,
                 tempo_estudado_minutos: missao.duracao_minutos || 60,
-                qtd_questoes_total: qEst,
-                qtd_acertos: acEst,
-                qtd_erros: erEst,
+                qtd_questoes_total: ehAnkiMissao ? 0 : qEst,
+                qtd_acertos: ehAnkiMissao ? 0 : acEst,
+                qtd_erros: ehAnkiMissao ? 0 : erEst,
                 avancar_ciclo: true,
                 data: getDataHojeLocal()
             };
@@ -5593,10 +5593,10 @@ const app = createApp({
                 disciplina_id: dId,
                 bloco_ciclo_id: blocoAnkiAtual ? blocoAnkiAtual.id : (blocoAtual.value ? blocoAtual.value.id : null),
                 topico_id: tId,
-                tempo_estudado_minutos: 45,
-                qtd_questoes_total: 15,
-                qtd_acertos: 12,
-                qtd_erros: 3,
+                tempo_estudado_minutos: 30,
+                qtd_questoes_total: 0,
+                qtd_acertos: 0,
+                qtd_erros: 0,
                 avancar_ciclo: !!blocoAnkiAtual,
                 data: getDataHojeLocal()
             };
