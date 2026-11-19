@@ -2636,52 +2636,106 @@
                     <div v-else-if="revisoesData && !revisoesData.erro" class="space-y-6">
 
                         <!-- 0. BARRA DE STATUS E CONTROLE DA INTEGRAÇÃO ANKICONNECT -->
-                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-4 sm:p-5 shadow-xs flex flex-wrap items-center justify-between gap-4">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 border"
-                                    :class="ankiConectado ? 'bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border-emerald-500/30' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-400 border-slate-200 dark:border-[#24324A]'">
-                                    <i class="fa-solid fa-plug-circle-check" v-if="ankiConectado"></i>
-                                    <i class="fa-solid fa-plug-circle-xmark" v-else></i>
-                                </div>
-                                <div>
-                                    <div class="flex flex-wrap items-center gap-2">
-                                        <span class="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
-                                            Integração Anki Desktop (AnkiConnect)
-                                        </span>
-                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
-                                            :class="ankiConectado ? 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border border-emerald-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'">
-                                            {{ ankiConectado ? `Online • ${ankiBaralhos.length} baralhos` : 'Offline (abra o Anki no PC)' }}
-                                        </span>
+                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-4 sm:p-5 shadow-xs space-y-4">
+                            <div class="flex flex-wrap items-center justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-base shrink-0 border"
+                                        :class="ankiConectado ? 'bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border-emerald-500/30' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-400 border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid fa-plug-circle-check" v-if="ankiConectado"></i>
+                                        <i class="fa-solid fa-plug-circle-xmark" v-else></i>
                                     </div>
-                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8] mt-0.5">
-                                        Correlaciona automaticamente cada matéria e tópico da fila de revisão ao baralho correspondente do seu Anki.
-                                    </p>
+                                    <div>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="text-xs sm:text-sm font-black text-slate-900 dark:text-white">
+                                                Integração Anki Desktop (AnkiConnect)
+                                            </span>
+                                            <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider"
+                                                :class="ankiConectado ? 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border border-emerald-500/30' : 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30'">
+                                                {{ ankiConectado ? `Online • ${ankiBaralhos.length} baralhos` : 'Offline (abra o Anki no PC)' }}
+                                            </span>
+                                        </div>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8] mt-0.5">
+                                            Correlaciona automaticamente cada matéria e tópico da fila de revisão ao baralho correspondente do seu Anki.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <button type="button"
+                                        @click="alternarAutoAbrirAnki()"
+                                        class="px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5"
+                                        :class="ankiConfig.auto_abrir
+                                            ? 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border-emerald-500/30'
+                                            : 'bg-slate-100 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                        <i class="fa-solid" :class="ankiConfig.auto_abrir ? 'fa-toggle-on text-sm' : 'fa-toggle-off text-sm'"></i>
+                                        <span>Auto-abrir Anki ao revisar: <strong>{{ ankiConfig.auto_abrir ? 'SIM' : 'NÃO' }}</strong></span>
+                                    </button>
+                                    <button type="button"
+                                        @click="conectarAnkiDesktop(false)"
+                                        :disabled="ankiCarregando"
+                                        class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] dark:hover:bg-[#24324A] text-slate-700 dark:text-[#F1F5F9] font-bold text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer flex items-center gap-1.5">
+                                        <i class="fa-solid fa-rotate" :class="ankiCarregando || ankiStatsResumo.carregando ? 'fa-spin' : ''"></i>
+                                        <span>{{ ankiConectado ? 'Sincronizar Baralhos' : 'Conectar ao Anki' }}</span>
+                                    </button>
+                                    <button type="button"
+                                        @click="irParaMapeamentoAnkiDoModal()"
+                                        class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5">
+                                        <i class="fa-solid fa-sliders"></i>
+                                        <span>Mapear Baralhos (De-Para)</span>
+                                    </button>
                                 </div>
                             </div>
 
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button type="button"
-                                    @click="alternarAutoAbrirAnki()"
-                                    class="px-3 py-2 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5"
-                                    :class="ankiConfig.auto_abrir
-                                        ? 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399] border-emerald-500/30'
-                                        : 'bg-slate-100 dark:bg-[#1B2638] text-slate-500 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
-                                    <i class="fa-solid" :class="ankiConfig.auto_abrir ? 'fa-toggle-on text-sm' : 'fa-toggle-off text-sm'"></i>
-                                    <span>Auto-abrir Anki ao revisar: <strong>{{ ankiConfig.auto_abrir ? 'SIM' : 'NÃO' }}</strong></span>
-                                </button>
-                                <button type="button"
-                                    @click="conectarAnkiDesktop(false)"
-                                    :disabled="ankiCarregando"
-                                    class="px-3.5 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-[#1B2638] dark:hover:bg-[#24324A] text-slate-700 dark:text-[#F1F5F9] font-bold text-xs border border-slate-200 dark:border-[#24324A] transition-all cursor-pointer flex items-center gap-1.5">
-                                    <i class="fa-solid fa-rotate" :class="ankiCarregando ? 'fa-spin' : ''"></i>
-                                    <span>{{ ankiConectado ? 'Sincronizar Baralhos' : 'Conectar ao Anki' }}</span>
-                                </button>
-                                <button type="button"
-                                    @click="irParaMapeamentoAnkiDoModal()"
-                                    class="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-xs transition-all cursor-pointer flex items-center gap-1.5">
-                                    <i class="fa-solid fa-sliders"></i>
-                                    <span>Mapear Baralhos (De-Para)</span>
-                                </button>
+                            <!-- Estatísticas Reais dos Baralhos Vinculados ao Orbis (via AnkiConnect) -->
+                            <div v-if="ankiConectado && ankiStatsResumo.total_baralhos_vinculados > 0"
+                                class="pt-4 border-t border-slate-100 dark:border-[#24324A] grid grid-cols-2 lg:grid-cols-4 gap-3">
+                                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1">
+                                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                        Cards Integrados
+                                    </div>
+                                    <div class="flex items-baseline gap-1.5">
+                                        <span class="text-xl font-black font-mono-timer text-slate-900 dark:text-white">{{ ankiStatsResumo.total_cards }}</span>
+                                        <span class="text-[11px] font-semibold text-slate-500 dark:text-[#94A3B8]">em {{ ankiStatsResumo.total_baralhos_vinculados }} baralhos</span>
+                                    </div>
+                                </div>
+
+                                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1">
+                                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                        Faltam Revisar Agora
+                                    </div>
+                                    <div class="flex items-baseline gap-1.5">
+                                        <span class="text-xl font-black font-mono-timer"
+                                            :class="ankiStatsResumo.pendentes > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-[#34D399]'">
+                                            {{ ankiStatsResumo.pendentes }}
+                                        </span>
+                                        <span class="text-[11px] font-semibold text-slate-500 dark:text-[#94A3B8]">vencidos / novos</span>
+                                    </div>
+                                </div>
+
+                                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1.5">
+                                    <div class="flex items-center justify-between text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                        <span>Em Dia / Consolidados</span>
+                                        <span class="text-emerald-600 dark:text-[#34D399] font-mono-timer font-black">{{ ankiStatsResumo.perc_em_dia }}%</span>
+                                    </div>
+                                    <div class="flex items-baseline gap-1.5">
+                                        <span class="text-xl font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">{{ ankiStatsResumo.em_dia }}</span>
+                                        <span class="text-[11px] font-semibold text-slate-500 dark:text-[#94A3B8]">de {{ ankiStatsResumo.total_cards }}</span>
+                                    </div>
+                                    <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#0E1622] overflow-hidden">
+                                        <div class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                            :style="{ width: ankiStatsResumo.perc_em_dia + '%' }"></div>
+                                    </div>
+                                </div>
+
+                                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1">
+                                    <div class="text-[10px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                        Revisados Hoje no Anki
+                                    </div>
+                                    <div class="flex items-baseline gap-1.5">
+                                        <span class="text-xl font-black font-mono-timer text-blue-600 dark:text-[#60A5FA]">{{ ankiStatsResumo.revisados_hoje_global }}</span>
+                                        <span class="text-[11px] font-semibold text-slate-500 dark:text-[#94A3B8]">cards feitos hoje</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
@@ -2799,9 +2853,23 @@
                                             &mdash; {{ revisoesData.destaque_pior_rendimento.topico_titulo }}
                                         </h3>
                                         <div v-if="resolverBaralhoAnki(revisoesData.destaque_pior_rendimento).deck"
-                                            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-[#60A5FA] border border-blue-500/20 text-xs font-bold">
-                                            <i class="fa-solid fa-layer-group"></i>
-                                            <span>Baralho Anki: <strong>{{ resolverBaralhoAnki(revisoesData.destaque_pior_rendimento).deck }}</strong></span>
+                                            class="flex flex-wrap items-center gap-2">
+                                            <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-[#60A5FA] border border-blue-500/20 text-xs font-bold">
+                                                <i class="fa-solid fa-layer-group"></i>
+                                                <span>Baralho Anki: <strong>{{ resolverBaralhoAnki(revisoesData.destaque_pior_rendimento).deck }}</strong></span>
+                                            </div>
+                                            <template v-if="obterStatsBaralhoAnki(revisoesData.destaque_pior_rendimento)">
+                                                <span class="px-2 py-1 rounded-lg text-[11px] font-mono-timer font-bold bg-slate-100 dark:bg-[#1B2638] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-[#24324A]">
+                                                    {{ obterStatsBaralhoAnki(revisoesData.destaque_pior_rendimento).total }} cards
+                                                </span>
+                                                <span class="px-2 py-1 rounded-lg text-[11px] font-mono-timer font-black"
+                                                    :class="obterStatsBaralhoAnki(revisoesData.destaque_pior_rendimento).pendentes > 0 ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399]'">
+                                                    {{ obterStatsBaralhoAnki(revisoesData.destaque_pior_rendimento).pendentes > 0 ? `${obterStatsBaralhoAnki(revisoesData.destaque_pior_rendimento).pendentes} faltam revisar` : '✓ Em dia' }}
+                                                </span>
+                                                <span class="px-2 py-1 rounded-lg text-[11px] font-mono-timer font-bold bg-emerald-500/10 text-emerald-700 dark:text-[#34D399]">
+                                                    {{ obterStatsBaralhoAnki(revisoesData.destaque_pior_rendimento).em_dia }} em dia ({{ obterStatsBaralhoAnki(revisoesData.destaque_pior_rendimento).perc_em_dia }}%)
+                                                </span>
+                                            </template>
                                         </div>
                                     </div>
 
@@ -2892,18 +2960,63 @@
                         <!-- 3. PAINEL VISUAL DE GRÁFICOS (CURVA DE EBBINGHAUS, CONSTÂNCIA 14 DIAS E VULNERABILIDADE POR DISCIPLINA) -->
                         <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
                             <!-- Gráfico 1: Curva de Esquecimento de Ebbinghaus vs Revisão Espaçada Anki -->
-                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-3">
-                                <div>
-                                    <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                        <i class="fa-solid fa-wave-square text-emerald-500"></i>
-                                        Curva de Ebbinghaus vs. Revisão Anki
-                                    </h4>
-                                    <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
-                                        Efeito das revisões espaçadas (24h, 7d, 15d, 30d) blindando a retenção acima de 85%.
-                                    </p>
+                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-3 relative">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                            <i class="fa-solid fa-wave-square text-emerald-500"></i>
+                                            Curva de Ebbinghaus vs. Revisão Anki
+                                        </h4>
+                                        <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                            O ponto azul mostra sua estimativa atual e sobe a cada revisão feita.
+                                        </p>
+                                    </div>
+                                    <button type="button"
+                                        @click="mostrarAjudaEbbinghaus = !mostrarAjudaEbbinghaus"
+                                        class="w-7 h-7 rounded-full border border-slate-200 dark:border-[#24324A] bg-slate-100 hover:bg-blue-500/15 dark:bg-[#1B2638] text-slate-500 hover:text-blue-600 dark:text-[#94A3B8] dark:hover:text-[#60A5FA] flex items-center justify-center text-xs font-black shrink-0 cursor-pointer transition-all"
+                                        title="Entenda este gráfico e onde você está">
+                                        <i class="fa-solid fa-question"></i>
+                                    </button>
                                 </div>
+
+                                <!-- Box Explicativo (Botão ?) -->
+                                <div v-if="mostrarAjudaEbbinghaus"
+                                    class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#0E1622] border border-blue-500/30 text-xs space-y-2 leading-relaxed">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="font-black text-blue-600 dark:text-[#60A5FA]">
+                                            <i class="fa-solid fa-circle-info mr-1"></i>Como ler este gráfico
+                                        </span>
+                                        <button type="button" @click="mostrarAjudaEbbinghaus = false"
+                                            class="text-slate-400 hover:text-slate-700 dark:hover:text-white cursor-pointer">
+                                            <i class="fa-solid fa-xmark"></i>
+                                        </button>
+                                    </div>
+                                    <ul class="space-y-1 text-[11px] text-slate-600 dark:text-[#CBD5E1]">
+                                        <li><strong class="text-emerald-600 dark:text-[#34D399]">Linha Verde:</strong> retenção esperada quando você revisa periodicamente (1d, 7d, 15d, 30d).</li>
+                                        <li><strong class="text-rose-600 dark:text-rose-400">Linha Vermelha Tracejada:</strong> queda natural da memória sem revisões (Ebbinghaus).</li>
+                                        <li><strong class="text-blue-600 dark:text-[#60A5FA]">Ponto Azul (Você Hoje):</strong> sua posição real estimada a partir da média de dias sem revisar e da sua retenção atual.</li>
+                                    </ul>
+                                    <div v-if="revisoesData.graficos?.curva_ebbinghaus?.posicao_usuario"
+                                        class="pt-2 border-t border-slate-200 dark:border-[#24324A] text-[11px] text-slate-700 dark:text-slate-200 space-y-1">
+                                        <div class="font-black text-slate-900 dark:text-white">
+                                            📍 Sua Posição: {{ revisoesData.graficos.curva_ebbinghaus.posicao_usuario.zona }}
+                                        </div>
+                                        <p>{{ revisoesData.graficos.curva_ebbinghaus.posicao_usuario.explicacao }}</p>
+                                    </div>
+                                </div>
+
                                 <div class="h-56 relative">
                                     <canvas id="chartRevisoesEbbinghaus"></canvas>
+                                </div>
+
+                                <div v-if="revisoesData.graficos?.curva_ebbinghaus?.posicao_usuario"
+                                    class="pt-2 border-t border-slate-100 dark:border-[#24324A] flex flex-wrap items-center justify-between gap-1.5 text-[11px]">
+                                    <span class="font-bold text-blue-600 dark:text-[#60A5FA]">
+                                        <i class="fa-solid fa-location-dot mr-1"></i>Você hoje: {{ revisoesData.graficos.curva_ebbinghaus.posicao_usuario.dia_estimado_label }} ({{ revisoesData.graficos.curva_ebbinghaus.posicao_usuario.retencao_atual_perc }}%)
+                                    </span>
+                                    <span class="text-slate-500 dark:text-[#94A3B8] font-semibold">
+                                        {{ revisoesData.graficos.curva_ebbinghaus.posicao_usuario.zona }}
+                                    </span>
                                 </div>
                             </div>
 
@@ -3037,10 +3150,24 @@
                                             </div>
 
                                             <div v-if="resolverBaralhoAnki(item).deck"
-                                                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-[#60A5FA] border border-blue-500/20 text-[11px] font-bold">
-                                                <i class="fa-solid fa-layer-group"></i>
-                                                <span>Baralho Anki: <strong>{{ resolverBaralhoAnki(item).deck }}</strong></span>
-                                                <span v-if="resolverBaralhoAnki(item).origem.startsWith('manual')" class="px-1.5 py-0.2 rounded bg-blue-600 text-white text-[9px] uppercase">Fixado</span>
+                                                class="flex flex-wrap items-center gap-1.5">
+                                                <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-500/10 text-blue-700 dark:text-[#60A5FA] border border-blue-500/20 text-[11px] font-bold">
+                                                    <i class="fa-solid fa-layer-group"></i>
+                                                    <span>Baralho Anki: <strong>{{ resolverBaralhoAnki(item).deck }}</strong></span>
+                                                    <span v-if="resolverBaralhoAnki(item).origem.startsWith('manual')" class="px-1.5 py-0.2 rounded bg-blue-600 text-white text-[9px] uppercase">Fixado</span>
+                                                </div>
+                                                <template v-if="obterStatsBaralhoAnki(item)">
+                                                    <span class="px-2 py-0.5 rounded-md text-[10.5px] font-mono-timer font-bold bg-white dark:bg-[#141D2E] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#24324A]">
+                                                        {{ obterStatsBaralhoAnki(item).total }} cards
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded-md text-[10.5px] font-mono-timer font-black"
+                                                        :class="obterStatsBaralhoAnki(item).pendentes > 0 ? 'bg-rose-500/15 text-rose-600 dark:text-rose-300' : 'bg-emerald-500/15 text-emerald-700 dark:text-[#34D399]'">
+                                                        {{ obterStatsBaralhoAnki(item).pendentes > 0 ? `${obterStatsBaralhoAnki(item).pendentes} pendentes` : '✓ Em dia' }}
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded-md text-[10.5px] font-mono-timer font-bold bg-emerald-500/10 text-emerald-700 dark:text-[#34D399]">
+                                                        {{ obterStatsBaralhoAnki(item).perc_em_dia }}% consolidado
+                                                    </span>
+                                                </template>
                                             </div>
                                         </div>
 
@@ -3275,6 +3402,7 @@
                                                 <th class="py-3 px-4 font-bold">#</th>
                                                 <th class="py-3 px-4 font-bold">Disciplina &amp; Tópico na Fila de Revisão</th>
                                                 <th class="py-3 px-4 font-bold">Baralho Correlacionado no Anki</th>
+                                                <th class="py-3 px-4 font-bold">Cards (Em Dia / Faltam)</th>
                                                 <th class="py-3 px-4 font-bold text-right">Testar / Abrir</th>
                                             </tr>
                                         </thead>
@@ -3305,6 +3433,25 @@
                                                             <span v-else class="ml-1 text-emerald-600 dark:text-[#34D399] font-bold">(Correlação automática)</span>
                                                         </div>
                                                     </div>
+                                                </td>
+                                                <td class="py-3 px-4 min-w-[165px]">
+                                                    <div v-if="obterStatsBaralhoAnki(item)" class="space-y-1">
+                                                        <div class="flex items-center justify-between gap-2 text-[11px] font-mono-timer">
+                                                            <span class="font-bold text-slate-700 dark:text-slate-200">{{ obterStatsBaralhoAnki(item).total }} total</span>
+                                                            <span class="font-black" :class="obterStatsBaralhoAnki(item).pendentes > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-[#34D399]'">
+                                                                {{ obterStatsBaralhoAnki(item).pendentes > 0 ? `${obterStatsBaralhoAnki(item).pendentes} faltam` : 'Em dia' }}
+                                                            </span>
+                                                        </div>
+                                                        <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#0E1622] overflow-hidden">
+                                                            <div class="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                                                                :style="{ width: obterStatsBaralhoAnki(item).perc_em_dia + '%' }"></div>
+                                                        </div>
+                                                        <div class="text-[10px] text-slate-500 dark:text-[#94A3B8]">
+                                                            {{ obterStatsBaralhoAnki(item).em_dia }} em dia ({{ obterStatsBaralhoAnki(item).perc_em_dia }}%)
+                                                            <span v-if="obterStatsBaralhoAnki(item).revisados_hoje > 0" class="text-blue-600 dark:text-[#60A5FA] font-bold"> &bull; {{ obterStatsBaralhoAnki(item).revisados_hoje }} hoje</span>
+                                                        </div>
+                                                    </div>
+                                                    <span v-else class="text-[11px] text-slate-400">—</span>
                                                 </td>
                                                 <td class="py-3 px-4 text-right">
                                                     <button type="button"
@@ -7519,7 +7666,7 @@
     </div>
 
     
-            <script src="/static/js/app.js?v=20261119_modal_anki_foco_v2"></script>
+            <script src="/static/js/app.js?v=20261119_ebbinghaus_pos_v1"></script>
 </body>
 
 </html>

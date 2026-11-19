@@ -4887,6 +4887,7 @@ const app = createApp({
         const carregandoRevisoes = ref(false);
         const subAbaRevisoes = ref('sequencia_anki'); // 'sequencia_anki' | 'pior_rendimento' | 'historico' | 'tecnicas' | 'integracao_anki'
         const filtroStatusRevisao = ref('TODAS'); // 'TODAS' | 'ATRASADA_CRITICA' | 'PARA_HOJE' | 'PROGRAMADA' | 'CONSOLIDADA'
+        const mostrarAjudaEbbinghaus = ref(false);
 
         // Estado da Integração AnkiConnect (http://127.0.0.1:8765)
         const ankiConectado = ref(false);
@@ -4895,6 +4896,17 @@ const app = createApp({
         const ankiFiltroBuscaBaralho = ref('');
         const modalEstudoAnkiAberto = ref(false);
         const estudoAnkiContexto = ref(null);
+        const ankiStatsPorBaralho = ref({});
+        const ankiStatsResumo = ref({
+            total_baralhos_vinculados: 0,
+            total_cards: 0,
+            pendentes: 0,
+            em_dia: 0,
+            revisados_hoje_global: 0,
+            revisados_hoje_vinculados: 0,
+            perc_em_dia: 0,
+            carregando: false
+        });
         const ankiConfig = ref({
             auto_abrir: true,
             url: 'http://127.0.0.1:8765',
@@ -4949,6 +4961,7 @@ const app = createApp({
                 if (data && Array.isArray(data.result)) {
                     ankiBaralhos.value = data.result.slice().sort((a, b) => a.localeCompare(b));
                     ankiConectado.value = true;
+                    carregarEstatisticasBaralhosAnki();
                     if (!silencioso) {
                         mostrarAlerta(`🟢 Anki Desktop conectado (${ankiBaralhos.value.length} baralhos sincronizados)!`, 'sucesso');
                     }
@@ -4997,6 +5010,7 @@ const app = createApp({
                 }
             }
             await persistirAnkiConfig();
+            carregarEstatisticasBaralhosAnki();
             mostrarAlerta(deckName ? `🔗 Baralho vinculado: ${deckName}` : 'Vínculo restaurado para correlação automática.', 'sucesso');
         };
 
@@ -5232,6 +5246,103 @@ const app = createApp({
             }
         };
 
+        const obterStatsBaralhoAnki = (item) => {
+            if (!item) return null;
+            const deck = typeof item === 'string' ? item : resolverBaralhoAnki(item).deck;
+            if (!deck) return null;
+            return ankiStatsPorBaralho.value?.[deck] || null;
+        };
+
+        const carregarEstatisticasBaralhosAnki = async () => {
+            if (!ankiConectado.value || !ankiBaralhos.value.length) return;
+            const itensFila = [
+                ...(revisoesData.value?.fila_sequencial_anki || []),
+                ...(revisoesData.value?.mapeamento_esteira_anki || [])
+            ];
+            if (revisoesData.value?.destaque_pior_rendimento) {
+                itensFila.push(revisoesData.value.destaque_pior_rendimento);
+            }
+            const decksUnicos = Array.from(new Set(
+                itensFila
+                    .map(it => resolverBaralhoAnki(it).deck)
+                    .filter(d => Boolean(d))
+            ));
+            if (decksUnicos.length === 0) return;
+
+            ankiStatsResumo.value.carregando = true;
+            const urlAnki = ankiConfig.value?.url || 'http://127.0.0.1:8765';
+            const actions = [{ action: 'getNumCardsReviewedToday', version: 6 }];
+            for (const dk of decksUnicos) {
+                const dkEsc = dk.replace(/"/g, '\\"');
+                actions.push({ action: 'findCards', version: 6, params: { query: `deck:"${dkEsc}"` } });
+                actions.push({ action: 'findCards', version: 6, params: { query: `deck:"${dkEsc}" (is:due OR is:learn OR is:new)` } });
+                actions.push({ action: 'findCards', version: 6, params: { query: `deck:"${dkEsc}" rated:1` } });
+            }
+
+            try {
+                const res = await fetch(urlAnki, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'multi', version: 6, params: { actions } })
+                });
+                const data = await res.json();
+                const listaRes = Array.isArray(data?.result) ? data.result : [];
+                if (!listaRes.length) return;
+
+                const extrairRes = (entry) => (entry && typeof entry === 'object' && 'result' in entry) ? entry.result : entry;
+                const revHojeGlobal = Number(extrairRes(listaRes[0]) || 0);
+
+                const novoMapa = {};
+                const setTotalIds = new Set();
+                const setPendIds = new Set();
+                const setHojeIds = new Set();
+
+                for (let i = 0; i < decksUnicos.length; i++) {
+                    const dk = decksUnicos[i];
+                    const base = 1 + i * 3;
+                    const idsTotal = Array.isArray(extrairRes(listaRes[base])) ? extrairRes(listaRes[base]) : [];
+                    const idsPend = Array.isArray(extrairRes(listaRes[base + 1])) ? extrairRes(listaRes[base + 1]) : [];
+                    const idsHoje = Array.isArray(extrairRes(listaRes[base + 2])) ? extrairRes(listaRes[base + 2]) : [];
+
+                    idsTotal.forEach(id => setTotalIds.add(id));
+                    idsPend.forEach(id => setPendIds.add(id));
+                    idsHoje.forEach(id => setHojeIds.add(id));
+
+                    const total = idsTotal.length;
+                    const pendentes = idsPend.length;
+                    const em_dia = Math.max(0, total - pendentes);
+                    const perc_em_dia = total > 0 ? Math.round((em_dia / total) * 100) : 0;
+
+                    novoMapa[dk] = {
+                        total,
+                        pendentes,
+                        em_dia,
+                        revisados_hoje: idsHoje.length,
+                        perc_em_dia
+                    };
+                }
+
+                const totGeral = setTotalIds.size;
+                const pendGeral = setPendIds.size;
+                const emDiaGeral = Math.max(0, totGeral - pendGeral);
+
+                ankiStatsPorBaralho.value = novoMapa;
+                ankiStatsResumo.value = {
+                    total_baralhos_vinculados: decksUnicos.length,
+                    total_cards: totGeral,
+                    pendentes: pendGeral,
+                    em_dia: emDiaGeral,
+                    revisados_hoje_global: revHojeGlobal,
+                    revisados_hoje_vinculados: setHojeIds.size,
+                    perc_em_dia: totGeral > 0 ? Math.round((emDiaGeral / totGeral) * 100) : 0,
+                    carregando: false
+                };
+            } catch (e) {
+                console.warn('Aviso ao consultar estatísticas dos baralhos Anki:', e);
+                ankiStatsResumo.value.carregando = false;
+            }
+        };
+
         const abrirModalEstudoAnki = async (topicoAnki) => {
             if (!topicoAnki) return;
             const itemNorm = {
@@ -5331,6 +5442,8 @@ const app = createApp({
                     }
                     if (!ankiConectado.value) {
                         conectarAnkiDesktop(true);
+                    } else {
+                        carregarEstatisticasBaralhosAnki();
                     }
                     if (abaAtiva.value === 'revisoes') {
                         nextTick(() => setTimeout(renderGraficosRevisoes, 100));
@@ -5390,35 +5503,51 @@ const app = createApp({
                     chartRevEbbinghausInstance = null;
                 }
                 const ebb = revisoesData.value.graficos.curva_ebbinghaus;
+                const posUsr = ebb.posicao_usuario;
+                const datasetsEbb = [
+                    {
+                        label: 'Com Revisão Espaçada Anki (1d • 7d • 15d • 30d)',
+                        data: ebb.com_revisao_anki || [],
+                        borderColor: '#10B981',
+                        backgroundColor: 'rgba(16, 185, 129, 0.16)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#10B981'
+                    },
+                    {
+                        label: 'Sem Revisão (Queda Natural de Ebbinghaus)',
+                        data: ebb.sem_revisao || [],
+                        borderColor: '#F43F5E',
+                        backgroundColor: 'rgba(244, 63, 94, 0.08)',
+                        borderWidth: 2,
+                        borderDash: [5, 5],
+                        fill: true,
+                        tension: 0.35,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#F43F5E'
+                    }
+                ];
+                if (Array.isArray(ebb.ponto_usuario) && posUsr) {
+                    datasetsEbb.unshift({
+                        label: `Você Hoje (${posUsr.dia_estimado_label} • ${posUsr.retencao_atual_perc}%)`,
+                        data: ebb.ponto_usuario,
+                        borderColor: '#2563EB',
+                        backgroundColor: '#2563EB',
+                        pointRadius: 9,
+                        pointHoverRadius: 11,
+                        pointBackgroundColor: '#2563EB',
+                        pointBorderColor: '#FFFFFF',
+                        pointBorderWidth: 3,
+                        showLine: false
+                    });
+                }
                 chartRevEbbinghausInstance = new Chart(elEbb.getContext('2d'), {
                     type: 'line',
                     data: {
                         labels: ebb.labels || [],
-                        datasets: [
-                            {
-                                label: 'Com Revisão Espaçada Anki (1d • 7d • 15d • 30d)',
-                                data: ebb.com_revisao_anki || [],
-                                borderColor: '#10B981',
-                                backgroundColor: 'rgba(16, 185, 129, 0.16)',
-                                borderWidth: 3,
-                                fill: true,
-                                tension: 0.35,
-                                pointRadius: 4,
-                                pointBackgroundColor: '#10B981'
-                            },
-                            {
-                                label: 'Sem Revisão (Queda Natural de Ebbinghaus)',
-                                data: ebb.sem_revisao || [],
-                                borderColor: '#F43F5E',
-                                backgroundColor: 'rgba(244, 63, 94, 0.08)',
-                                borderWidth: 2,
-                                borderDash: [5, 5],
-                                fill: true,
-                                tension: 0.35,
-                                pointRadius: 3,
-                                pointBackgroundColor: '#F43F5E'
-                            }
-                        ]
+                        datasets: datasetsEbb
                     },
                     options: {
                         responsive: true,
@@ -5813,11 +5942,12 @@ const app = createApp({
             abrirGaleriaMedalhas,
             resgatarDesafioDiarioXP,
 
-            // Central de Revisões & Anki (SM-2 / Ebbinghaus)
+            // Central de Revisões & Anki (SM-2 / Ebbinghaus + AnkiConnect)
             revisoesData,
             carregandoRevisoes,
             subAbaRevisoes,
             filtroStatusRevisao,
+            mostrarAjudaEbbinghaus,
             filaSequencialAnkiFiltrada,
             carregarCentralRevisoes,
             abrirCentralRevisoes,
@@ -5829,9 +5959,13 @@ const app = createApp({
             ankiFiltroBuscaBaralho,
             baralhosAnkiFiltradosSelect,
             ankiConfig,
+            ankiStatsPorBaralho,
+            ankiStatsResumo,
             modalEstudoAnkiAberto,
             estudoAnkiContexto,
             conectarAnkiDesktop,
+            carregarEstatisticasBaralhosAnki,
+            obterStatsBaralhoAnki,
             salvarVinculoBaralhoAnki,
             alternarAutoAbrirAnki,
             resolverBaralhoAnki,

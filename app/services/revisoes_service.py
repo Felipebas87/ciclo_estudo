@@ -526,6 +526,60 @@ def diagnosticar_fila_revisoes_anki(
         else:
             curva_com_anki.append(round(98.0 * math.exp(-(d - 15) / 65.0), 1))
 
+    # Posição estimada dinâmica do aluno na Curva de Ebbinghaus (atualiza a cada revisão!)
+    if topicos_analisados:
+        media_dias_sem_revisar = round(
+            sum(min(30, int(x["dias_desde_ultimo_estudo"])) for x in topicos_analisados) / len(topicos_analisados),
+            1,
+        )
+    else:
+        media_dias_sem_revisar = 0.0
+
+    # Encontra o ponto do eixo X mais próximo da média real de dias desde a última revisão/estudo
+    indice_eixo_usuario = min(
+        range(len(dias_eixo)),
+        key=lambda idx: abs(dias_eixo[idx] - media_dias_sem_revisar),
+    )
+    dia_eixo_usuario = dias_eixo[indice_eixo_usuario]
+    ret_atual_plot = round(
+        sum(x["retencao_estimada_perc"] for x in topicos_analisados) / len(topicos_analisados), 1
+    ) if topicos_analisados else 100.0
+
+    ponto_usuario = [None] * len(dias_eixo)
+    ponto_usuario[indice_eixo_usuario] = ret_atual_plot
+
+    if ret_atual_plot >= 75.0:
+        zona_ebbinghaus = "Zona Blindada (Memória Forte)"
+        explicacao_posicao = (
+            f"Você está no Dia {dia_eixo_usuario} com {ret_atual_plot}% de retenção média estimada "
+            f"(média de {media_dias_sem_revisar} dias desde o último contato com seus tópicos). "
+            f"Sua constância de revisões está mantendo a memória próxima da curva verde ideal!"
+        )
+    elif ret_atual_plot >= 40.0:
+        zona_ebbinghaus = "Zona de Atenção (Revisão Recomendada)"
+        explicacao_posicao = (
+            f"Você está no Dia {dia_eixo_usuario} com {ret_atual_plot}% de retenção média estimada "
+            f"(média de {media_dias_sem_revisar} dias desde o último contato). "
+            f"A cada revisão feita no Anki/Ciclo, seu ponto azul sobe em direção à curva verde."
+        )
+    else:
+        zona_ebbinghaus = "Zona de Esquecimento (Alerta Ebbinghaus)"
+        explicacao_posicao = (
+            f"Você está no Dia {dia_eixo_usuario} com {ret_atual_plot}% de retenção média estimada "
+            f"(média de {media_dias_sem_revisar} dias sem revisar os tópicos estudados). "
+            f"Ao concluir as revisões urgentes da fila, seu ponto azul sobe rapidamente e recua para a esquerda rumo à curva verde!"
+        )
+
+    posicao_usuario_ebbinghaus = {
+        "indice_eixo": indice_eixo_usuario,
+        "dia_eixo": dia_eixo_usuario,
+        "dia_estimado_label": f"Dia {dia_eixo_usuario}",
+        "media_dias_sem_revisar": media_dias_sem_revisar,
+        "retencao_atual_perc": ret_atual_plot,
+        "zona": zona_ebbinghaus,
+        "explicacao": explicacao_posicao,
+    }
+
     # (B) Constância de Revisões (14 dias recentes ou janela ancorada na última revisão/sessão registrada)
     inicio_recente_14d = hoje - timedelta(days=13)
     tem_revisao_recente = any(
@@ -632,6 +686,8 @@ def diagnosticar_fila_revisoes_anki(
                 "labels": [f"Dia {d}" for d in dias_eixo],
                 "sem_revisao": curva_sem_revisao,
                 "com_revisao_anki": curva_com_anki,
+                "ponto_usuario": ponto_usuario,
+                "posicao_usuario": posicao_usuario_ebbinghaus,
             },
             "constancia_14d": constancia_14d,
             "vulnerabilidade_disciplinas": vulnerabilidade_disciplinas[:10],
