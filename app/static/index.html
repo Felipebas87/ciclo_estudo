@@ -556,12 +556,7 @@
                         <button type="button" @click="abrirGaleriaMedalhas()"
                             class="relative px-3 py-2 sm:px-3.5 sm:py-2 rounded-xl border border-amber-400/40 dark:border-amber-500/40 bg-gradient-to-r from-amber-500/15 via-yellow-500/10 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-700 dark:text-amber-300 font-black text-xs transition-all flex items-center gap-2 shadow-xs active:scale-95 cursor-pointer"
                             title="Ver Galeria de Medalhas, Conquistas e Patentes">
-                            <img v-if="gamificacaoData && gamificacaoData.rank_atual && gamificacaoData.rank_atual.avatar_url"
-                                :src="gamificacaoData.rank_atual.avatar_url"
-                                :alt="gamificacaoData.rank_atual.personagem"
-                                :title="`${gamificacaoData.rank_atual.titulo} • ${gamificacaoData.rank_atual.personagem}`"
-                                class="w-6 h-6 object-contain shrink-0">
-                            <i v-else class="fa-solid fa-medal text-amber-500 dark:text-amber-400 text-sm sm:text-base"></i>
+                            <i class="fa-solid fa-medal text-amber-500 dark:text-amber-400 text-sm sm:text-base"></i>
                             <span class="hidden sm:inline">Medalhas</span>
                             <span v-if="gamificacaoData" class="px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-200 font-mono-timer text-[10px] font-black">
                                 {{ gamificacaoData.resumo_conquistas.conquistadas }}/{{ gamificacaoData.resumo_conquistas.total }}
@@ -7248,13 +7243,13 @@
 
                 <!-- BLOCO 1: PATENTE ATUAL (ROSETTE EMBLEM), NÍVEL DE XP, SEQUÊNCIA E PRÓXIMO OBJETIVO -->
                 <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
-                    <div class="lg:col-span-7 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs space-y-4">
-                        <div class="flex items-center gap-4">
+                    <div class="lg:col-span-7 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs flex flex-col justify-between gap-3">
+                        <div class="flex-1 flex items-center gap-4">
                             <!-- Avatar Humano do Personagem do Nível (sem medalha em volta) -->
                             <div class="relative flex flex-col items-center justify-center shrink-0">
-                                <img :src="gamificacaoData.rank_atual.avatar_url || '/static/img/avatars/rank_01.svg'"
+                                <img :src="gamificacaoData.rank_atual.avatar_url || '/static/img/avatars/rank_01.png?v=3'"
                                     :alt="gamificacaoData.rank_atual.personagem || gamificacaoData.rank_atual.titulo"
-                                    class="w-24 h-24 object-contain drop-shadow-md select-none">
+                                    class="w-40 h-40 sm:w-56 sm:h-56 lg:w-60 lg:h-60 object-contain drop-shadow-md select-none">
                             </div>
 
                             <!-- Nome do Rank + Nível + Personagem + Barra de XP -->
@@ -7265,10 +7260,6 @@
                                     </h4>
                                     <span class="px-2.5 py-0.5 rounded-full text-xs font-black bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
                                         Nível {{ gamificacaoData.rank_atual.nivel }}
-                                    </span>
-                                    <span v-if="gamificacaoData.rank_atual.personagem"
-                                        class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/25">
-                                        {{ gamificacaoData.rank_atual.personagem }}
                                     </span>
                                 </div>
                                 <div class="w-full h-2.5 rounded-full bg-slate-200 dark:bg-[#1E293B] overflow-hidden">
@@ -7489,9 +7480,10 @@
                                     ? 'bg-slate-50 dark:bg-[#1B2638] border-slate-200 dark:border-[#24324A]'
                                     : 'bg-slate-100/40 dark:bg-[#0E1622]/40 border-slate-200/40 dark:border-[#1B2638] opacity-55')">
                             <div class="relative flex flex-col items-center justify-center">
-                                <img :src="rk.avatar_url || '/static/img/avatars/rank_01.svg'"
+                                <img :src="rk.avatar_url || '/static/img/avatars/rank_01.png?v=3'"
                                     :alt="rk.personagem || rk.titulo"
-                                    class="w-16 h-16 object-contain select-none transition-all"
+                                    class="object-contain select-none transition-all"
+                                    style="width: 110px; height: 110px;"
                                     :class="rk.desbloqueado ? 'drop-shadow-sm' : 'grayscale opacity-45'">
                                 <span v-if="!rk.desbloqueado"
                                     class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-white dark:bg-[#141D2E] border border-slate-300 dark:border-slate-600 flex items-center justify-center text-[9px] text-slate-500">
@@ -7500,9 +7492,6 @@
                             </div>
                             <div class="text-[11px] font-black text-slate-800 dark:text-white leading-tight">
                                 {{ rk.titulo }}
-                            </div>
-                            <div v-if="rk.personagem" class="text-[10px] font-semibold text-blue-600 dark:text-[#60A5FA] leading-tight">
-                                {{ rk.personagem }}
                             </div>
                             <div class="text-[10px] font-mono-timer text-slate-400">
                                 Nível {{ rk.nivel }} &bull; {{ rk.xp_min }} XP
