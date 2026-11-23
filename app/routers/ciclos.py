@@ -13,6 +13,7 @@ from app.services.ciclo_service import (
     configurar_ciclo_personalizado,
     aplicar_alternancia_volta_ciclo,
     avancar_bloco_ciclo,
+    reparar_progresso_volta_ciclo,
 )
 from app.services.trilha_ia_service import obter_proximo_topico_trilha_disciplina
 from app.services.revisoes_service import mapear_topicos_para_blocos_anki_do_ciclo
@@ -31,6 +32,7 @@ def _ciclo_eager_options():
 def _enriquecer_ciclo_com_topicos_trilha(db: Session, ciclo: Optional[CicloEstudos]) -> Optional[CicloEstudos]:
     if not ciclo or not ciclo.blocos:
         return ciclo
+    reparar_progresso_volta_ciclo(db, ciclo)
     sessoes = (
         db.query(SessaoEstudo.topico_id)
         .join(Disciplina)

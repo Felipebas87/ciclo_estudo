@@ -2126,16 +2126,24 @@ const app = createApp({
             const currentIdx = cicloAtivo.value.bloco_atual_index;
             const blocoClicado = cicloAtivo.value.blocos[idx];
 
-            if (idx > currentIdx) {
-                mostrarAlerta('Você ainda não chegou nesta fase! Conclua ou pule a fase atual.', 'aviso');
-                return;
-            }
             if (idx === currentIdx) {
                 abrirModalCheckinComBloco(blocoClicado);
                 return;
             }
+            if (!blocoClicado.concluido && idx > currentIdx) {
+                mostrarAlerta('Você ainda não chegou nesta fase! Conclua ou pule a fase atual.', 'aviso');
+                return;
+            }
 
-            const sessoesBloco = sessoes.value.filter(s => s.bloco_ciclo_id === blocoClicado.id);
+            const voltaAtual = cicloAtivo.value.voltas_completas || 0;
+            let sessoesBloco = sessoes.value.filter(s => s.bloco_ciclo_id === blocoClicado.id);
+            if (sessoesBloco.length === 0) {
+                sessoesBloco = sessoes.value.filter(
+                    s => s.ciclo_id === cicloAtivo.value.id &&
+                         s.disciplina_id === blocoClicado.disciplina_id &&
+                         (s.volta_ciclo === voltaAtual || s.volta_ciclo === undefined || s.volta_ciclo === null)
+                );
+            }
             if (sessoesBloco.length > 0) {
                 const ultimaSessao = sessoesBloco.reduce((a, b) => (new Date(a.data_criacao) > new Date(b.data_criacao) ? a : b));
                 resumoSessaoAtual.value = {

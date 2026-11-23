@@ -384,6 +384,109 @@ def avancar_bloco_ciclo(
     return (antigo_index, novo_index)
 
 
+def reparar_progresso_volta_ciclo(db: Session, ciclo: Optional[CicloEstudos]) -> bool:
+    """
+    Garante consistência resiliente do progresso da volta atual com base nas sessões reais registradas:
+    - Re-vincula sessões da volta atual cujo `bloco_ciclo_id` esteja vazio ao `BlocoCiclo` correspondente.
+    - Limpa `concluido=True` residual de voltas anteriores em blocos posteriores à última sessão estudada na volta atual
+      (corrige ciclos que pularam para o último bloco ao adicionar uma revisão no final).
+    - Reposiciona `bloco_atual_index` no primeiro bloco realmente pendente da sequência (ex.: logo após o último estudado).
+    """
+    if not ciclo or not ciclo.blocos:
+        return False
+
+    blocos_ord = sorted(list(ciclo.blocos), key=lambda b: b.ordem)
+    volta_atual = ciclo.voltas_completas or 0
+
+    sessoes_volta = (
+        db.query(SessaoEstudo)
+        .filter(
+            SessaoEstudo.ciclo_id == ciclo.id,
+            SessaoEstudo.volta_ciclo == volta_atual,
+        )
+        .order_by(SessaoEstudo.id.asc())
+        .all()
+    )
+
+    if not sessoes_volta:
+        if (ciclo.voltas_completas or 0) > 0 and all(b.concluido for b in blocos_ord):
+            for b in blocos_ord:
+                b.concluido = False
+            db.commit()
+            return True
+        return False
+
+    alterou = False
+    mapa_bloco_por_id = {b.id: b for b in blocos_ord}
+    blocos_por_disc: Dict[int, List[BlocoCiclo]] = {}
+    for b in blocos_ord:
+        blocos_por_disc.setdefault(b.disciplina_id, []).append(b)
+
+    # 1. Re-vincula sessões da volta atual que tenham perdido bloco_ciclo_id
+    bloco_ids_estudados = set()
+    disc_ids_estudadas = set()
+    for s in sessoes_volta:
+        if s.disciplina_id:
+            disc_ids_estudadas.add(s.disciplina_id)
+        if s.bloco_ciclo_id and s.bloco_ciclo_id in mapa_bloco_por_id:
+            bloco_ids_estudados.add(s.bloco_ciclo_id)
+        elif s.disciplina_id and s.disciplina_id in blocos_por_disc:
+            candidato = blocos_por_disc[s.disciplina_id][0]
+            s.bloco_ciclo_id = candidato.id
+            bloco_ids_estudados.add(candidato.id)
+            alterou = True
+
+    # 2. Localiza a posição do último bloco efetivamente estudado nesta volta
+    ultima_sessao = sessoes_volta[-1]
+    idx_ult: Optional[int] = None
+    if ultima_sessao.bloco_ciclo_id and ultima_sessao.bloco_ciclo_id in mapa_bloco_por_id:
+        for i, b in enumerate(blocos_ord):
+            if b.id == ultima_sessao.bloco_ciclo_id:
+                idx_ult = i
+                break
+    if idx_ult is None and ultima_sessao.disciplina_id:
+        for i, b in enumerate(blocos_ord):
+            if b.disciplina_id == ultima_sessao.disciplina_id:
+                idx_ult = i
+                break
+
+    if idx_ult is None:
+        if alterou:
+            db.commit()
+        return alterou
+
+    # 3. Garante que todo bloco com sessão registrada na volta atual esteja marcado como concluído
+    for b in blocos_ord:
+        if b.id in bloco_ids_estudados and not b.concluido:
+            b.concluido = True
+            alterou = True
+
+    # 4. Detecta se existem blocos APÓS o último estudado com concluido=True residual de volta anterior
+    tem_concluido_residual_apos_ultimo = any(
+        b.concluido and (b.id not in bloco_ids_estudados)
+        for b in blocos_ord[idx_ult + 1 :]
+    )
+
+    if tem_concluido_residual_apos_ultimo:
+        for i in range(idx_ult + 1, len(blocos_ord)):
+            b = blocos_ord[i]
+            if b.id not in bloco_ids_estudados and b.concluido:
+                b.concluido = False
+                alterou = True
+
+        proximo_idx = next(
+            (i for i, b in enumerate(blocos_ord) if not b.concluido),
+            min(idx_ult + 1, len(blocos_ord) - 1),
+        )
+        if ciclo.bloco_atual_index != proximo_idx:
+            ciclo.bloco_atual_index = proximo_idx
+            alterou = True
+
+    if alterou:
+        db.commit()
+    return alterou
+
+
 def configurar_ciclo_personalizado(
     db: Session,
     ciclo_id: int,
@@ -489,6 +592,9 @@ def configurar_ciclo_personalizado(
             for _ in range(extras):
                 sequencia_final.append((revisao_disc.id, dur_anki))
 
+    # Limpa qualquer estado concluido=True residual de voltas anteriores antes de reconfigurar
+    reparar_progresso_volta_ciclo(db, ciclo)
+
     blocos_atuais = sorted(list(ciclo.blocos), key=lambda b: b.ordem)
     idx_atual_antigo = ciclo.bloco_atual_index or 0
     bloco_atual_antigo = (
@@ -503,10 +609,12 @@ def configurar_ciclo_personalizado(
         parceiro_alt[reg["disc_a_id"]] = reg["disc_b_id"]
         parceiro_alt[reg["disc_b_id"]] = reg["disc_a_id"]
 
-    # Pool de blocos existentes por disciplina_id (preserva IDs, status concluido e vínculos de SessaoEstudo)
+    # Pool de blocos existentes por disciplina_id (prioriza blocos já concluídos para as primeiras posições)
     pools_existentes: Dict[int, List[BlocoCiclo]] = {}
     for b in blocos_atuais:
         pools_existentes.setdefault(b.disciplina_id, []).append(b)
+    for d_key in pools_existentes:
+        pools_existentes[d_key].sort(key=lambda b: (0 if b.concluido else 1, b.ordem))
 
     blocos_finais: List[BlocoCiclo] = []
     ids_reutilizados = set()

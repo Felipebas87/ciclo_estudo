@@ -12,6 +12,7 @@ from app.services.ciclo_service import (
     configurar_ciclo_personalizado,
     aplicar_alternancia_volta_ciclo,
     avancar_bloco_ciclo,
+    reparar_progresso_volta_ciclo,
 )
 
 
@@ -182,6 +183,49 @@ class TestConfigCiclo(unittest.TestCase):
         # Próxima volta segue sequencialmente normal: 0 -> 1
         _, novo3 = avancar_bloco_ciclo(self.db, atualizado, marcar_atual_concluido=True)
         self.assertEqual(novo3, 1)
+
+    def test_resgate_ciclo_com_concluido_residual_ao_adicionar_revisao_no_final(self):
+        # Simula estado do servidor: volta 1 onde todos os blocos antigos ficaram com concluido=True residual da volta 0,
+        # mas na volta 1 o usuário estudou apenas até o 2º bloco (Direito Tributário) e o próximo seria Estatística.
+        self.ciclo.voltas_completas = 1
+        blocos_ord = sorted(list(self.ciclo.blocos), key=lambda b: b.ordem)
+        for b in blocos_ord:
+            b.concluido = True  # residual da volta anterior
+
+        # Registra sessões reais da volta 1 apenas para os 2 primeiros blocos
+        for b_feito in blocos_ord[:2]:
+            self.db.add(
+                SessaoEstudo(
+                    ciclo_id=self.ciclo.id,
+                    bloco_ciclo_id=b_feito.id,
+                    disciplina_id=b_feito.disciplina_id,
+                    tempo_estudado_minutos=60,
+                    volta_ciclo=1,
+                )
+            )
+        self.db.commit()
+
+        # Usuário adiciona mais uma revisão Anki (qtd_revisoes_anki=2) que entra no final do ciclo
+        reg_itens = [
+            {"disciplina_id": b.disciplina_id, "duracao_minutos": b.duracao_minutos}
+            for b in blocos_ord
+            if b.disciplina.categoria != "REVISAO_ANKI"
+        ]
+        atualizado = configurar_ciclo_personalizado(
+            db=self.db,
+            ciclo_id=self.ciclo.id,
+            itens=reg_itens,
+            qtd_revisoes_anki=2,
+            duracao_revisao_anki=30,
+            alternancias=[],
+        )
+
+        # Não pode pular para a revisão Anki do final! Deve manter os 2 primeiros concluídos e apontar para o 3º bloco
+        self.assertEqual(atualizado.bloco_atual_index, 2)
+        self.assertTrue(atualizado.blocos[0].concluido)
+        self.assertTrue(atualizado.blocos[1].concluido)
+        for b_pend in atualizado.blocos[2:]:
+            self.assertFalse(b_pend.concluido)
 
 
 if __name__ == "__main__":
