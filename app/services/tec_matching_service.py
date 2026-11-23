@@ -182,7 +182,7 @@ SINONIMOS_TERMOS_TEC: List[Tuple[List[str], str]] = [
     (["sql", "ddl", "dml", "dcl", "tcl", "stored procedures", "triggers", "views", "indices", "transacoes", "acid"], "linguagem sql controle de transacoes e concorrencia"),
     (["nosql", "mongodb", "redis", "cassandra", "neo4j", "chave-valor", "orientado a documentos", "grafos"], "bancos de dados nosql"),
     (["big data", "hadoop", "spark", "kafka", "mapreduce"], "big data ecossistema hadoop spark"),
-    (["132/2023", "ec 132", "214/2025", "lc 214", "ibs", "cbs", "imposto seletivo", "reforma tributaria", "split payment", "comite gestor", "nao cumulatividade plena", "cashback"], "reforma tributaria ec 132 2023 sistema tributario nacional"),
+    (["132/2023", "ec 132", "214/2025", "lc 214", "ibs", "cbs", "imposto seletivo", "reforma tributaria", "split payment", "comite gestor", "nao cumulatividade plena", "cashback", "principio do destino", "tributacao no destino", "regimes diferenciados", "regimes especificos", "aliquota padrao", "aliquota de referencia", "transicao federativa"], "reforma tributaria ec 132 2023 lc 214 2025 ibs cbs normas gerais sistema tributario nacional"),
     (["icms", "lc 87", "lei kandir", "substituicao tributaria", "fato gerador do icms"], "icms imposto sobre operacoes relativas a circulacao de mercadorias"),
     (["ipva"], "ipva imposto sobre a propriedade de veiculos automotores"),
     (["itcd", "itcmd", "causa mortis"], "itcmd imposto sobre transmissao causa mortis e doacao"),

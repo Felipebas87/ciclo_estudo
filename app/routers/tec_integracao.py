@@ -262,11 +262,12 @@ def obter_link_e_sugestoes_topico(
 
         catalogo = _preparar_catalogo_nos_tec(nos_cand)
         norm_t = normalizar_texto_topico(topico.titulo)
-        exp_t = expandir_termos_topico(topico.titulo, norm_t)
+        exp_t = expandir_termos_topico(f"{topico.titulo} {disc_nome}", norm_t)
         tok_t = set(norm_t.split())
         tok_exp = set(exp_t.split())
 
         avaliados = []
+        avaliados_fallback = []
         for c in catalogo:
             sc, tp = calcular_similaridade_topico_no_tec(
                 titulo_topico=topico.titulo,
@@ -278,8 +279,26 @@ def obter_link_e_sugestoes_topico(
             )
             if sc > 0.15:
                 avaliados.append((sc, tp, c["obj"]))
+            elif sc > 0.03:
+                avaliados_fallback.append((sc, tp, c["obj"]))
 
         avaliados.sort(key=lambda x: (-x[0], -(x[2].total_questoes or 0)))
+        if len(avaliados) < 5 and avaliados_fallback:
+            avaliados_fallback.sort(key=lambda x: (-x[0], -(x[2].total_questoes or 0)))
+            ids_ja = {x[2].id for x in avaliados}
+            for item_fb in avaliados_fallback:
+                if item_fb[2].id not in ids_ja:
+                    avaliados.append(item_fb)
+                    ids_ja.add(item_fb[2].id)
+                if len(avaliados) >= 8:
+                    break
+
+        if not avaliados and catalogo:
+            # Garante sugestões úteis da matéria correlata mesmo para tópicos muito curtos/genéricos
+            populares = sorted(catalogo, key=lambda c: -(c["obj"].total_questoes or 0))[:8]
+            for c_pop in populares:
+                avaliados.append((0.1, "SUGESTAO_MATERIA", c_pop["obj"]))
+
         for sc, tp, obj in avaliados[:8]:
             item_s = _serializar_no_tec(obj)
             item_s["confianca_score"] = round(sc, 4)
