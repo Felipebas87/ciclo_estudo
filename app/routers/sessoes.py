@@ -14,7 +14,7 @@ router = APIRouter(prefix="/api/sessoes", tags=["Sessões de Estudo & Questões"
 @router.get("", response_model=List[SessaoEstudoResponse])
 def listar_sessoes(
     disciplina_id: Optional[int] = Query(None),
-    limite: int = Query(50, le=200),
+    limite: int = Query(500, le=2000),
     db: Session = Depends(get_db)
 ):
     query = db.query(SessaoEstudo)
@@ -166,6 +166,8 @@ def editar_sessao(sessao_id: int, dados: SessaoEstudoCreate, db: Session = Depen
     sessao.qtd_acertos = acertos
     sessao.qtd_erros = erros
     sessao.percentual_acerto = perc_acerto
+    sessao.observacoes = dados.observacoes
+    sessao.is_revisao_anki = dados.is_revisao_anki
 
     db.commit()
     db.refresh(sessao)

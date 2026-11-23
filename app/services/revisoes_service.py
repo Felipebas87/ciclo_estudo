@@ -395,6 +395,12 @@ def diagnosticar_fila_revisoes_anki(
                 else None
             )
 
+            sessoes_com_obs = [
+                s_ob for s_ob in sorted(lista_s, key=lambda x: (x.data or hoje, x.id or 0), reverse=True)
+                if (s_ob.observacoes or "").strip()
+            ]
+            ult_obs_obj = sessoes_com_obs[0] if sessoes_com_obs else None
+
             topicos_analisados.append({
                 "topico_id": t.id,
                 "topico_titulo": t.titulo,
@@ -431,6 +437,9 @@ def diagnosticar_fila_revisoes_anki(
                 "primeiro_rendimento_perc": primeiro_rend,
                 "ultimo_rendimento_perc": ultimo_rend,
                 "delta_evolucao_pp": delta_evolucao_total,
+                "ultima_observacao": (ult_obs_obj.observacoes or "").strip() if ult_obs_obj else None,
+                "ultima_observacao_data": ult_obs_obj.data.isoformat() if (ult_obs_obj and ult_obs_obj.data) else None,
+                "ultima_observacao_sessao_id": ult_obs_obj.id if ult_obs_obj else None,
             })
 
     # Se nenhum tópico foi estudado ainda, cria sugestão inicial com o primeiro tópico P1 do edital
@@ -792,6 +801,9 @@ def mapear_topicos_para_blocos_anki_do_ciclo(db: Session, ciclo: CicloEstudos) -
                 "estagio_revisao": escolhido["estagio_revisao"],
                 "tecnica_recomendada": escolhido["tecnica_recomendada"]["nome"],
                 "eh_revisao_anki": True,
+                "ultima_observacao": escolhido.get("ultima_observacao"),
+                "ultima_observacao_data": escolhido.get("ultima_observacao_data"),
+                "ultima_observacao_sessao_id": escolhido.get("ultima_observacao_sessao_id"),
             }
 
     return mapa_bloco_topico

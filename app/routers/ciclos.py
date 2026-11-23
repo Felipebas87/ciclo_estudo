@@ -34,18 +34,41 @@ def _enriquecer_ciclo_com_topicos_trilha(db: Session, ciclo: Optional[CicloEstud
         return ciclo
     reparar_progresso_volta_ciclo(db, ciclo)
     sessoes = (
-        db.query(SessaoEstudo.topico_id)
+        db.query(
+            SessaoEstudo.topico_id,
+            SessaoEstudo.observacoes,
+            SessaoEstudo.data,
+            SessaoEstudo.id,
+        )
         .join(Disciplina)
         .filter(Disciplina.edital_id == ciclo.edital_id, SessaoEstudo.topico_id != None)
+        .order_by(SessaoEstudo.data.desc(), SessaoEstudo.id.desc())
         .all()
     )
     topicos_vistos_ids = set(r[0] for r in sessoes if r[0] is not None)
+    ultimas_obs_por_topico = {}
+    for top_id, obs_txt, dt_sess, s_id in sessoes:
+        if top_id is not None and top_id not in ultimas_obs_por_topico:
+            txt_limpo = (obs_txt or "").strip()
+            if txt_limpo:
+                ultimas_obs_por_topico[top_id] = {
+                    "ultima_observacao": txt_limpo,
+                    "ultima_observacao_data": dt_sess.isoformat() if dt_sess else None,
+                    "ultima_observacao_sessao_id": s_id,
+                }
     mapa_anki = mapear_topicos_para_blocos_anki_do_ciclo(db, ciclo)
     for b in ciclo.blocos:
         if b.disciplina and b.disciplina.categoria != "REVISAO_ANKI":
-            b.proximo_topico = obter_proximo_topico_trilha_disciplina(b.disciplina, topicos_vistos_ids)
+            prox = obter_proximo_topico_trilha_disciplina(b.disciplina, topicos_vistos_ids)
         else:
-            b.proximo_topico = mapa_anki.get(b.id)
+            prox = mapa_anki.get(b.id)
+        if prox and isinstance(prox, dict):
+            obs_info = ultimas_obs_por_topico.get(prox.get("id"))
+            if obs_info:
+                prox["ultima_observacao"] = obs_info["ultima_observacao"]
+                prox["ultima_observacao_data"] = obs_info["ultima_observacao_data"]
+                prox["ultima_observacao_sessao_id"] = obs_info["ultima_observacao_sessao_id"]
+        b.proximo_topico = prox
     return ciclo
 
 @router.get("", response_model=List[CicloResponse])

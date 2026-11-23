@@ -189,8 +189,38 @@ const app = createApp({
             material_utilizado: '',
             is_revisao_anki: false,
             avancar_ciclo: true,
-            notas_observacoes: ''
+            observacoes: '',
+            retomar_topico_no_ciclo: true
         });
+
+        // Estados para Observação Expansível e Orientação de Onde Parou / Dificuldades por Tópico
+        const observacaoSessaoExpandida = ref(false);
+        const mostrarHistoricoObsModal = ref(false);
+        const seletorTopicoCicloAberto = ref(false);
+        const obsDiarioExpandida = ref({});
+        const toggleObsDiario = (sessaoId) => {
+            if (!sessaoId) return;
+            obsDiarioExpandida.value = {
+                ...(obsDiarioExpandida.value || {}),
+                [sessaoId]: !obsDiarioExpandida.value?.[sessaoId]
+            };
+        };
+        const carregarTopicosEmAndamentoLocal = () => {
+            try {
+                const raw = localStorage.getItem('orbis_topico_em_andamento_por_disc');
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        };
+        const topicoSelecionadoManualPorDisciplina = ref(carregarTopicosEmAndamentoLocal());
+        const salvarTopicosEmAndamentoLocal = () => {
+            try {
+                localStorage.setItem('orbis_topico_em_andamento_por_disc', JSON.stringify(topicoSelecionadoManualPorDisciplina.value || {}));
+            } catch (e) {
+                // ignore storage errors
+            }
+        };
 
         // Módulo de Resultados & Raio-X
         const resultadoAtual = ref(null);
@@ -980,6 +1010,8 @@ const app = createApp({
             else if (t.prioridade === 2) badges.push('⭐ P2');
             else if (t.prioridade === 3) badges.push('🔹 P3');
             if (t.mais_cobrado) badges.push('🔥');
+            const obsSalva = t.ultima_observacao || (mapaObservacoesPorTopico.value && mapaObservacoesPorTopico.value[Number(t.id)]?.ultima_observacao);
+            if (obsSalva) badges.push('📝 Com anotação');
 
             return badges.length > 0 ? `[${badges.join(' ')}] ${base}` : base;
         };
@@ -1250,6 +1282,211 @@ const app = createApp({
             });
         };
 
+        const mapaObservacoesPorTopico = computed(() => {
+            const mapa = {};
+            const listaSessoes = [...(sessoes.value || [])].sort((a, b) => {
+                const da = a.data || '';
+                const db = b.data || '';
+                if (da !== db) return db.localeCompare(da);
+                return (b.id || 0) - (a.id || 0);
+            });
+
+            for (const s of listaSessoes) {
+                if (!s || !s.topico_id) continue;
+                const txt = (s.observacoes || '').trim();
+                if (!txt) continue;
+                const tid = Number(s.topico_id);
+                if (!mapa[tid]) {
+                    mapa[tid] = {
+                        topico_id: tid,
+                        disciplina_id: Number(s.disciplina_id),
+                        ultima_observacao: txt,
+                        ultima_observacao_data: s.data || null,
+                        ultima_observacao_sessao_id: s.id || null,
+                        percentual_acerto: s.percentual_acerto,
+                        qtd_questoes_total: s.qtd_questoes_total,
+                        qtd_acertos: s.qtd_acertos,
+                        tempo_estudado_minutos: s.tempo_estudado_minutos,
+                        is_revisao_anki: Boolean(s.is_revisao_anki),
+                        historico: []
+                    };
+                }
+                mapa[tid].historico.push({
+                    sessao_id: s.id,
+                    data: s.data,
+                    observacoes: txt,
+                    percentual_acerto: s.percentual_acerto,
+                    qtd_questoes_total: s.qtd_questoes_total,
+                    is_revisao_anki: Boolean(s.is_revisao_anki)
+                });
+            }
+
+            if (editalVerticalizadoData.value) {
+                const discs = [
+                    ...(editalVerticalizadoData.value.BASICOS || []),
+                    ...(editalVerticalizadoData.value.ESPECIFICOS || [])
+                ];
+                for (const d of discs) {
+                    for (const t of (d.topicos || [])) {
+                        const tid = Number(t.id);
+                        const txt = (t.ultima_observacao || '').trim();
+                        if (txt && !mapa[tid]) {
+                            mapa[tid] = {
+                                topico_id: tid,
+                                disciplina_id: Number(d.id),
+                                ultima_observacao: txt,
+                                ultima_observacao_data: t.ultima_observacao_data || t.ultima_data || null,
+                                ultima_observacao_sessao_id: t.ultima_observacao_sessao_id || null,
+                                percentual_acerto: t.percentual,
+                                qtd_questoes_total: t.resolvidas,
+                                historico: Array.isArray(t.historico_observacoes) ? t.historico_observacoes : [{
+                                    sessao_id: t.ultima_observacao_sessao_id,
+                                    data: t.ultima_observacao_data || t.ultima_data,
+                                    observacoes: txt,
+                                    percentual_acerto: t.percentual,
+                                    qtd_questoes_total: t.resolvidas
+                                }]
+                            };
+                        }
+                    }
+                }
+            }
+
+            if (cicloAtivo.value && Array.isArray(cicloAtivo.value.blocos)) {
+                for (const b of cicloAtivo.value.blocos) {
+                    const pt = b.proximo_topico;
+                    if (pt && pt.id && (pt.ultima_observacao || '').trim()) {
+                        const tid = Number(pt.id);
+                        if (!mapa[tid]) {
+                            mapa[tid] = {
+                                topico_id: tid,
+                                disciplina_id: Number(pt.disciplina_id || b.disciplina_id),
+                                ultima_observacao: pt.ultima_observacao.trim(),
+                                ultima_observacao_data: pt.ultima_observacao_data || null,
+                                ultima_observacao_sessao_id: pt.ultima_observacao_sessao_id || null,
+                                percentual_acerto: pt.taxa_acerto_perc ?? null,
+                                qtd_questoes_total: null,
+                                historico: [{
+                                    sessao_id: pt.ultima_observacao_sessao_id,
+                                    data: pt.ultima_observacao_data,
+                                    observacoes: pt.ultima_observacao.trim()
+                                }]
+                            };
+                        }
+                    }
+                }
+            }
+
+            return mapa;
+        });
+
+        const mapaUltimaObservacaoPorDisciplina = computed(() => {
+            const mapaDisc = {};
+            const listaSessoes = [...(sessoes.value || [])].sort((a, b) => {
+                const da = a.data || '';
+                const db = b.data || '';
+                if (da !== db) return db.localeCompare(da);
+                return (b.id || 0) - (a.id || 0);
+            });
+
+            for (const s of listaSessoes) {
+                if (!s || !s.disciplina_id) continue;
+                const txt = (s.observacoes || '').trim();
+                if (!txt) continue;
+                const did = Number(s.disciplina_id);
+                if (!mapaDisc[did]) {
+                    mapaDisc[did] = {
+                        disciplina_id: did,
+                        topico_id: s.topico_id ? Number(s.topico_id) : null,
+                        topico_titulo: s.topico_id ? getNomeTopico(s.topico_id) : 'Estudo Geral da Disciplina',
+                        ultima_observacao: txt,
+                        ultima_observacao_data: s.data || null,
+                        ultima_observacao_sessao_id: s.id || null,
+                        percentual_acerto: s.percentual_acerto,
+                        qtd_questoes_total: s.qtd_questoes_total,
+                        is_revisao_anki: Boolean(s.is_revisao_anki)
+                    };
+                }
+            }
+            return mapaDisc;
+        });
+
+        const getObservacaoTopico = (topicoOuId) => {
+            if (!topicoOuId) return null;
+            const tid = typeof topicoOuId === 'object' ? Number(topicoOuId.id || topicoOuId.topico_id) : Number(topicoOuId);
+            if (!tid || isNaN(tid)) return null;
+            const infoMapa = mapaObservacoesPorTopico.value[tid];
+            if (infoMapa && infoMapa.ultima_observacao) {
+                return {
+                    ...infoMapa,
+                    topico_titulo: infoMapa.topico_titulo || (typeof topicoOuId === 'object' ? (topicoOuId.titulo || topicoOuId.topico_titulo) : '') || getNomeTopico(tid)
+                };
+            }
+            if (typeof topicoOuId === 'object' && (topicoOuId.ultima_observacao || '').trim()) {
+                return {
+                    topico_id: tid,
+                    topico_titulo: topicoOuId.titulo || topicoOuId.topico_titulo || getNomeTopico(tid),
+                    ultima_observacao: topicoOuId.ultima_observacao.trim(),
+                    ultima_observacao_data: topicoOuId.ultima_observacao_data || topicoOuId.ultima_data || null,
+                    ultima_observacao_sessao_id: topicoOuId.ultima_observacao_sessao_id || null,
+                    percentual_acerto: topicoOuId.percentual ?? topicoOuId.taxa_acerto_perc ?? null,
+                    qtd_questoes_total: topicoOuId.resolvidas ?? topicoOuId.questoes_resolvidas ?? null,
+                    historico: Array.isArray(topicoOuId.historico_observacoes) ? topicoOuId.historico_observacoes : []
+                };
+            }
+            return null;
+        };
+
+        const getUltimaObservacaoDisciplina = (discId) => {
+            if (!discId) return null;
+            return mapaUltimaObservacaoPorDisciplina.value[Number(discId)] || null;
+        };
+
+        const observacaoTopicoSelecionadoNoModal = computed(() => {
+            const tid = formSessao.value?.topico_id;
+            if (!tid) return null;
+            const obsTop = getObservacaoTopico(tid);
+            if (obsTop && obsTop.ultima_observacao) {
+                return { ...obsTop, eh_do_topico_selecionado: true };
+            }
+            return null;
+        });
+
+        const getTopicosDaDisciplinaPorId = (discId) => {
+            if (!discId) return [];
+            const numId = Number(discId);
+            if (editalVerticalizadoData.value) {
+                const todosDiscs = [
+                    ...(editalVerticalizadoData.value.BASICOS || []),
+                    ...(editalVerticalizadoData.value.ESPECIFICOS || []),
+                    ...(editalVerticalizadoData.value.TRILHA_COMPLETA || [])
+                ];
+                const d = todosDiscs.find(x => Number(x.id) === numId);
+                if (d && Array.isArray(d.topicos) && d.topicos.length > 0) {
+                    return ordenarTopicosPorTrilha(d.topicos);
+                }
+            }
+            const dLocal = (todasDisciplinas.value || []).find(x => Number(x.id) === numId);
+            if (dLocal && Array.isArray(dLocal.topicos) && dLocal.topicos.length > 0) {
+                return ordenarTopicosPorTrilha(dLocal.topicos);
+            }
+            if (editais.value) {
+                for (const ed of editais.value) {
+                    const dEd = (ed.disciplinas || []).find(x => Number(x.id) === numId);
+                    if (dEd && Array.isArray(dEd.topicos) && dEd.topicos.length > 0) {
+                        return ordenarTopicosPorTrilha(dEd.topicos);
+                    }
+                }
+            }
+            return [];
+        };
+
+        const topicosDaDisciplinaBlocoAtual = computed(() => {
+            if (!blocoAtual.value || !blocoAtual.value.disciplina_id) return [];
+            if (blocoAtual.value.disciplina?.categoria === 'REVISAO_ANKI') return [];
+            return getTopicosDaDisciplinaPorId(blocoAtual.value.disciplina_id);
+        });
+
         const getProximoTopicoTrilha = (discId) => {
             if (!discId) return null;
             const numId = Number(discId);
@@ -1293,6 +1530,21 @@ const app = createApp({
 
             if (!topicos || topicos.length === 0) return null;
 
+            // 1. Verifica se o usuário selecionou/fixou um tópico em andamento para retomar nesta disciplina
+            const topicoFixadoId = topicoSelecionadoManualPorDisciplina.value?.[numId];
+            if (topicoFixadoId) {
+                const topicoFixado = topicos.find(t => Number(t.id) === Number(topicoFixadoId));
+                if (topicoFixado) {
+                    const obsFix = getObservacaoTopico(topicoFixado);
+                    return obsFix ? {
+                        ...topicoFixado,
+                        ultima_observacao: obsFix.ultima_observacao,
+                        ultima_observacao_data: obsFix.ultima_observacao_data,
+                        em_andamento_retomada: true
+                    } : { ...topicoFixado, em_andamento_retomada: true };
+                }
+            }
+
             const vistosIds = new Set(
                 (sessoes.value || [])
                     .filter(s => s && s.topico_id != null)
@@ -1303,16 +1555,118 @@ const app = createApp({
             const pendentes = ordenados.filter(t => !t.visto && !t.concluido && !vistosIds.has(Number(t.id)));
             const pool = pendentes.length > 0 ? pendentes : ordenados;
 
-            return pool[0] || null;
+            const escolhido = pool[0] || null;
+            if (!escolhido) return null;
+            const obsEsc = getObservacaoTopico(escolhido);
+            return obsEsc ? {
+                ...escolhido,
+                ultima_observacao: obsEsc.ultima_observacao,
+                ultima_observacao_data: obsEsc.ultima_observacao_data
+            } : escolhido;
         };
 
         const proximoTopicoBlocoAtual = computed(() => {
             if (!blocoAtual.value || !blocoAtual.value.disciplina_id) return null;
             if (blocoAtual.value.disciplina && blocoAtual.value.disciplina.categoria === 'REVISAO_ANKI') {
-                return blocoAtual.value.proximo_topico || null;
+                const ptAnki = blocoAtual.value.proximo_topico || null;
+                if (!ptAnki) return null;
+                const obsAnki = getObservacaoTopico(ptAnki);
+                return obsAnki ? {
+                    ...ptAnki,
+                    ultima_observacao: obsAnki.ultima_observacao,
+                    ultima_observacao_data: obsAnki.ultima_observacao_data
+                } : ptAnki;
             }
             return getProximoTopicoTrilha(blocoAtual.value.disciplina_id);
         });
+
+        const observacaoBlocoAtualCiclo = computed(() => {
+            const pt = proximoTopicoBlocoAtual.value;
+            if (!pt) return null;
+            const obsTopico = getObservacaoTopico(pt);
+            if (obsTopico && obsTopico.ultima_observacao) {
+                return {
+                    ...obsTopico,
+                    topico_id: Number(pt.id),
+                    topico_titulo: pt.titulo || obsTopico.topico_titulo,
+                    eh_do_topico_atual: true
+                };
+            }
+            return null;
+        });
+
+        const selecionarTopicoNoCiclo = (discId, topicoOuId) => {
+            if (!discId) return;
+            const numDiscId = Number(discId);
+            if (!topicoOuId) {
+                const copia = { ...(topicoSelecionadoManualPorDisciplina.value || {}) };
+                delete copia[numDiscId];
+                topicoSelecionadoManualPorDisciplina.value = copia;
+                salvarTopicosEmAndamentoLocal();
+                seletorTopicoCicloAberto.value = false;
+                return;
+            }
+            const tid = typeof topicoOuId === 'object' ? Number(topicoOuId.id || topicoOuId.topico_id) : Number(topicoOuId);
+            if (!tid) return;
+            topicoSelecionadoManualPorDisciplina.value = {
+                ...(topicoSelecionadoManualPorDisciplina.value || {}),
+                [numDiscId]: tid
+            };
+            salvarTopicosEmAndamentoLocal();
+            seletorTopicoCicloAberto.value = false;
+        };
+
+        const concluirPendenciaTopicoNoCiclo = (discId) => {
+            if (!discId) return;
+            const numDiscId = Number(discId);
+            const copia = { ...(topicoSelecionadoManualPorDisciplina.value || {}) };
+            delete copia[numDiscId];
+            topicoSelecionadoManualPorDisciplina.value = copia;
+            salvarTopicosEmAndamentoLocal();
+            mostrarAlerta('Tópico liberado! A trilha apontará o próximo tópico inédito da matéria.', 'sucesso');
+        };
+
+        const toggleExpandirObservacaoSessao = () => {
+            observacaoSessaoExpandida.value = !observacaoSessaoExpandida.value;
+            if (observacaoSessaoExpandida.value) {
+                nextTick(() => {
+                    const el = document.getElementById('textarea-observacao-sessao');
+                    if (el) el.focus();
+                });
+            }
+        };
+
+        const inserirTagObservacaoSessao = (prefixo) => {
+            observacaoSessaoExpandida.value = true;
+            const atual = (formSessao.value.observacoes || '').trim();
+            if (!atual) {
+                formSessao.value.observacoes = `${prefixo} `;
+            } else if (!atual.endsWith('\n')) {
+                formSessao.value.observacoes = `${atual}\n${prefixo} `;
+            } else {
+                formSessao.value.observacoes = `${atual}${prefixo} `;
+            }
+            nextTick(() => {
+                const el = document.getElementById('textarea-observacao-sessao');
+                if (el) {
+                    el.focus();
+                    el.setSelectionRange(el.value.length, el.value.length);
+                }
+            });
+        };
+
+        const usarObservacaoAnteriorNoFormulario = (texto) => {
+            if (!texto) return;
+            observacaoSessaoExpandida.value = true;
+            formSessao.value.observacoes = texto;
+            nextTick(() => {
+                const el = document.getElementById('textarea-observacao-sessao');
+                if (el) {
+                    el.focus();
+                    el.setSelectionRange(el.value.length, el.value.length);
+                }
+            });
+        };
 
         const iniciarEstudoDoTopico = (disc, topico) => {
             let discId = null;
@@ -1353,8 +1707,12 @@ const app = createApp({
                 qtd_erros: 0,
                 is_revisao_anki: false,
                 avancar_ciclo: !!blocoCorrespondente,
+                observacoes: '',
+                retomar_topico_no_ciclo: true,
                 data: getDataHojeLocal()
             };
+            observacaoSessaoExpandida.value = false;
+            mostrarHistoricoObsModal.value = false;
             modalCheckinAberto.value = true;
         };
 
@@ -1810,7 +2168,7 @@ const app = createApp({
             const targetEditalId = cicloAtivo.value?.edital_id || (editais.value.length > 0 ? editais.value[0].id : null);
             const [rCiclo, rSess] = await Promise.all([
                 fetch('/api/ciclos/ativo'),
-                fetch('/api/sessoes?limite=100'),
+                fetch('/api/sessoes?limite=500'),
                 targetEditalId ? carregarDashboardData(targetEditalId) : Promise.resolve(),
                 carregarRoteiroEstudo(true).catch(() => {}),
                 carregarCentralRevisoes(true).catch(() => {})
@@ -1826,7 +2184,7 @@ const app = createApp({
                     carregarDadosProvaServidor(),
                     fetch('/api/editais'),
                     fetch('/api/ciclos/ativo'),
-                    fetch('/api/sessoes?limite=100')
+                    fetch('/api/sessoes?limite=500')
                 ]);
 
                 if (rEd.ok) {
@@ -2055,6 +2413,9 @@ const app = createApp({
                 }
                 const dadosTrilha = await res.json();
 
+                progressoTrilhaIA.value = 96;
+                etapaTrilhaIA.value = 'Atualizando painel verticalizado e esteira do ciclo...';
+
                 // Recarrega editais, ciclo ativo (com blocos ordenados e tópicos apontados) e verticalizado
                 const [rEd, rCiclo] = await Promise.all([
                     fetch('/api/editais'),
@@ -2164,7 +2525,16 @@ const app = createApp({
                 const ultimaSessao = sessoesBloco.reduce((a, b) => (new Date(a.data_criacao) > new Date(b.data_criacao) ? a : b));
                 let topicoTitulo = '';
                 if (ultimaSessao.topico_id) {
-                    topicoTitulo = getNomeTopico(ultimaSessao.topico_id);
+                    for (const ed of (editais.value || [])) {
+                        for (const disc of (ed.disciplinas || [])) {
+                            const tFound = (disc.topicos || []).find(t => Number(t.id) === Number(ultimaSessao.topico_id));
+                            if (tFound) {
+                                topicoTitulo = tFound.titulo;
+                                break;
+                            }
+                        }
+                        if (topicoTitulo) break;
+                    }
                 }
                 resumoSessaoAtual.value = {
                     sessao: ultimaSessao,
@@ -2196,8 +2566,12 @@ const app = createApp({
                 qtd_erros: 0,
                 is_revisao_anki: isRevisao,
                 avancar_ciclo: true,
+                observacoes: '',
+                retomar_topico_no_ciclo: true,
                 data: getDataHojeLocal()
             };
+            observacaoSessaoExpandida.value = false;
+            mostrarHistoricoObsModal.value = false;
             modalCheckinAberto.value = true;
         }
 
@@ -2224,8 +2598,12 @@ const app = createApp({
                 qtd_acertos: 0,
                 qtd_erros: 0,
                 avancar_ciclo: true,
+                observacoes: '',
+                retomar_topico_no_ciclo: true,
                 data: getDataHojeLocal()
             };
+            observacaoSessaoExpandida.value = false;
+            mostrarHistoricoObsModal.value = false;
             modalCheckinAberto.value = true;
         }
 
@@ -2289,6 +2667,12 @@ const app = createApp({
             if (payload.avancar_ciclo === undefined) {
                 payload.avancar_ciclo = true;
             }
+            payload.observacoes = (payload.observacoes || '').trim() || null;
+
+            const discIdNum = Number(payload.disciplina_id);
+            const topIdNum = payload.topico_id ? Number(payload.topico_id) : null;
+            const temObservacao = Boolean(payload.observacoes);
+            const retomarNoCiclo = Boolean(formSessao.value.retomar_topico_no_ciclo);
 
             salvandoSessao.value = true;
             let res;
@@ -2312,7 +2696,25 @@ const app = createApp({
                 return;
             }
 
+            if (discIdNum && topIdNum && !payload.is_revisao_anki) {
+                if (temObservacao && retomarNoCiclo) {
+                    topicoSelecionadoManualPorDisciplina.value = {
+                        ...(topicoSelecionadoManualPorDisciplina.value || {}),
+                        [discIdNum]: topIdNum
+                    };
+                    salvarTopicosEmAndamentoLocal();
+                } else if (!temObservacao || !retomarNoCiclo) {
+                    if (Number(topicoSelecionadoManualPorDisciplina.value?.[discIdNum]) === topIdNum) {
+                        const copia = { ...(topicoSelecionadoManualPorDisciplina.value || {}) };
+                        delete copia[discIdNum];
+                        topicoSelecionadoManualPorDisciplina.value = copia;
+                        salvarTopicosEmAndamentoLocal();
+                    }
+                }
+            }
+
             modalCheckinAberto.value = false;
+            observacaoSessaoExpandida.value = false;
             salvandoSessao.value = false;
             resetTimer();
 
@@ -2347,6 +2749,7 @@ const app = createApp({
         }
 
         function editarSessao(s) {
+            const obsExistente = (s.observacoes || '').trim();
             formSessao.value = {
                 id: s.id,
                 disciplina_id: s.disciplina_id,
@@ -2358,8 +2761,12 @@ const app = createApp({
                 qtd_erros: s.qtd_erros,
                 is_revisao_anki: s.is_revisao_anki,
                 avancar_ciclo: false,
+                observacoes: s.observacoes || '',
+                retomar_topico_no_ciclo: true,
                 data: s.data
             };
+            observacaoSessaoExpandida.value = Boolean(obsExistente);
+            mostrarHistoricoObsModal.value = false;
             modalCheckinAberto.value = true;
         }
 
@@ -4049,6 +4456,29 @@ const app = createApp({
         const subAbaTemporal = ref('projeto'); // 'projeto' | 'configuracao'
         const disciplinaSelecionadaMapaId = ref(null);
         const filtroTopicosMapa = ref('nao_estudado'); // 'nao_estudado' | 'todos' | 'em_andamento' | 'concluido'
+        const disciplinaPrioridadeSelecionadaId = ref(null);
+        const filtroClassificacaoPrioridade = ref('TODAS'); // 'TODAS' | 'CRÍTICA' | 'ALTA' | 'MODERADA' | 'BAIXA' | 'MANUTENÇÃO'
+        const abaSimuladorProb = ref('cenarios'); // 'cenarios' | 'recuperacao' | 'sensibilidade' | 'evolucao'
+        const cenarioSimuladorOverrides = ref({});
+        const cenarioSimuladoResultado = ref(null);
+        const simulandoCenarioMC = ref(false);
+        const abaPlanoAdaptativo = ref('hoje'); // 'hoje' | 'semana' | 'revisoes' | 'disponibilidade' | 'historico'
+        const filtroDiaSemanaPlano = ref('TODOS');
+        const processandoPlanoAdaptativo = ref(false);
+        const tarefaEmRegistroExecucao = ref(null);
+        const formExecucaoTarefa = ref({
+            questoes_realizadas: 15,
+            acertos_obtidos: 12,
+            tempo_executado_min: 45
+        });
+        const formDisponibilidadeAdaptativa = ref({
+            horas_estudo_dia: 4.0,
+            horas_fim_de_semana: 5.0,
+            dias_semana_ativos: ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'],
+            tempo_maximo_sessao_min: 50,
+            horario_preferencial: 'Noite (19h às 23h)',
+            limite_max_concentracao_disciplina_perc: 35.0
+        });
 
         let chartMapaCurvaInstance = null;
         let chartMapaEvolucaoInstance = null;
@@ -4095,6 +4525,286 @@ const app = createApp({
             if (f === 'todos') return disc.topicos_lista;
             return disc.topicos_lista.filter(t => t.status === f);
         });
+
+        const rankingPrioridadesFiltrado = computed(() => {
+            const lista = mapaAprovacaoData.value?.inteligencia_prioridades?.ranking_disciplinas || [];
+            const f = filtroClassificacaoPrioridade.value;
+            if (!f || f === 'TODAS') return lista;
+            return lista.filter(d => d.classificacao === f);
+        });
+
+        const disciplinaPrioridadeSelecionada = computed(() => {
+            const lista = mapaAprovacaoData.value?.inteligencia_prioridades?.ranking_disciplinas || [];
+            if (lista.length === 0) return null;
+            if (disciplinaPrioridadeSelecionadaId.value) {
+                const enc = lista.find(d => d.disciplina_id === disciplinaPrioridadeSelecionadaId.value);
+                if (enc) return enc;
+            }
+            return lista[0];
+        });
+
+        const selecionarDisciplinaPrioridade = (discId) => {
+            disciplinaPrioridadeSelecionadaId.value = discId;
+        };
+
+        const simuladorAtivo = computed(() => {
+            const base = mapaAprovacaoData.value?.simulador_probabilistico || null;
+            if (!base) return null;
+            if (!cenarioSimuladoResultado.value) return base;
+            return {
+                ...base,
+                ...cenarioSimuladoResultado.value,
+                analise_sensibilidade: base.analise_sensibilidade,
+                simulacao_recuperacao_prioridades: base.simulacao_recuperacao_prioridades,
+                evolucao_temporal_probabilidade: base.evolucao_temporal_probabilidade,
+            };
+        });
+
+        const inicializarOverridesSimulador = (data) => {
+            const modelos = data?.simulador_probabilistico?.modelos_disciplinas || [];
+            const mapa = {};
+            for (const m of modelos) {
+                mapa[m.disciplina_id] = m.taxa_base_atual_perc;
+            }
+            cenarioSimuladorOverrides.value = mapa;
+            cenarioSimuladoResultado.value = null;
+        };
+
+        const executarSimulacaoCenario = async () => {
+            if (!mapaAprovacaoData.value?.simulador_probabilistico) return;
+            simulandoCenarioMC.value = true;
+            try {
+                const modelosReais = mapaAprovacaoData.value.simulador_probabilistico.modelos_disciplinas || [];
+                const overridesAlterados = {};
+                for (const m of modelosReais) {
+                    const valNovo = Number(cenarioSimuladorOverrides.value[m.disciplina_id]);
+                    if (!isNaN(valNovo) && Math.abs(valNovo - Number(m.taxa_base_atual_perc)) >= 0.2) {
+                        overridesAlterados[m.disciplina_id] = valNovo;
+                    }
+                }
+                if (Object.keys(overridesAlterados).length === 0) {
+                    cenarioSimuladoResultado.value = null;
+                    return;
+                }
+                const res = await fetch('/api/mapa-aprovacao/simular-cenario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        edital_id: mapaAprovacaoData.value.parametros_prova?.edital_id || null,
+                        overrides_desempenho: overridesAlterados,
+                        n_simulacoes: 10000,
+                        seed: 42
+                    })
+                });
+                if (res.ok) {
+                    cenarioSimuladoResultado.value = await res.json();
+                } else {
+                    mostrarAlerta('Falha ao recalcular cenário simulado.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao simular cenário:', e);
+                mostrarAlerta('Erro de comunicação ao simular cenário.', 'erro');
+            } finally {
+                simulandoCenarioMC.value = false;
+            }
+        };
+
+        const restaurarDadosReaisSimulador = () => {
+            if (mapaAprovacaoData.value) {
+                inicializarOverridesSimulador(mapaAprovacaoData.value);
+            } else {
+                cenarioSimuladoResultado.value = null;
+            }
+        };
+
+        const aplicarCenarioRecuperacaoPrioridades = async (cenarioItem) => {
+            if (!mapaAprovacaoData.value) return;
+            inicializarOverridesSimulador(mapaAprovacaoData.value);
+            if (cenarioItem && cenarioItem.disciplina_id) {
+                cenarioSimuladorOverrides.value[cenarioItem.disciplina_id] = cenarioItem.desempenho_simulado_perc;
+            } else if (cenarioItem === 'conjunto') {
+                const listaRec = mapaAprovacaoData.value?.simulador_probabilistico?.simulacao_recuperacao_prioridades?.cenarios_recuperacao || [];
+                for (const c of listaRec) {
+                    cenarioSimuladorOverrides.value[c.disciplina_id] = c.desempenho_simulado_perc;
+                }
+            }
+            abaSimuladorProb.value = 'cenarios';
+            await executarSimulacaoCenario();
+        };
+
+        const tarefasSemanaFiltradas = computed(() => {
+            const lista = mapaAprovacaoData.value?.plano_acao_adaptativo?.tarefas_semana || [];
+            const f = filtroDiaSemanaPlano.value;
+            if (!f || f === 'TODOS') return lista;
+            return lista.filter(t => t.dia_semana_sigla === f);
+        });
+
+        const sincronizarFormDisponibilidadeAdaptativa = (data) => {
+            const disp = data?.plano_acao_adaptativo?.configuracao_disponibilidade;
+            if (!disp) return;
+            formDisponibilidadeAdaptativa.value = {
+                horas_estudo_dia: disp.horas_estudo_dia ?? 4.0,
+                horas_fim_de_semana: disp.horas_fim_de_semana ?? 5.0,
+                dias_semana_ativos: Array.isArray(disp.dias_semana_ativos) ? [...disp.dias_semana_ativos] : ['SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'],
+                tempo_maximo_sessao_min: disp.tempo_maximo_sessao_min ?? 50,
+                horario_preferencial: disp.horario_preferencial || 'Noite (19h às 23h)',
+                limite_max_concentracao_disciplina_perc: disp.limite_max_concentracao_disciplina_perc ?? 35.0
+            };
+        };
+
+        const alternarStatusTarefaAdaptativa = async (tarefa, novoStatus = null) => {
+            if (!tarefa || processandoPlanoAdaptativo.value) return;
+            const statusAlvo = novoStatus || (tarefa.status === 'concluida' ? 'pendente' : 'concluida');
+            processandoPlanoAdaptativo.value = true;
+            try {
+                const res = await fetch('/api/mapa-aprovacao/plano-adaptativo/execucao', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        edital_id: mapaAprovacaoData.value?.parametros_prova?.edital_id || null,
+                        tarefa_id: tarefa.id,
+                        status: statusAlvo,
+                        tempo_executado_min: statusAlvo === 'concluida' ? tarefa.tempo_estimado_min : null
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.plano_acao_adaptativo && mapaAprovacaoData.value) {
+                        mapaAprovacaoData.value.plano_acao_adaptativo = data.plano_acao_adaptativo;
+                    }
+                    mostrarAlerta(
+                        statusAlvo === 'concluida'
+                            ? 'Tarefa concluída! Indicadores de execução atualizados.'
+                            : `Status da tarefa atualizado para ${statusAlvo}.`,
+                        'sucesso'
+                    );
+                } else {
+                    mostrarAlerta('Falha ao atualizar status da tarefa.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao atualizar tarefa:', e);
+                mostrarAlerta('Erro de comunicação ao atualizar tarefa.', 'erro');
+            } finally {
+                processandoPlanoAdaptativo.value = false;
+            }
+        };
+
+        const abrirRegistroDesempenhoTarefa = (tarefa) => {
+            tarefaEmRegistroExecucao.value = tarefa;
+            formExecucaoTarefa.value = {
+                questoes_realizadas: tarefa.questoes_realizadas || 15,
+                acertos_obtidos: tarefa.acertos_obtidos || 12,
+                tempo_executado_min: tarefa.tempo_estimado_min || 45
+            };
+        };
+
+        const confirmarRegistroDesempenhoTarefa = async () => {
+            const tarefa = tarefaEmRegistroExecucao.value;
+            if (!tarefa || processandoPlanoAdaptativo.value) return;
+            processandoPlanoAdaptativo.value = true;
+            try {
+                const q = Math.max(1, Number(formExecucaoTarefa.value.questoes_realizadas) || 1);
+                const ac = Math.min(q, Math.max(0, Number(formExecucaoTarefa.value.acertos_obtidos) || 0));
+                const tMin = Math.max(5, Number(formExecucaoTarefa.value.tempo_executado_min) || tarefa.tempo_estimado_min);
+                const res = await fetch('/api/mapa-aprovacao/plano-adaptativo/execucao', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        edital_id: mapaAprovacaoData.value?.parametros_prova?.edital_id || null,
+                        tarefa_id: tarefa.id,
+                        status: 'concluida',
+                        questoes_realizadas: q,
+                        acertos_obtidos: ac,
+                        tempo_executado_min: tMin
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.plano_acao_adaptativo && mapaAprovacaoData.value) {
+                        mapaAprovacaoData.value.plano_acao_adaptativo = data.plano_acao_adaptativo;
+                    }
+                    tarefaEmRegistroExecucao.value = null;
+                    mostrarAlerta('Execução e adaptação de desempenho registradas com sucesso!', 'sucesso');
+                } else {
+                    mostrarAlerta('Não foi possível registrar o desempenho da atividade.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao registrar desempenho:', e);
+                mostrarAlerta('Erro de comunicação ao registrar desempenho.', 'erro');
+            } finally {
+                processandoPlanoAdaptativo.value = false;
+            }
+        };
+
+        const executarReplanejamentoAutomatico = async () => {
+            if (processandoPlanoAdaptativo.value) return;
+            processandoPlanoAdaptativo.value = true;
+            try {
+                const res = await fetch('/api/mapa-aprovacao/plano-adaptativo/replanejar', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        edital_id: mapaAprovacaoData.value?.parametros_prova?.edital_id || null
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.plano_acao_adaptativo && mapaAprovacaoData.value) {
+                        mapaAprovacaoData.value.plano_acao_adaptativo = data.plano_acao_adaptativo;
+                    }
+                    mostrarAlerta(data.replanejamento?.resumo_replanejamento || 'Semana replanejada sem sobrecarga diária.', 'sucesso');
+                } else {
+                    mostrarAlerta('Falha ao executar replanejamento.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao replanejar:', e);
+                mostrarAlerta('Erro de comunicação ao replanejar semana.', 'erro');
+            } finally {
+                processandoPlanoAdaptativo.value = false;
+            }
+        };
+
+        const alternarDiaDisponivelAdaptativo = (sigla) => {
+            const lista = formDisponibilidadeAdaptativa.value.dias_semana_ativos || [];
+            const idx = lista.indexOf(sigla);
+            if (idx >= 0) {
+                if (lista.length > 1) {
+                    lista.splice(idx, 1);
+                }
+            } else {
+                lista.push(sigla);
+            }
+        };
+
+        const salvarDisponibilidadeAdaptativa = async () => {
+            if (processandoPlanoAdaptativo.value) return;
+            processandoPlanoAdaptativo.value = true;
+            try {
+                const res = await fetch('/api/mapa-aprovacao/plano-adaptativo/disponibilidade', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        edital_id: mapaAprovacaoData.value?.parametros_prova?.edital_id || null,
+                        ...formDisponibilidadeAdaptativa.value
+                    })
+                });
+                if (res.ok) {
+                    const data = await res.json();
+                    if (data.plano_acao_adaptativo && mapaAprovacaoData.value) {
+                        mapaAprovacaoData.value.plano_acao_adaptativo = data.plano_acao_adaptativo;
+                        sincronizarFormDisponibilidadeAdaptativa(mapaAprovacaoData.value);
+                    }
+                    mostrarAlerta('Disponibilidade atualizada! Planejamento semanal recalculado preservando o histórico.', 'sucesso');
+                } else {
+                    mostrarAlerta('Falha ao atualizar disponibilidade.', 'erro');
+                }
+            } catch (e) {
+                console.error('Erro ao salvar disponibilidade:', e);
+                mostrarAlerta('Erro de comunicação ao salvar disponibilidade.', 'erro');
+            } finally {
+                processandoPlanoAdaptativo.value = false;
+            }
+        };
 
         const sincronizarFormMapaConfig = (data) => {
             const p = data?.parametros_prova;
@@ -4153,9 +4863,18 @@ const app = createApp({
                     const data = await res.json();
                     mapaAprovacaoData.value = data;
                     sincronizarFormMapaConfig(data);
+                    inicializarOverridesSimulador(data);
+                    sincronizarFormDisponibilidadeAdaptativa(data);
                     const progDiscs = data.gestao_temporal?.progresso_disciplinas || [];
                     if (progDiscs.length > 0 && !disciplinaSelecionadaMapaId.value) {
                         disciplinaSelecionadaMapaId.value = progDiscs[0].id;
+                    }
+                    const rankPrio = data.inteligencia_prioridades?.ranking_disciplinas || [];
+                    if (rankPrio.length > 0) {
+                        const existe = rankPrio.some(r => r.disciplina_id === disciplinaPrioridadeSelecionadaId.value);
+                        if (!existe) {
+                            disciplinaPrioridadeSelecionadaId.value = rankPrio[0].disciplina_id;
+                        }
                     }
                     if (abaAtiva.value === 'mapa_aprovacao' && subAbaMapa.value === 'preditivo') {
                         nextTick(() => {
@@ -4237,6 +4956,8 @@ const app = createApp({
                     const data = await res.json();
                     mapaAprovacaoData.value = data;
                     sincronizarFormMapaConfig(data);
+                    inicializarOverridesSimulador(data);
+                    sincronizarFormDisponibilidadeAdaptativa(data);
                     await carregarDadosProvaServidor();
                     mostrarAlerta('Parâmetros da prova, pesos e metas temporais atualizados com sucesso!', 'sucesso');
                     if (abaAtiva.value === 'gestao_temporal') {
@@ -4911,8 +5632,12 @@ const app = createApp({
                 qtd_acertos: ehAnkiMissao ? 0 : acEst,
                 qtd_erros: ehAnkiMissao ? 0 : erEst,
                 avancar_ciclo: true,
+                observacoes: '',
+                retomar_topico_no_ciclo: true,
                 data: getDataHojeLocal()
             };
+            observacaoSessaoExpandida.value = false;
+            mostrarHistoricoObsModal.value = false;
             modalCheckinAberto.value = true;
         };
 
@@ -5634,8 +6359,12 @@ const app = createApp({
                 qtd_acertos: 0,
                 qtd_erros: 0,
                 avancar_ciclo: !!blocoAnkiAtual,
+                observacoes: '',
+                retomar_topico_no_ciclo: true,
                 data: getDataHojeLocal()
             };
+            observacaoSessaoExpandida.value = false;
+            mostrarHistoricoObsModal.value = false;
             modalCheckinAberto.value = true;
         };
 
@@ -6021,6 +6750,7 @@ const app = createApp({
             }
             configCicloForm.value.alternancias.push({ disc_a_id: aId, disc_b_id: bId });
 
+            // Consolida em 1 slot na lista se ambas estiverem presentes
             const lista = [...configCicloForm.value.itens];
             const idxA = lista.findIndex(it => Number(it.disciplina_id) === aId);
             const idxB = lista.findIndex(it => Number(it.disciplina_id) === bId);
@@ -6173,6 +6903,24 @@ const app = createApp({
             modalResumoAberto,
             resumoSessaoAtual,
             formSessao,
+            observacaoSessaoExpandida,
+            mostrarHistoricoObsModal,
+            seletorTopicoCicloAberto,
+            obsDiarioExpandida,
+            toggleObsDiario,
+            topicoSelecionadoManualPorDisciplina,
+            mapaObservacoesPorTopico,
+            mapaUltimaObservacaoPorDisciplina,
+            getObservacaoTopico,
+            getUltimaObservacaoDisciplina,
+            observacaoTopicoSelecionadoNoModal,
+            observacaoBlocoAtualCiclo,
+            topicosDaDisciplinaBlocoAtual,
+            selecionarTopicoNoCiclo,
+            concluirPendenciaTopicoNoCiclo,
+            toggleExpandirObservacaoSessao,
+            inserirTagObservacaoSessao,
+            usarObservacaoAnteriorNoFormulario,
             abrirModalCheckin,
             abrirModalCheckinComBloco,
             salvarSessaoEstudo,
@@ -6347,9 +7095,35 @@ const app = createApp({
             subAbaTemporal,
             disciplinaSelecionadaMapaId,
             filtroTopicosMapa,
+            disciplinaPrioridadeSelecionadaId,
+            filtroClassificacaoPrioridade,
             formMapaConfig,
             disciplinaSelecionadaMapa,
             topicosFiltradosDisciplinaMapa,
+            rankingPrioridadesFiltrado,
+            disciplinaPrioridadeSelecionada,
+            selecionarDisciplinaPrioridade,
+            abaSimuladorProb,
+            cenarioSimuladorOverrides,
+            cenarioSimuladoResultado,
+            simulandoCenarioMC,
+            simuladorAtivo,
+            executarSimulacaoCenario,
+            restaurarDadosReaisSimulador,
+            aplicarCenarioRecuperacaoPrioridades,
+            abaPlanoAdaptativo,
+            filtroDiaSemanaPlano,
+            processandoPlanoAdaptativo,
+            tarefaEmRegistroExecucao,
+            formExecucaoTarefa,
+            formDisponibilidadeAdaptativa,
+            tarefasSemanaFiltradas,
+            alternarStatusTarefaAdaptativa,
+            abrirRegistroDesempenhoTarefa,
+            confirmarRegistroDesempenhoTarefa,
+            executarReplanejamentoAutomatico,
+            alternarDiaDisponivelAdaptativo,
+            salvarDisponibilidadeAdaptativa,
             calcularRepresentatividadePreview,
             carregarMapaAprovacao,
             abrirMapaAprovacao,

@@ -243,6 +243,16 @@ def calcular_roteiro_estudo(
 
     topicos_vistos_ids = set(s.topico_id for s in todas_sessoes if s.topico_id is not None)
     sessoes_hoje = [s for s in todas_sessoes if s.data == hoje]
+    ultimas_obs_por_topico: Dict[int, Dict[str, Any]] = {}
+    for s_ob in reversed(todas_sessoes):
+        if s_ob.topico_id is not None and s_ob.topico_id not in ultimas_obs_por_topico:
+            txt_ob = (s_ob.observacoes or "").strip()
+            if txt_ob:
+                ultimas_obs_por_topico[s_ob.topico_id] = {
+                    "ultima_observacao": txt_ob,
+                    "ultima_observacao_data": s_ob.data.isoformat() if s_ob.data else None,
+                    "ultima_observacao_sessao_id": s_ob.id,
+                }
 
     total_questoes_ja_resolvidas = sum(int(s.qtd_questoes_total or 0) for s in todas_sessoes)
     total_minutos_ja_estudados = sum(int(s.tempo_estudado_minutos or 0) for s in todas_sessoes)
@@ -375,6 +385,8 @@ def calcular_roteiro_estudo(
             "questoes_realizadas": int(s_hoje.qtd_questoes_total or 0),
             "acertos_obtidos": int(s_hoje.qtd_acertos or 0),
             "questoes_estimadas": int(s_hoje.qtd_questoes_total or round(questoes_por_hora)),
+            "ultima_observacao": (s_hoje.observacoes or "").strip() or (ultimas_obs_por_topico.get(t_obj.id, {}).get("ultima_observacao") if t_obj else None),
+            "ultima_observacao_data": s_hoje.data.isoformat() if (s_hoje.observacoes or "").strip() else (ultimas_obs_por_topico.get(t_obj.id, {}).get("ultima_observacao_data") if t_obj else None),
         })
 
     # Ponteiros de simulação da fila verticalizada por disciplina
@@ -458,6 +470,8 @@ def calcular_roteiro_estudo(
             "concluida": False,
             "sessao_id": None,
             "questoes_estimadas": questoes_est,
+            "ultima_observacao": ultimas_obs_por_topico.get(topico_id_esc, {}).get("ultima_observacao") if topico_id_esc else None,
+            "ultima_observacao_data": ultimas_obs_por_topico.get(topico_id_esc, {}).get("ultima_observacao_data") if topico_id_esc else None,
         }
 
     # Quantas missões faltam hoje para completar a meta diária (ex.: se meta é 2h/dia e já fez 1h hoje, falta 1h hoje)

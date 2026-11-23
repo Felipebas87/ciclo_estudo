@@ -393,6 +393,22 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                 if visto:
                     disc_topicos_vistos += 1
                     topicos_vistos_ids.add(t.id)
+
+                sessoes_obs_ord = [
+                    s_ob for s_ob in sorted(s_top, key=lambda x: (x.data or date.min, x.id or 0), reverse=True)
+                    if (s_ob.observacoes or "").strip()
+                ]
+                ult_obs_sess = sessoes_obs_ord[0] if sessoes_obs_ord else None
+                historico_obs = [
+                    {
+                        "sessao_id": s_ob.id,
+                        "data": s_ob.data.isoformat() if s_ob.data else None,
+                        "observacoes": (s_ob.observacoes or "").strip(),
+                        "percentual_acerto": s_ob.percentual_acerto,
+                        "qtd_questoes_total": s_ob.qtd_questoes_total,
+                    }
+                    for s_ob in sessoes_obs_ord[:5]
+                ]
                 
                 topicos_data.append({
                     "id": t.id,
@@ -410,6 +426,10 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
                     "mais_cobrado": bool(getattr(t, "mais_cobrado", False)),
                     "prioridade": getattr(t, "prioridade", None),
                     "visto": visto,
+                    "ultima_observacao": (ult_obs_sess.observacoes or "").strip() if ult_obs_sess else None,
+                    "ultima_observacao_data": ult_obs_sess.data.isoformat() if (ult_obs_sess and ult_obs_sess.data) else None,
+                    "ultima_observacao_sessao_id": ult_obs_sess.id if ult_obs_sess else None,
+                    "historico_observacoes": historico_obs,
                     "tec_vinculo": montar_dados_vinculo_topico(t, t.vinculo_tec, banca_nome=banca_ativa)
                 })
                 
@@ -420,6 +440,15 @@ def get_edital_verticalizado(db: Session, edital_id: int) -> Dict[str, Any]:
             
             cobertura_perc = round((disc_topicos_vistos / len(disc.topicos) * 100), 1) if len(disc.topicos) > 0 else 0
             prox_topico = obter_proximo_topico_trilha_disciplina(disc, topicos_vistos_ids, banca_nome=banca_ativa)
+            if prox_topico and isinstance(prox_topico, dict):
+                s_prox_obs = [
+                    s_ob for s_ob in sorted(sessoes_por_topico.get(prox_topico.get("id"), []), key=lambda x: (x.data or date.min, x.id or 0), reverse=True)
+                    if (s_ob.observacoes or "").strip()
+                ]
+                if s_prox_obs:
+                    prox_topico["ultima_observacao"] = (s_prox_obs[0].observacoes or "").strip()
+                    prox_topico["ultima_observacao_data"] = s_prox_obs[0].data.isoformat() if s_prox_obs[0].data else None
+                    prox_topico["ultima_observacao_sessao_id"] = s_prox_obs[0].id
 
             d_mc = sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False))
             d_mc_vistos = sum(1 for t in disc.topicos if getattr(t, "mais_cobrado", False) and (t.id in topicos_vistos_ids or bool(t.concluido)))

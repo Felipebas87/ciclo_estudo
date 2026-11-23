@@ -129,6 +129,9 @@ def auto_upgrade_db():
         ("topico_estudo_tec_de_para", "pasta_tec_nome", "VARCHAR(100)"),
         ("topico_estudo_tec_de_para", "data_geracao_caderno", "TIMESTAMP"),
 
+        # sessoes_estudo
+        ("sessoes_estudo", "observacoes", "TEXT"),
+
         # resultados_concurso
         ("resultados_concurso", "total_pontos_prova", "REAL"),
 

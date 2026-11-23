@@ -737,15 +737,55 @@
                                                         <i class="fa-solid fa-folder-closed text-[8px] text-emerald-600 dark:text-emerald-400"></i>
                                                         <span>Caderno #{{ proximoTopicoBlocoAtual.tec_vinculo.caderno_id }}</span>
                                                     </span>
+                                                    <span v-if="proximoTopicoBlocoAtual.em_andamento_retomada"
+                                                        class="px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-700 dark:text-amber-300 border border-amber-500/40 text-[9.5px] font-black"
+                                                        title="Tópico mantido em foco para você retomar de onde parou">
+                                                        <i class="fa-solid fa-rotate-left text-[8px] mr-0.5"></i> EM CONTINUAÇÃO
+                                                    </span>
                                                 </div>
 
-                                                <!-- Engrenagem perfeitamente posicionada no canto superior direito sem invadir o botão -->
-                                                <button type="button"
-                                                    @click.stop="abrirModalVinculoTec(proximoTopicoBlocoAtual, getNomeDisciplina(blocoAtual.disciplina_id))"
-                                                    class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-blue-600 border border-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-cyan-300 dark:border-slate-700/60 dark:hover:border-cyan-500/40 flex items-center justify-center transition-all cursor-pointer shadow-xs flex-shrink-0"
-                                                    title="Alterar Vínculo TEC / Gerenciar Caderno">
-                                                    <i class="fa-solid fa-gear text-xs"></i>
-                                                </button>
+                                                <!-- Botão Selecionar Tópico da Matéria + Engrenagem TEC -->
+                                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                                    <button v-if="topicosDaDisciplinaBlocoAtual.length > 1"
+                                                        type="button"
+                                                        @click.stop="seletorTopicoCicloAberto = !seletorTopicoCicloAberto"
+                                                        class="px-2.5 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-blue-600 border border-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 dark:text-slate-300 dark:hover:text-cyan-300 dark:border-slate-700/60 dark:hover:border-cyan-500/40 flex items-center gap-1.5 text-[11px] font-bold transition-all cursor-pointer shadow-xs"
+                                                        title="Selecionar outro tópico desta matéria para estudar agora">
+                                                        <i class="fa-solid fa-list-ul text-[10px]"></i>
+                                                        <span class="hidden sm:inline">Selecionar Tópico</span>
+                                                        <i class="fa-solid text-[9px]" :class="seletorTopicoCicloAberto ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                                    </button>
+                                                    <button type="button"
+                                                        @click.stop="abrirModalVinculoTec(proximoTopicoBlocoAtual, getNomeDisciplina(blocoAtual.disciplina_id))"
+                                                        class="w-7 h-7 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-blue-600 border border-slate-200 dark:bg-slate-800/80 dark:hover:bg-slate-700 dark:text-slate-400 dark:hover:text-cyan-300 dark:border-slate-700/60 dark:hover:border-cyan-500/40 flex items-center justify-center transition-all cursor-pointer shadow-xs flex-shrink-0"
+                                                        title="Alterar Vínculo TEC / Gerenciar Caderno">
+                                                        <i class="fa-solid fa-gear text-xs"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- SELETOR RÁPIDO DE TÓPICO NO CARD DO CICLO -->
+                                            <div v-if="seletorTopicoCicloAberto && topicosDaDisciplinaBlocoAtual.length > 0"
+                                                class="mb-3 p-2.5 rounded-xl bg-white dark:bg-[#0E1622] border border-slate-200 dark:border-[#3D5A82] shadow-md space-y-2">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <span class="text-[10.5px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                                        <i class="fa-solid fa-crosshairs text-blue-500 mr-1"></i>Escolher Tópico para Estudar Agora
+                                                    </span>
+                                                    <button v-if="topicoSelecionadoManualPorDisciplina[blocoAtual.disciplina_id]"
+                                                        type="button"
+                                                        @click.stop="selecionarTopicoNoCiclo(blocoAtual.disciplina_id, null)"
+                                                        class="text-[10.5px] font-bold text-blue-600 dark:text-[#22D3EE] hover:underline cursor-pointer">
+                                                        Voltar ao automático da Trilha
+                                                    </button>
+                                                </div>
+                                                <select
+                                                    :value="proximoTopicoBlocoAtual.id"
+                                                    @change="selecionarTopicoNoCiclo(blocoAtual.disciplina_id, $event.target.value)"
+                                                    class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3 py-2 bg-slate-50 dark:bg-[#162234] outline-none text-xs font-bold text-slate-800 dark:text-[#F8FAFC] focus:ring-2 focus:ring-blue-500 dark:focus:ring-[#22D3EE] cursor-pointer">
+                                                    <option v-for="tOp in topicosDaDisciplinaBlocoAtual" :key="'ciclo-sel-' + tOp.id" :value="tOp.id">
+                                                        {{ formatarTituloTopico(tOp) }}
+                                                    </option>
+                                                </select>
                                             </div>
 
                                             <!-- CORPO DO TÓPICO: ÍCONE + TÍTULO À ESQUERDA + BOTÃO ESTUDAR À DIREITA -->
@@ -780,6 +820,60 @@
                                                         <i class="fa-solid fa-play text-[10px]"></i>
                                                         <span>Questões</span>
                                                     </a>
+                                                </div>
+                                            </div>
+
+                                            <!-- CARD VISUAL DE ORIENTAÇÃO DA OBSERVAÇÃO (ONDE PAROU / DIFICULDADES / DICAS) -->
+                                            <div v-if="observacaoBlocoAtualCiclo"
+                                                class="mt-3 pt-3 border-t border-slate-200/70 dark:border-slate-700/50">
+                                                <div class="rounded-2xl border border-amber-300/90 dark:border-amber-400/45 bg-gradient-to-br from-amber-50/95 via-orange-50/60 to-amber-50/90 dark:from-[#1b283d] dark:via-[#202f47] dark:to-[#182336] p-3 sm:p-3.5 shadow-sm">
+                                                    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+                                                        <div class="flex items-center gap-2 min-w-0">
+                                                            <div class="w-7 h-7 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center flex-shrink-0 shadow-xs">
+                                                                <i class="fa-solid fa-compass text-xs"></i>
+                                                            </div>
+                                                            <div class="min-w-0">
+                                                                <div class="flex items-center gap-1.5 flex-wrap">
+                                                                    <span class="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300">
+                                                                        {{ observacaoBlocoAtualCiclo.eh_do_topico_atual ? 'Orientação do Tópico • Onde Você Parou & Dificuldades' : 'Última Observação nesta Matéria' }}
+                                                                    </span>
+                                                                    <span v-if="observacaoBlocoAtualCiclo.ultima_observacao_data"
+                                                                        class="px-2 py-0.2 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-400/30">
+                                                                        <i class="fa-regular fa-clock mr-1"></i>{{ formatarData(observacaoBlocoAtualCiclo.ultima_observacao_data) }}
+                                                                    </span>
+                                                                    <span v-if="observacaoBlocoAtualCiclo.qtd_questoes_total > 0"
+                                                                        class="px-2 py-0.2 rounded-full text-[10px] font-extrabold bg-white/80 dark:bg-[#0E1622] text-slate-700 dark:text-slate-200 border border-amber-300/60 dark:border-amber-500/30">
+                                                                        {{ observacaoBlocoAtualCiclo.percentual_acerto }}% ({{ observacaoBlocoAtualCiclo.qtd_questoes_total }}q)
+                                                                    </span>
+                                                                </div>
+                                                                <div v-if="!observacaoBlocoAtualCiclo.eh_do_topico_atual && observacaoBlocoAtualCiclo.topico_titulo"
+                                                                    class="text-[11px] font-bold text-amber-700 dark:text-amber-200 truncate mt-0.5">
+                                                                    Tópico anotado: {{ observacaoBlocoAtualCiclo.topico_titulo }}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                        <div class="flex flex-wrap items-center gap-1.5">
+                                                            <button v-if="!observacaoBlocoAtualCiclo.eh_do_topico_atual && observacaoBlocoAtualCiclo.topico_id"
+                                                                type="button"
+                                                                @click.stop="selecionarTopicoNoCiclo(blocoAtual.disciplina_id, observacaoBlocoAtualCiclo.topico_id)"
+                                                                class="px-2.5 py-1 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-[11px] transition-all flex items-center gap-1 cursor-pointer shadow-2xs"
+                                                                title="Retomar estudo exatamente neste tópico com anotação">
+                                                                <i class="fa-solid fa-rotate-left text-[10px]"></i>
+                                                                <span>Retomar este Tópico</span>
+                                                            </button>
+                                                            <button v-if="proximoTopicoBlocoAtual.em_andamento_retomada"
+                                                                type="button"
+                                                                @click.stop="concluirPendenciaTopicoNoCiclo(blocoAtual.disciplina_id)"
+                                                                class="px-2.5 py-1 rounded-xl bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-800 dark:text-emerald-300 border border-emerald-500/40 font-extrabold text-[10.5px] transition-all flex items-center gap-1 cursor-pointer"
+                                                                title="Finalizar retomada deste tópico e avançar para o próximo tópico inédito da trilha">
+                                                                <i class="fa-solid fa-check text-[10px]"></i>
+                                                                <span>Avançar p/ Próximo Tópico</span>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-xs sm:text-[13px] font-semibold text-slate-800 dark:text-[#F8FAFC] whitespace-pre-line leading-relaxed bg-white/80 dark:bg-[#0E1622]/85 rounded-xl p-2.5 sm:p-3 border border-amber-200/70 dark:border-amber-500/25">
+                                                        {{ observacaoBlocoAtualCiclo.ultima_observacao }}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -936,19 +1030,27 @@
                                             {{ b.disciplina.nome }}
                                         </h4>
                                         <!-- Tópico apontado na trilha para este bloco do ciclo (ou Disciplina + Tópico da Revisão Anki) -->
-                                        <div v-if="b.disciplina.categoria !== 'REVISAO_ANKI' && (b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))"
+                                        <div v-if="b.disciplina.categoria !== 'REVISAO_ANKI' && (getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)"
                                             class="mt-1.5 p-1.5 sm:p-2 rounded-lg bg-slate-100/90 dark:bg-[#0F1826]/90 border border-slate-200/80 dark:border-[#2A3F5F] text-[10.5px]"
-                                            :title="(b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.titulo">
+                                            :title="(getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)?.titulo">
                                             <div class="flex items-center gap-1 font-extrabold mb-0.5"
                                                 :class="(b.concluido && idx !== cicloAtivo.bloco_atual_index) ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-cyan-300'">
                                                 <i class="fa-solid text-[9px]" :class="(b.concluido && idx !== cicloAtivo.bloco_atual_index) ? 'fa-forward' : 'fa-crosshairs'"></i>
                                                 <span>{{ (b.concluido && idx !== cicloAtivo.bloco_atual_index) ? 'Próximo tópico:' : 'Estudar:' }}</span>
-                                                <span v-if="(b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.prioridade === 1" class="text-rose-500 dark:text-rose-400">⚡P1</span>
-                                                <span v-if="(b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.mais_cobrado" class="text-amber-500">🔥</span>
+                                                <span v-if="(getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)?.prioridade === 1" class="text-rose-500 dark:text-rose-400">⚡P1</span>
+                                                <span v-if="(getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)?.mais_cobrado" class="text-amber-500">🔥</span>
                                             </div>
                                             <p class="text-slate-700 dark:text-slate-300 font-medium line-clamp-2 leading-tight">
-                                                {{ (b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.titulo }}
+                                                {{ (getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)?.titulo }}
                                             </p>
+                                            <div v-if="getObservacaoTopico(getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)"
+                                                class="mt-1.5 pt-1 border-t border-amber-300/50 dark:border-amber-400/30 flex items-start gap-1 text-[10px] text-amber-700 dark:text-amber-300"
+                                                :title="getObservacaoTopico(getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)?.ultima_observacao">
+                                                <i class="fa-solid fa-compass text-[9px] mt-0.5 shrink-0"></i>
+                                                <span class="font-bold line-clamp-2 leading-tight">
+                                                    {{ getObservacaoTopico(getProximoTopicoTrilha(b.disciplina_id) || b.proximo_topico)?.ultima_observacao }}
+                                                </span>
+                                            </div>
                                         </div>
                                         <!-- Indicação inteligente quando o bloco da esteira é REVISÃO ANKI -->
                                         <div v-else-if="b.disciplina.categoria === 'REVISAO_ANKI' && b.proximo_topico"
@@ -963,6 +1065,14 @@
                                             </p>
                                             <div class="text-[9px] text-purple-600 dark:text-purple-300 font-bold mt-0.5 truncate">
                                                 Retenção: {{ b.proximo_topico.retencao_estimada_perc }}% &bull; {{ b.proximo_topico.tecnica_recomendada }}
+                                            </div>
+                                            <div v-if="getObservacaoTopico(b.proximo_topico)"
+                                                class="mt-1 pt-1 border-t border-amber-300/50 dark:border-amber-400/30 flex items-start gap-1 text-[10px] text-amber-700 dark:text-amber-300"
+                                                :title="getObservacaoTopico(b.proximo_topico)?.ultima_observacao">
+                                                <i class="fa-solid fa-compass text-[9px] mt-0.5 shrink-0"></i>
+                                                <span class="font-bold line-clamp-2 leading-tight">
+                                                    {{ getObservacaoTopico(b.proximo_topico)?.ultima_observacao }}
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -1264,6 +1374,19 @@
                                         </div>
                                         <div class="text-sm sm:text-base font-black text-slate-900 dark:text-white mt-0.5 leading-snug">
                                             {{ missao.topico_titulo }}
+                                        </div>
+                                        <div v-if="missao.ultima_observacao || getObservacaoTopico(missao.topico_id)"
+                                            class="mt-2 p-2.5 rounded-xl bg-amber-50/90 dark:bg-[#162335] border border-amber-300/80 dark:border-amber-400/40 text-xs">
+                                            <div class="flex items-center gap-1.5 text-[10.5px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-0.5">
+                                                <i class="fa-solid fa-compass"></i>
+                                                <span>Orientação / Onde Você Parou</span>
+                                                <span v-if="(missao.ultima_observacao_data || getObservacaoTopico(missao.topico_id)?.ultima_observacao_data)" class="font-semibold opacity-80">
+                                                    &bull; {{ formatarData(missao.ultima_observacao_data || getObservacaoTopico(missao.topico_id)?.ultima_observacao_data) }}
+                                                </span>
+                                            </div>
+                                            <p class="text-slate-700 dark:text-slate-200 font-semibold whitespace-pre-line leading-snug">
+                                                {{ missao.ultima_observacao || getObservacaoTopico(missao.topico_id)?.ultima_observacao }}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -2437,6 +2560,28 @@
                                                                 class="text-[11px] text-slate-500 dark:text-[#94A3B8] font-medium mt-1 block">
                                                                 {{ topico.motivo_ia }}
                                                             </span>
+                                                            <!-- Orientação Salva (Onde Parou / Dificuldades) no Edital Verticalizado -->
+                                                            <div v-if="getObservacaoTopico(topico)"
+                                                                class="mt-2 p-2.5 rounded-xl bg-gradient-to-r from-amber-50/95 to-orange-50/75 dark:from-[#1b283d] dark:to-[#182336] border border-amber-300/80 dark:border-amber-400/40 shadow-2xs">
+                                                                <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+                                                                    <span class="text-[10.5px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                                                                        <i class="fa-solid fa-compass"></i>
+                                                                        <span>Onde Você Parou / Observação</span>
+                                                                        <span v-if="getObservacaoTopico(topico).ultima_observacao_data" class="font-semibold opacity-80">
+                                                                            &bull; {{ formatarData(getObservacaoTopico(topico).ultima_observacao_data) }}
+                                                                        </span>
+                                                                    </span>
+                                                                    <button type="button"
+                                                                        @click.stop="iniciarEstudoDoTopico(disc, topico)"
+                                                                        class="text-[10.5px] font-extrabold text-amber-800 dark:text-amber-200 hover:underline flex items-center gap-1 cursor-pointer">
+                                                                        <i class="fa-solid fa-pen-to-square text-[9px]"></i>
+                                                                        <span>Continuar deste ponto</span>
+                                                                    </button>
+                                                                </div>
+                                                                <p class="text-xs font-semibold text-slate-800 dark:text-[#F8FAFC] whitespace-pre-line leading-relaxed">
+                                                                    {{ getObservacaoTopico(topico).ultima_observacao }}
+                                                                </p>
+                                                            </div>
                                                             <!-- Badge Vínculo TEC Concursos -->
                                                             <div class="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                                                                 <a v-if="topico.tec_vinculo && topico.tec_vinculo.vinculado"
@@ -2581,11 +2726,27 @@
                                     <td class="py-3 px-4 font-semibold text-slate-500 dark:text-[#94A3B8]">{{ formatarData(s.data) }}</td>
                                     <td class="py-3 px-4 font-bold text-slate-800 dark:text-[#F1F5F9]">{{ getNomeDisciplina(s.disciplina_id)
                                         }}</td>
-                                    <td class="py-3 px-4 text-slate-600 dark:text-[#CBD5E1] max-w-[260px]">
+                                    <td class="py-3 px-4 text-slate-600 dark:text-[#CBD5E1]"
+                                        :class="obsDiarioExpandida[s.id] ? 'max-w-[420px]' : 'max-w-[300px]'">
                                         <span v-if="getNomeTopico(s.topico_id)" class="font-medium leading-snug block truncate" :title="getNomeTopico(s.topico_id)">
                                             {{ getNomeTopico(s.topico_id) }}
                                         </span>
                                         <span v-else class="text-slate-400 dark:text-slate-500">-</span>
+                                        <div v-if="s.observacoes && s.observacoes.trim()"
+                                            @click="toggleObsDiario(s.id)"
+                                            class="group mt-1.5 p-2 rounded-xl bg-amber-50/90 hover:bg-amber-50 dark:bg-[#1B2638] dark:hover:bg-[#223047] border border-amber-200/80 hover:border-amber-400/80 dark:border-amber-500/30 dark:hover:border-amber-400/60 text-[11px] text-amber-900 dark:text-amber-200 cursor-pointer transition-all shadow-2xs hover:shadow-sm"
+                                            :class="obsDiarioExpandida[s.id] ? 'ring-1 ring-amber-400/50 bg-amber-50 dark:bg-[#223047]' : ''"
+                                            :title="obsDiarioExpandida[s.id] ? 'Clique para recolher observação' : 'Passe o mouse ou clique para expandir a observação completa'">
+                                            <div class="flex items-start gap-1.5">
+                                                <i class="fa-solid fa-compass text-[10px] text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"></i>
+                                                <span class="font-semibold whitespace-pre-line leading-relaxed flex-1 break-words"
+                                                    :class="obsDiarioExpandida[s.id] ? 'line-clamp-none' : 'line-clamp-2 group-hover:line-clamp-none'">
+                                                    {{ s.observacoes.trim() }}
+                                                </span>
+                                                <i class="fa-solid text-[9px] text-amber-600/80 dark:text-amber-300/80 mt-0.5 shrink-0 transition-transform"
+                                                    :class="obsDiarioExpandida[s.id] ? 'fa-chevron-up' : 'fa-chevron-down group-hover:rotate-180'"></i>
+                                            </div>
+                                        </div>
                                     </td>
                                     <td class="py-3 px-4 text-center font-semibold text-slate-800 dark:text-[#F1F5F9]">{{ s.tempo_estudado_minutos }} min
                                     </td>
@@ -2911,6 +3072,17 @@
                                         <i class="fa-solid fa-wand-magic-sparkles text-blue-500 mr-1.5"></i>Técnica de Memorização Indicada ({{ revisoesData.destaque_pior_rendimento.tecnica_recomendada.nome }}):
                                     </strong>
                                     {{ revisoesData.destaque_pior_rendimento.tecnica_recomendada.orientacao_curta }}
+                                </div>
+
+                                <div v-if="revisoesData.destaque_pior_rendimento.ultima_observacao || getObservacaoTopico(revisoesData.destaque_pior_rendimento.topico_id)"
+                                    class="w-full p-3.5 rounded-2xl bg-amber-50/90 dark:bg-[#182336] border border-amber-300/80 dark:border-amber-400/40 text-xs sm:text-sm">
+                                    <div class="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-1 flex items-center gap-1.5">
+                                        <i class="fa-solid fa-compass"></i>
+                                        <span>Sua Observação / Dificuldade Registrada neste Tópico</span>
+                                    </div>
+                                    <p class="font-semibold text-slate-800 dark:text-[#F8FAFC] whitespace-pre-line leading-relaxed">
+                                        {{ revisoesData.destaque_pior_rendimento.ultima_observacao || getObservacaoTopico(revisoesData.destaque_pior_rendimento.topico_id)?.ultima_observacao }}
+                                    </p>
                                 </div>
                             </div>
 
@@ -5268,6 +5440,1489 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- ======================================================================= -->
+                            <!-- SEÇÃO: INTELIGÊNCIA DE PRIORIDADES & ROI DE ESTUDO                      -->
+                            <!-- ======================================================================= -->
+                            <div v-if="mapaAprovacaoData.inteligencia_prioridades"
+                                class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-7 shadow-xs space-y-6">
+
+                                <!-- Cabeçalho da Seção -->
+                                <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4 pb-5 border-b border-slate-200 dark:border-[#24324A]">
+                                    <div>
+                                        <span class="text-[11px] font-black uppercase tracking-widest text-amber-600 dark:text-[#FBBF24] flex items-center gap-1.5">
+                                            <i class="fa-solid fa-compass-drafting"></i>
+                                            MOTOR DE DECISÃO ESTRATÉGICA &amp; ALOCAÇÃO DE ESFORÇO
+                                        </span>
+                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5">
+                                            INTELIGÊNCIA DE PRIORIDADES
+                                        </h3>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                            Priorização automática (0 a 100), Retorno sobre o Tempo de Estudo (ROI), diagnóstico de assuntos críticos e distribuição semanal inteligente
+                                        </p>
+                                    </div>
+
+                                    <!-- Filtro Rápido por Classificação -->
+                                    <div class="flex flex-wrap items-center gap-1.5">
+                                        <button v-for="fOpt in ['TODAS', 'CRÍTICA', 'ALTA', 'MODERADA', 'BAIXA', 'MANUTENÇÃO']" :key="fOpt"
+                                            type="button"
+                                            @click="filtroClassificacaoPrioridade = fOpt"
+                                            class="px-3 py-1.5 rounded-xl text-[11px] font-extrabold transition-all cursor-pointer border"
+                                            :class="filtroClassificacaoPrioridade === fOpt
+                                                ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                                                : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A] hover:text-slate-900 dark:hover:text-white'">
+                                            {{ fOpt }}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- 1. Indicadores Consolidados -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4">
+                                    <!-- Maior Prioridade -->
+                                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] block">
+                                            Disciplina #1 em Prioridade
+                                        </span>
+                                        <div v-if="mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.disciplina_maior_prioridade" class="mt-1">
+                                            <div class="text-sm font-black text-slate-900 dark:text-white truncate"
+                                                :title="mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.disciplina_maior_prioridade.nome">
+                                                {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.disciplina_maior_prioridade.nome }}
+                                            </div>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-rose-500/15 text-rose-600 dark:text-[#F87171] border border-rose-500/30">
+                                                    {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.disciplina_maior_prioridade.classificacao }}
+                                                </span>
+                                                <span class="text-xs font-extrabold text-slate-600 dark:text-[#CBD5E1] font-mono-timer">
+                                                    Índice {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.disciplina_maior_prioridade.indice_prioridade }}/100
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div v-else class="text-xs text-slate-400 mt-1">Sem disciplinas</div>
+                                    </div>
+
+                                    <!-- Quantidade Críticas -->
+                                    <div class="p-4 rounded-2xl bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/80 dark:border-rose-500/30">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-rose-600 dark:text-rose-300 block">
+                                            Disciplinas Críticas
+                                        </span>
+                                        <div class="flex items-baseline gap-2 mt-1">
+                                            <span class="text-2xl font-black text-rose-600 dark:text-[#F87171] font-mono-timer">
+                                                {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.qtd_disciplinas_criticas }}
+                                            </span>
+                                            <span class="text-[11px] font-semibold text-slate-500 dark:text-[#94A3B8]">
+                                                intervenção imediata
+                                            </span>
+                                        </div>
+                                        <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                            Alta prioridade: <strong class="text-amber-600 dark:text-[#FBBF24]">{{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.qtd_disciplinas_alta }}</strong>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quantidade Prioridade Alta & Moderada -->
+                                    <div class="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-500/30">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 block">
+                                            Prioridade Alta / Moderada
+                                        </span>
+                                        <div class="flex items-baseline gap-2 mt-1">
+                                            <span class="text-2xl font-black text-amber-600 dark:text-[#FBBF24] font-mono-timer">
+                                                {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.qtd_disciplinas_alta }}
+                                            </span>
+                                            <span class="text-xs font-bold text-slate-400">/</span>
+                                            <span class="text-lg font-extrabold text-blue-600 dark:text-[#60A5FA] font-mono-timer">
+                                                {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.qtd_disciplinas_moderada }} mod.
+                                            </span>
+                                        </div>
+                                        <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                            Em manutenção: <strong class="text-emerald-600 dark:text-[#34D399]">{{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.qtd_disciplinas_manutencao }}</strong>
+                                        </div>
+                                    </div>
+
+                                    <!-- Horas Recomendadas na Semana -->
+                                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] block">
+                                            Horas Recomendadas / Sem
+                                        </span>
+                                        <div v-if="mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.disponibilidade_semanal_cadastrada" class="mt-1">
+                                            <span class="text-2xl font-black text-blue-600 dark:text-[#60A5FA] font-mono-timer">
+                                                {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.horas_recomendadas_semana }}h
+                                            </span>
+                                            <span class="text-[11px] font-bold text-slate-400 dark:text-[#94A3B8]">
+                                                / {{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.carga_semanal_disponivel }}h disp.
+                                            </span>
+                                            <span class="block text-[10.5px] text-slate-500 dark:text-[#94A3B8] mt-0.5">
+                                                100% dentro do seu limite semanal
+                                            </span>
+                                        </div>
+                                        <div v-else class="mt-1">
+                                            <span class="text-xs font-extrabold text-amber-600 dark:text-[#FBBF24] block">
+                                                Modo Proporcional (%)
+                                            </span>
+                                            <button type="button" @click="MudarSubAbaMapa('configuracao')"
+                                                class="text-[11px] font-bold text-blue-600 dark:text-[#22D3EE] hover:underline mt-0.5">
+                                                Informar disponibilidade semanal &rarr;
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Potencial de Ganho Estimado na Nota Final -->
+                                    <div class="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/80 dark:border-emerald-500/30">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 block">
+                                            Potencial de Ganho na Nota
+                                        </span>
+                                        <div class="flex items-baseline gap-1.5 mt-1">
+                                            <span class="text-2xl font-black text-emerald-600 dark:text-[#34D399] font-mono-timer">
+                                                +{{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.potencial_ganho_nota_final_pts }} pts
+                                            </span>
+                                            <span class="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 font-mono-timer">
+                                                (+{{ mapaAprovacaoData.inteligencia_prioridades.indicadores_consolidados.potencial_ganho_nota_final_pp }} p.p.)
+                                            </span>
+                                        </div>
+                                        <div class="text-[10px] text-slate-500 dark:text-[#94A3B8] mt-1 leading-tight">
+                                            Retorno potencial na prova (não representa garantia)
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Alertas de Desperdício de Tempo de Estudo (se detectados) -->
+                                <div v-if="mapaAprovacaoData.inteligencia_prioridades.alertas_desperdicio_tempo && mapaAprovacaoData.inteligencia_prioridades.alertas_desperdicio_tempo.length > 0"
+                                    class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                                    <div class="text-xs font-black uppercase tracking-wider text-amber-700 dark:text-amber-300 flex items-center gap-2">
+                                        <i class="fa-solid fa-hourglass-half"></i>
+                                        Onde Você Está Desperdiçando Tempo de Estudo (Alerta de Eficiência)
+                                    </div>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div v-for="(alerta, aIdx) in mapaAprovacaoData.inteligencia_prioridades.alertas_desperdicio_tempo" :key="aIdx"
+                                            class="text-xs text-slate-700 dark:text-[#E2E8F0] bg-white/80 dark:bg-[#141D2E]/90 p-3 rounded-xl border border-amber-500/25">
+                                            {{ alerta.diagnostico }}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Grid Principal: Ranking Estratégico (7 cols) + Painel de Detalhamento (5 cols) -->
+                                <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+                                    <!-- Coluna Esquerda (7 cols): Ranking Estratégico + Distribuição Semanal -->
+                                    <div class="xl:col-span-7 space-y-6">
+                                        <div class="space-y-3">
+                                            <div class="flex items-center justify-between">
+                                                <h4 class="text-sm font-black uppercase tracking-wider text-slate-800 dark:text-[#F1F5F9]">
+                                                    Ranking Estratégico de Prioridades &amp; ROI de Estudo
+                                                </h4>
+                                                <span class="text-[11px] font-semibold text-slate-400 dark:text-[#94A3B8]">
+                                                    Clique em uma disciplina para ver o diagnóstico detalhado e assuntos críticos
+                                                </span>
+                                            </div>
+
+                                            <div class="space-y-3">
+                                                <div v-for="item in rankingPrioridadesFiltrado" :key="item.disciplina_id"
+                                                    @click="selecionarDisciplinaPrioridade(item.disciplina_id)"
+                                                    class="p-4 rounded-2xl border transition-all cursor-pointer"
+                                                    :class="disciplinaPrioridadeSelecionada && disciplinaPrioridadeSelecionada.disciplina_id === item.disciplina_id
+                                                        ? 'bg-blue-50/70 dark:bg-[#1E2D45] border-blue-500 dark:border-blue-400 shadow-sm'
+                                                        : 'bg-slate-50/70 dark:bg-[#1B2638]/70 border-slate-200/80 dark:border-[#24324A] hover:border-blue-400/50'">
+
+                                                    <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                                        <div class="flex items-center gap-2 flex-wrap">
+                                                            <span class="w-6 h-6 rounded-lg bg-slate-900 dark:bg-[#0B1220] text-white font-black text-xs flex items-center justify-center font-mono-timer">
+                                                                #{{ item.posicao_ranking }}
+                                                            </span>
+                                                            <span class="font-extrabold text-sm text-slate-900 dark:text-[#F1F5F9]">
+                                                                {{ item.nome }}
+                                                            </span>
+                                                            <!-- Badge de Classificação -->
+                                                            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase border"
+                                                                :class="item.cor_prioridade === 'rose' ? 'bg-rose-500/15 text-rose-600 dark:text-[#F87171] border-rose-500/30'
+                                                                    : (item.cor_prioridade === 'amber' ? 'bg-amber-500/15 text-amber-600 dark:text-[#FBBF24] border-amber-500/30'
+                                                                    : (item.cor_prioridade === 'blue' ? 'bg-blue-500/15 text-blue-600 dark:text-[#60A5FA] border-blue-500/30'
+                                                                    : (item.cor_prioridade === 'cyan' ? 'bg-cyan-500/15 text-cyan-600 dark:text-[#22D3EE] border-cyan-500/30'
+                                                                    : 'bg-emerald-500/15 text-emerald-600 dark:text-[#34D399] border-emerald-500/30')))">
+                                                                {{ item.classificacao }}
+                                                            </span>
+                                                            <!-- Badge de Confiabilidade Estatística -->
+                                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold border"
+                                                                :title="item.confiabilidade.motivo"
+                                                                :class="item.confiabilidade.nivel === 'Alta' ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/25'
+                                                                    : (item.confiabilidade.nivel === 'Média' ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/25'
+                                                                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/25')">
+                                                                Confiança: {{ item.confiabilidade.nivel }}
+                                                            </span>
+                                                        </div>
+
+                                                        <!-- Índice Numérico de Prioridade -->
+                                                        <div class="text-right">
+                                                            <span class="text-[10px] font-bold uppercase text-slate-400 dark:text-[#94A3B8] mr-1">Prioridade:</span>
+                                                            <span class="text-base font-black font-mono-timer text-slate-900 dark:text-white">
+                                                                {{ item.indice_prioridade }}<span class="text-xs text-slate-400">/100</span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Linha de Indicadores: Desempenho, Meta, Peso, ROI e Horas Recomendadas -->
+                                                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 py-2 px-3 rounded-xl bg-white/80 dark:bg-[#141D2E]/80 border border-slate-200/60 dark:border-[#24324A] text-xs mb-2">
+                                                        <div>
+                                                            <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] block">Desempenho vs Meta</span>
+                                                            <strong class="font-mono-timer text-slate-800 dark:text-white">
+                                                                {{ item.tem_questoes ? item.desempenho_atual_perc + '%' : 'Sem dados' }}
+                                                            </strong>
+                                                            <span class="text-[11px] text-slate-400"> / {{ item.meta_perc }}%</span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] block">Peso na Prova</span>
+                                                            <strong class="font-mono-timer text-cyan-700 dark:text-[#22D3EE]">
+                                                                {{ item.representatividade_perc }}%
+                                                            </strong>
+                                                            <span class="text-[10.5px] text-slate-400"> ({{ item.pontos_maximos }} pts)</span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] block">ROI de Estudo</span>
+                                                            <strong class="font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                                                +{{ item.roi_estudo.potencial_evolucao_disciplina_pp }} p.p.
+                                                            </strong>
+                                                            <span class="text-[10.5px] text-slate-400"> (+{{ item.roi_estudo.potencial_ganho_nota_final_pts }} pts)</span>
+                                                        </div>
+                                                        <div>
+                                                            <span class="text-[10px] text-slate-400 dark:text-[#94A3B8] block">Tempo Recomendado</span>
+                                                            <strong v-if="item.horas_recomendadas_semana !== null" class="font-mono-timer text-blue-600 dark:text-[#60A5FA]">
+                                                                {{ item.horas_recomendadas_semana }}h / sem
+                                                            </strong>
+                                                            <strong v-else class="font-mono-timer text-blue-600 dark:text-[#60A5FA]">
+                                                                {{ item.percentual_tempo_semana }}% sem.
+                                                            </strong>
+                                                        </div>
+                                                    </div>
+
+                                                    <!-- Justificativa Resumida -->
+                                                    <p class="text-xs text-slate-600 dark:text-[#CBD5E1] leading-relaxed">
+                                                        {{ item.justificativa_resumida }}
+                                                    </p>
+                                                    <div class="mt-1.5 text-[11px] font-semibold text-emerald-700 dark:text-[#6EE7B7]">
+                                                        <i class="fa-solid fa-chart-line mr-1"></i>
+                                                        ROI: {{ item.roi_estudo.resumo_roi }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Subbloco: Distribuição Inteligente do Tempo Semanal -->
+                                        <div v-if="mapaAprovacaoData.inteligencia_prioridades.distribuicao_semanal"
+                                            class="p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-3">
+                                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                                <div>
+                                                    <h4 class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                                        <i class="fa-solid fa-clock text-blue-500"></i>
+                                                        Distribuição Inteligente do Tempo na Semana
+                                                    </h4>
+                                                    <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                        {{ mapaAprovacaoData.inteligencia_prioridades.distribuicao_semanal.orientacao }}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                                <div v-for="aloc in mapaAprovacaoData.inteligencia_prioridades.distribuicao_semanal.itens" :key="aloc.disciplina_id"
+                                                    class="p-2.5 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/70 dark:border-[#24324A] flex items-center justify-between gap-2">
+                                                    <div class="min-w-0">
+                                                        <div class="text-xs font-extrabold text-slate-800 dark:text-[#F1F5F9] truncate">
+                                                            {{ aloc.nome }}
+                                                        </div>
+                                                        <div class="text-[10.5px] text-slate-400 dark:text-[#94A3B8]">
+                                                            {{ aloc.tipo_alocacao }} &bull; {{ aloc.classificacao }}
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-right shrink-0">
+                                                        <span v-if="aloc.horas_recomendadas_semana !== null"
+                                                            class="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-[#60A5FA] font-black text-xs font-mono-timer border border-blue-500/30">
+                                                            {{ aloc.horas_recomendadas_semana }}h/sem
+                                                        </span>
+                                                        <span v-else
+                                                            class="px-2.5 py-1 rounded-lg bg-blue-500/15 text-blue-700 dark:text-[#60A5FA] font-black text-xs font-mono-timer border border-blue-500/30">
+                                                            {{ aloc.percentual_tempo_semana }}%
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Coluna Direita (5 cols): Detalhamento da Disciplina Selecionada & Assuntos Críticos -->
+                                    <div class="xl:col-span-5">
+                                        <div v-if="disciplinaPrioridadeSelecionada"
+                                            class="p-5 sm:p-6 rounded-3xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-5 sticky top-4">
+
+                                            <!-- Cabeçalho do Detalhamento -->
+                                            <div class="border-b border-slate-200 dark:border-[#24324A] pb-3">
+                                                <div class="flex items-center justify-between gap-2">
+                                                    <span class="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-[#60A5FA]">
+                                                        DIAGNÓSTICO DETALHADO DA DISCIPLINA
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
+                                                        :class="disciplinaPrioridadeSelecionada.cor_prioridade === 'rose' ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300'
+                                                            : (disciplinaPrioridadeSelecionada.cor_prioridade === 'amber' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                                                            : 'bg-blue-500/20 text-blue-600 dark:text-blue-300')">
+                                                        Prioridade {{ disciplinaPrioridadeSelecionada.classificacao }} ({{ disciplinaPrioridadeSelecionada.indice_prioridade }}/100)
+                                                    </span>
+                                                </div>
+                                                <h4 class="text-lg font-black text-slate-900 dark:text-white mt-1">
+                                                    {{ disciplinaPrioridadeSelecionada.nome }}
+                                                </h4>
+                                                <p class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-0.5">
+                                                    Confiança estatística: <strong>{{ disciplinaPrioridadeSelecionada.confiabilidade.nivel }}</strong> — {{ disciplinaPrioridadeSelecionada.confiabilidade.motivo }}
+                                                </p>
+                                            </div>
+
+                                            <!-- Principal Problema Identificado & Estratégia -->
+                                            <div class="p-3.5 rounded-2xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] space-y-2">
+                                                <div class="text-xs font-black text-rose-600 dark:text-[#F87171]">
+                                                    <i class="fa-solid fa-crosshairs mr-1"></i>
+                                                    Principal Problema: {{ disciplinaPrioridadeSelecionada.principal_problema }}
+                                                </div>
+                                                <p class="text-xs text-slate-600 dark:text-[#CBD5E1] leading-relaxed">
+                                                    <strong>Estratégia Recomendada:</strong> {{ disciplinaPrioridadeSelecionada.estrategia_recuperacao }}
+                                                </p>
+                                                <div class="flex flex-wrap gap-2 pt-1 text-[11px]">
+                                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1B2638] text-slate-700 dark:text-[#CBD5E1] font-bold">
+                                                        Meta Alvo: {{ disciplinaPrioridadeSelecionada.desempenho_alvo_perc }}%
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1B2638] text-slate-700 dark:text-[#CBD5E1] font-bold">
+                                                        Evolução Histórica: {{ disciplinaPrioridadeSelecionada.evolucao_historica.tendencia_label }}
+                                                    </span>
+                                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-[#1B2638] text-slate-700 dark:text-[#CBD5E1] font-bold">
+                                                        Recuperação Est.: ~{{ disciplinaPrioridadeSelecionada.roi_estudo.tempo_estimado_recuperacao_horas }}h
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <!-- Indicadores que Influenciaram a Decisão -->
+                                            <div class="space-y-2">
+                                                <div class="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-[#CBD5E1]">
+                                                    Indicadores Responsáveis pela Priorização
+                                                </div>
+                                                <ul class="space-y-1.5 text-xs text-slate-600 dark:text-[#94A3B8]">
+                                                    <li v-for="(indTxt, iIdx) in disciplinaPrioridadeSelecionada.indicadores_influenciadores" :key="iIdx"
+                                                        class="flex items-start gap-2">
+                                                        <i class="fa-solid fa-check text-blue-500 mt-1 text-[10px]"></i>
+                                                        <span>{{ indTxt }}</span>
+                                                    </li>
+                                                </ul>
+                                            </div>
+
+                                            <!-- Priorização no Nível dos Assuntos (Tópicos da Disciplina) -->
+                                            <div class="space-y-2.5">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="text-xs font-extrabold uppercase tracking-wider text-slate-700 dark:text-[#CBD5E1]">
+                                                        Priorização por Assunto ({{ disciplinaPrioridadeSelecionada.assuntos_prioritarios.length }})
+                                                    </span>
+                                                    <span class="text-[10.5px] font-bold text-rose-500" v-if="disciplinaPrioridadeSelecionada.qtd_assuntos_criticos > 0">
+                                                        {{ disciplinaPrioridadeSelecionada.qtd_assuntos_criticos }} assunto(s) crítico(s)/alta
+                                                    </span>
+                                                </div>
+
+                                                <div class="max-h-80 overflow-y-auto space-y-2 pr-1">
+                                                    <div v-for="assunto in disciplinaPrioridadeSelecionada.assuntos_prioritarios" :key="assunto.id"
+                                                        class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] space-y-1">
+                                                        <div class="flex items-start justify-between gap-2">
+                                                            <span class="text-xs font-bold text-slate-800 dark:text-[#F1F5F9] leading-snug">
+                                                                {{ assunto.titulo }}
+                                                            </span>
+                                                            <span class="px-2 py-0.5 rounded text-[9.5px] font-black uppercase shrink-0"
+                                                                :class="assunto.classificacao === 'CRÍTICA' ? 'bg-rose-500/20 text-rose-600 dark:text-rose-300'
+                                                                    : (assunto.classificacao === 'ALTA' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300'
+                                                                    : (assunto.classificacao === 'MANUTENÇÃO' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300'
+                                                                    : 'bg-blue-500/15 text-blue-600 dark:text-blue-300'))">
+                                                                {{ assunto.classificacao }}
+                                                            </span>
+                                                        </div>
+                                                        <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                                            {{ assunto.motivo }}
+                                                            <span v-if="assunto.dias_desde_ultima_revisao !== null">
+                                                                &bull; Último estudo há {{ assunto.dias_desde_ultima_revisao }}d
+                                                            </span>
+                                                        </p>
+                                                        <div class="text-[11px] font-semibold text-blue-600 dark:text-[#60A5FA]">
+                                                            <i class="fa-solid fa-bolt mr-1"></i>{{ assunto.acao_recomendada }} ({{ assunto.horas_sugeridas }}h)
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ======================================================================= -->
+                            <!-- ETAPA 2: SIMULADOR PROBABILÍSTICO DE APROVAÇÃO (MONTE CARLO)            -->
+                            <!-- ======================================================================= -->
+                            <div v-if="simuladorAtivo"
+                                class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-7 shadow-xs space-y-6">
+
+                                <!-- Cabeçalho + Nível de Confiabilidade do Simulador -->
+                                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-5 border-b border-slate-200 dark:border-[#24324A]">
+                                    <div>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="text-[11px] font-black uppercase tracking-widest text-indigo-600 dark:text-[#818CF8] flex items-center gap-1.5">
+                                                <i class="fa-solid fa-dice-d20"></i>
+                                                MOTOR ESTATÍSTICO MONTE CARLO ({{ simuladorAtivo.metadados_simulacao.n_simulacoes }} SIMULAÇÕES &bull; {{ simuladorAtivo.metadados_simulacao.versao_modelo }})
+                                            </span>
+                                            <span v-if="simuladorAtivo.comparativo_cenario && simuladorAtivo.comparativo_cenario.cenario_customizado_ativo"
+                                                class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/20 text-amber-600 dark:text-amber-300 border border-amber-500/40">
+                                                Cenário Simulado Ativo ({{ simuladorAtivo.comparativo_cenario.qtd_disciplinas_alteradas }} disciplina(s) alterada(s))
+                                            </span>
+                                        </div>
+                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5">
+                                            SIMULADOR PROBABILÍSTICO DE APROVAÇÃO
+                                        </h3>
+                                        <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                            Distribuição Beta-Binomial ponderada por disciplina respeitando pesos, questões, penalidade da banca e critérios eliminatórios
+                                        </p>
+                                    </div>
+
+                                    <!-- Badge de Confiabilidade do Simulador + Botão Restaurar Dados Reais -->
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        <button v-if="simuladorAtivo.comparativo_cenario && simuladorAtivo.comparativo_cenario.cenario_customizado_ativo"
+                                            type="button"
+                                            @click="restaurarDadosReaisSimulador()"
+                                            class="px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-black text-xs shadow-sm transition-all cursor-pointer flex items-center gap-1.5">
+                                            <i class="fa-solid fa-rotate-left"></i>
+                                            Restaurar Dados Reais
+                                        </button>
+                                        <div class="px-4 py-2.5 rounded-2xl border text-right"
+                                            :class="simuladorAtivo.confiabilidade.classificacao === 'Alta confiabilidade'
+                                                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                                                : (simuladorAtivo.confiabilidade.classificacao === 'Média confiabilidade'
+                                                ? 'bg-blue-500/10 border-blue-500/30 text-blue-700 dark:text-blue-300'
+                                                : 'bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-300')">
+                                            <span class="text-[10px] font-bold uppercase block opacity-80">Confiabilidade do Simulador</span>
+                                            <span class="text-sm font-black">{{ simuladorAtivo.confiabilidade.classificacao }} ({{ simuladorAtivo.confiabilidade.score_confianca }}/100)</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Explicação da Confiabilidade -->
+                                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] flex flex-col md:flex-row md:items-center justify-between gap-2 text-xs text-slate-600 dark:text-[#CBD5E1]">
+                                    <div>
+                                        <i class="fa-solid fa-shield-check text-indigo-500 mr-1.5"></i>
+                                        <strong>Diagnóstico Amostral:</strong> {{ simuladorAtivo.confiabilidade.explicacao }}
+                                    </div>
+                                    <div class="text-[11px] font-mono-timer text-slate-500 dark:text-[#94A3B8] shrink-0">
+                                        {{ simuladorAtivo.confiabilidade.total_questoes_respondidas }}q totais &bull; {{ simuladorAtivo.confiabilidade.perc_disciplinas_com_amostra }}% matérias c/ amostra &bull; Estabilidade {{ simuladorAtivo.confiabilidade.estabilidade_desempenho_perc }}%
+                                    </div>
+                                </div>
+
+                                <!-- 1. Quatro Indicadores Principais de Probabilidade -->
+                                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                                    <!-- A. Probabilidade de Atingir a Nota Mínima Geral -->
+                                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] block">
+                                            A. Atingir Nota Mínima ({{ mapaAprovacaoData.parametros_prova.nota_minima_geral }}%)
+                                        </span>
+                                        <div class="flex items-baseline gap-2 mt-1">
+                                            <span class="text-2xl sm:text-3xl font-black font-mono-timer text-blue-600 dark:text-[#60A5FA]">
+                                                {{ simuladorAtivo.probabilidades.prob_atingir_nota_minima_perc }}%
+                                            </span>
+                                            <span class="text-[11px] text-slate-400">das simulações</span>
+                                        </div>
+                                        <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                            Habilitação no piso mínimo geral da prova
+                                        </div>
+                                    </div>
+
+                                    <!-- B. Probabilidade de Cumprir Todos os Critérios Eliminatórios -->
+                                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] block">
+                                            B. Cumprir Critérios Eliminatórios
+                                        </span>
+                                        <div class="flex items-baseline gap-2 mt-1">
+                                            <span class="text-2xl sm:text-3xl font-black font-mono-timer text-indigo-600 dark:text-[#818CF8]">
+                                                {{ simuladorAtivo.probabilidades.prob_cumprir_criterios_eliminatorios_perc }}%
+                                            </span>
+                                            <span v-if="simuladorAtivo.comparativo_cenario && simuladorAtivo.comparativo_cenario.cenario_customizado_ativo"
+                                                class="text-xs font-black font-mono-timer"
+                                                :class="simuladorAtivo.comparativo_cenario.diferenca_prob_minimos_pp >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                                                ({{ simuladorAtivo.comparativo_cenario.diferenca_prob_minimos_pp >= 0 ? '+' : '' }}{{ simuladorAtivo.comparativo_cenario.diferenca_prob_minimos_pp }} p.p.)
+                                            </span>
+                                        </div>
+                                        <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                            Geral + Básicos + Específicos + Não Zerar
+                                        </div>
+                                    </div>
+
+                                    <!-- C. Probabilidade de Superar a Nota de Corte -->
+                                    <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] block">
+                                            C. Superar Nota de Corte ({{ mapaAprovacaoData.parametros_prova.nota_corte }}%)
+                                        </span>
+                                        <div v-if="simuladorAtivo.probabilidades.tem_referencia_corte_confiavel" class="flex items-baseline gap-2 mt-1">
+                                            <span class="text-2xl sm:text-3xl font-black font-mono-timer text-amber-600 dark:text-[#FBBF24]">
+                                                {{ simuladorAtivo.probabilidades.prob_superar_nota_corte_perc }}%
+                                            </span>
+                                            <span class="text-[11px] text-slate-400">das simulações</span>
+                                        </div>
+                                        <div v-else class="text-xs font-bold text-amber-500 mt-2">
+                                            Corte competitivo não informado
+                                        </div>
+                                        <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                            Proporção de notas simuladas &ge; {{ mapaAprovacaoData.parametros_prova.nota_corte }}%
+                                        </div>
+                                    </div>
+
+                                    <!-- D. Probabilidade Conjunta (Corte + Todos os Eliminatórios) -->
+                                    <div class="p-4 rounded-2xl border"
+                                        :class="simuladorAtivo.probabilidades.apresentar_probabilidade_aprovacao
+                                            ? 'bg-emerald-50/60 dark:bg-emerald-950/25 border-emerald-300 dark:border-emerald-500/40'
+                                            : 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-300 dark:border-amber-500/30'">
+                                        <span class="text-[10px] font-black uppercase tracking-wider text-emerald-700 dark:text-emerald-300 block">
+                                            D. Probabilidade Conjunta (Meta + Pisos)
+                                        </span>
+                                        <div v-if="simuladorAtivo.probabilidades.apresentar_probabilidade_aprovacao" class="flex items-baseline gap-2 mt-1">
+                                            <span class="text-2xl sm:text-3xl font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                                {{ simuladorAtivo.probabilidades.prob_conjunta_aprovacao_perc }}%
+                                            </span>
+                                            <span v-if="simuladorAtivo.comparativo_cenario && simuladorAtivo.comparativo_cenario.cenario_customizado_ativo && simuladorAtivo.comparativo_cenario.diferenca_prob_corte_pp !== null"
+                                                class="text-xs font-black font-mono-timer"
+                                                :class="simuladorAtivo.comparativo_cenario.diferenca_prob_corte_pp >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                                                ({{ simuladorAtivo.comparativo_cenario.diferenca_prob_corte_pp >= 0 ? '+' : '' }}{{ simuladorAtivo.comparativo_cenario.diferenca_prob_corte_pp }} p.p.)
+                                            </span>
+                                        </div>
+                                        <div v-else class="text-xs font-bold text-amber-600 dark:text-amber-300 mt-1.5">
+                                            Exibindo apenas habilitação nos pisos ({{ simuladorAtivo.probabilidades.prob_cumprir_criterios_eliminatorios_perc }}%) — dados de corte/amostra insuficientes
+                                        </div>
+                                        <div class="text-[10.5px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                            Cumpre simultaneamente corte e pisos eliminatórios
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 2. Distribuição Probabilística das Notas Simulada + Cenários (P10, P25, Mediana, P90) -->
+                                <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+
+                                    <!-- Coluna Esquerda (7 cols): Histograma por Região + Quartis/Percentis -->
+                                    <div class="xl:col-span-7 p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-4">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                    Distribuição Probabilística das Notas Finais Simulada
+                                                </h4>
+                                                <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                                    Nota Média Simulada: <strong class="text-slate-900 dark:text-white">{{ simuladorAtivo.distribuicao_notas.nota_media_simulada_perc }}%</strong>
+                                                    ({{ simuladorAtivo.distribuicao_notas.nota_media_simulada_pontos }} / {{ simuladorAtivo.distribuicao_notas.total_pontos_prova }} pts)
+                                                    &bull; Desvio: &plusmn;{{ simuladorAtivo.distribuicao_notas.desvio_padrao_perc }} p.p.
+                                                    &bull; Intervalo: [{{ simuladorAtivo.distribuicao_notas.min_simulado_perc }}% a {{ simuladorAtivo.distribuicao_notas.max_simulado_perc }}%]
+                                                </p>
+                                            </div>
+                                            <div class="flex items-center gap-3 text-[10.5px] font-bold">
+                                                <span class="flex items-center gap-1 text-rose-500"><span class="w-2.5 h-2.5 rounded-xs bg-rose-500 inline-block"></span> Abaixo Mínimo ({{ simuladorAtivo.distribuicao_notas.probabilidade_faixas.abaixo_nota_minima_perc }}%)</span>
+                                                <span class="flex items-center gap-1 text-amber-500"><span class="w-2.5 h-2.5 rounded-xs bg-amber-500 inline-block"></span> Zona de Risco ({{ simuladorAtivo.distribuicao_notas.probabilidade_faixas.zona_risco_perc }}%)</span>
+                                                <span class="flex items-center gap-1 text-emerald-500"><span class="w-2.5 h-2.5 rounded-xs bg-emerald-500 inline-block"></span> Região Aprovação ({{ simuladorAtivo.distribuicao_notas.probabilidade_faixas.zona_aprovacao_perc }}%)</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Gráfico de Barras do Histograma de Monte Carlo -->
+                                        <div class="pt-3 pb-1 px-2 bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200/70 dark:border-[#24324A]">
+                                            <div class="flex items-end gap-1.5 h-36 w-full">
+                                                <div v-for="(bin, bIdx) in simuladorAtivo.distribuicao_notas.histograma" :key="bIdx"
+                                                    class="flex-1 flex flex-col items-center justify-end h-full group relative">
+                                                    <div class="w-full rounded-t-md transition-all duration-300"
+                                                        :class="bin.regiao === 'abaixo_minimo' ? 'bg-rose-500/75 hover:bg-rose-500'
+                                                            : (bin.regiao === 'zona_risco' ? 'bg-amber-500/75 hover:bg-amber-500'
+                                                            : 'bg-emerald-500/80 hover:bg-emerald-500')"
+                                                        :style="{ height: Math.max(4, Math.min(100, bin.frequencia_perc * 2.8)) + '%' }"
+                                                        :title="bin.faixa + ': ' + bin.frequencia_perc + '% das simulações'"></div>
+                                                    <span class="text-[9px] font-mono-timer text-slate-400 mt-1 truncate max-w-full">
+                                                        {{ Math.round(bin.centro_perc) }}%
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center justify-between text-[10.5px] font-bold text-slate-500 dark:text-[#94A3B8] border-t border-slate-100 dark:border-[#24324A] pt-2 mt-1">
+                                                <span>Piso Mínimo Geral: <strong class="text-rose-500">{{ simuladorAtivo.distribuicao_notas.nota_minima_marcador_perc }}%</strong></span>
+                                                <span>Mediana (P50): <strong class="text-blue-500">{{ simuladorAtivo.distribuicao_notas.mediana_perc }}%</strong> (P75: {{ simuladorAtivo.distribuicao_notas.percentil_75_perc }}%)</span>
+                                                <span v-if="simuladorAtivo.distribuicao_notas.nota_corte_marcador_perc">Nota de Corte: <strong class="text-emerald-500">{{ simuladorAtivo.distribuicao_notas.nota_corte_marcador_perc }}%</strong></span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Quatro Cenários Estatísticos (Pessimista P10, Conservador P25, Central P50, Otimista P90) -->
+                                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                            <div v-for="(cenObj, cenKey) in simuladorAtivo.distribuicao_notas.cenarios" :key="cenKey"
+                                                class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A]">
+                                                <span class="text-[10px] font-black uppercase text-slate-400 dark:text-[#94A3B8] block">
+                                                    {{ cenObj.nome }}
+                                                </span>
+                                                <span class="text-base font-black font-mono-timer text-slate-900 dark:text-white">
+                                                    {{ cenObj.nota_perc }}%
+                                                </span>
+                                                <span class="text-[10.5px] font-bold text-slate-400 ml-1">({{ cenObj.pontos }} pts)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Coluna Direita (5 cols): Critérios Eliminatórios Individuais + Cenários de Corte + Premissas -->
+                                    <div class="xl:col-span-5 p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-4">
+                                        <div>
+                                            <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                Probabilidade por Critério Eliminatório &amp; Faixas de Corte
+                                            </h4>
+                                            <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                                Verificação individual de cada requisito nas {{ simuladorAtivo.metadados_simulacao.n_simulacoes }} provas simuladas
+                                            </p>
+                                        </div>
+
+                                        <div class="space-y-2">
+                                            <div v-for="(cElim, ceIdx) in simuladorAtivo.probabilidades.criterios_eliminatorios_detalhe" :key="ceIdx"
+                                                class="p-2.5 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] flex items-center justify-between gap-2 text-xs">
+                                                <span class="font-bold text-slate-700 dark:text-[#E2E8F0]">{{ cElim.criterio }}</span>
+                                                <span class="font-black font-mono-timer"
+                                                    :class="cElim.probabilidade_cumprir_perc >= 85 ? 'text-emerald-600 dark:text-[#34D399]' : (cElim.probabilidade_cumprir_perc >= 55 ? 'text-amber-500' : 'text-rose-500')">
+                                                    {{ cElim.probabilidade_cumprir_perc }}%
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Sensibilidade a Diferentes Cenários de Nota de Corte -->
+                                        <div class="space-y-1.5 pt-1">
+                                            <span class="text-[10.5px] font-black uppercase tracking-wider text-slate-400 dark:text-[#94A3B8] block">
+                                                Sensibilidade a Cenários de Nota de Corte
+                                            </span>
+                                            <div class="grid grid-cols-3 gap-2">
+                                                <div v-for="(cCorte, ccIdx) in simuladorAtivo.probabilidades.cenarios_nota_corte" :key="ccIdx"
+                                                    class="p-2.5 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] text-center">
+                                                    <span class="text-[10px] font-bold text-slate-400 block">{{ cCorte.cenario }}</span>
+                                                    <span class="text-xs font-extrabold text-slate-700 dark:text-[#CBD5E1] block">Corte {{ cCorte.nota_corte_perc }}%</span>
+                                                    <span class="text-sm font-black font-mono-timer text-indigo-600 dark:text-[#818CF8]">
+                                                        {{ cCorte.probabilidade_perc !== null ? cCorte.probabilidade_perc + '%' : 'N/D' }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <!-- Premissas Estatísticas -->
+                                        <div class="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/25 text-[11px] text-slate-600 dark:text-[#CBD5E1] space-y-1">
+                                            <div class="font-black uppercase text-[10px] text-indigo-600 dark:text-indigo-300">
+                                                Premissas Metodológicas Utilizadas
+                                            </div>
+                                            <div v-for="(prem, pIdx) in simuladorAtivo.probabilidades.premissas_utilizadas" :key="pIdx">
+                                                &bull; {{ prem }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- 3. Sub-Abas do Simulador: Cenários (What-If) | Recuperação de Prioridades | Sensibilidade | Evolução Histórica -->
+                                <div class="space-y-4 pt-2 border-t border-slate-200 dark:border-[#24324A]">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <button type="button" @click="abaSimuladorProb = 'cenarios'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaSimuladorProb === 'cenarios' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-sliders mr-1.5"></i>Simulador de Cenários (What-If)
+                                        </button>
+                                        <button type="button" @click="abaSimuladorProb = 'recuperacao'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaSimuladorProb === 'recuperacao' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-rocket mr-1.5"></i>Simulação de Recuperação das Prioridades
+                                        </button>
+                                        <button type="button" @click="abaSimuladorProb = 'sensibilidade'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaSimuladorProb === 'sensibilidade' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-scale-unbalanced-flip mr-1.5"></i>Análise de Sensibilidade por Disciplina
+                                        </button>
+                                        <button type="button" @click="abaSimuladorProb = 'evolucao'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaSimuladorProb === 'evolucao' ? 'bg-blue-600 text-white border-blue-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-timeline mr-1.5"></i>Evolução Temporal da Probabilidade
+                                        </button>
+                                    </div>
+
+                                    <!-- ABA A: SIMULADOR DE CENÁRIOS -->
+                                    <div v-if="abaSimuladorProb === 'cenarios'" class="p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-4">
+                                        <div class="flex flex-wrap items-center justify-between gap-3">
+                                            <div>
+                                                <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                    SIMULADOR DE CENÁRIOS — Ajuste Temporário de Desempenho por Disciplina
+                                                </h4>
+                                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    Modifique o percentual de acerto de qualquer disciplina e clique em <strong>Recalcular Probabilidades</strong>. Seu histórico real nunca é alterado.
+                                                </p>
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <button type="button" @click="restaurarDadosReaisSimulador()"
+                                                    class="px-3.5 py-2 rounded-xl bg-slate-200 dark:bg-[#141D2E] text-slate-700 dark:text-[#CBD5E1] font-bold text-xs hover:bg-slate-300 cursor-pointer">
+                                                    Restaurar Dados Reais
+                                                </button>
+                                                <button type="button" @click="executarSimulacaoCenario()" :disabled="simulandoCenarioMC"
+                                                    class="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-md transition-all cursor-pointer disabled:opacity-50">
+                                                    <i :class="simulandoCenarioMC ? 'fa-solid fa-spinner fa-spin mr-1.5' : 'fa-solid fa-play mr-1.5'"></i>
+                                                    {{ simulandoCenarioMC ? 'Simulando 10.000 provas...' : 'Recalcular Probabilidades' }}
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <!-- Comparativo quando cenário customizado está ativo -->
+                                        <div v-if="simuladorAtivo.comparativo_cenario && simuladorAtivo.comparativo_cenario.cenario_customizado_ativo"
+                                            class="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex flex-wrap items-center justify-between gap-3 text-xs">
+                                            <div>
+                                                <strong class="text-emerald-700 dark:text-emerald-300">Impacto do Cenário Simulado:</strong>
+                                                Nota Média passa de <strong>{{ simuladorAtivo.comparativo_cenario.nota_media_real_perc }}%</strong> para
+                                                <strong>{{ simuladorAtivo.comparativo_cenario.nota_media_cenario_perc }}%</strong>
+                                                ({{ simuladorAtivo.comparativo_cenario.diferenca_nota_media_perc >= 0 ? '+' : '' }}{{ simuladorAtivo.comparativo_cenario.diferenca_nota_media_perc }} p.p. /
+                                                {{ simuladorAtivo.comparativo_cenario.diferenca_pontos >= 0 ? '+' : '' }}{{ simuladorAtivo.comparativo_cenario.diferenca_pontos }} pts).
+                                            </div>
+                                            <div class="font-mono-timer font-black text-emerald-600 dark:text-[#34D399]">
+                                                Prob. Conjunta: {{ simuladorAtivo.comparativo_cenario.prob_corte_real_perc }}% &rarr; {{ simuladorAtivo.comparativo_cenario.prob_corte_cenario_perc }}%
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                            <div v-for="mDisc in simuladorAtivo.modelos_disciplinas" :key="mDisc.disciplina_id"
+                                                class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border transition-all"
+                                                :class="Math.abs((cenarioSimuladorOverrides[mDisc.disciplina_id] ?? mDisc.taxa_base_atual_perc) - mDisc.taxa_base_atual_perc) >= 0.5
+                                                    ? 'border-amber-400 dark:border-amber-500/60'
+                                                    : 'border-slate-200/80 dark:border-[#24324A]'">
+                                                <div class="flex items-center justify-between gap-2 mb-1">
+                                                    <span class="text-xs font-extrabold text-slate-800 dark:text-[#F1F5F9] truncate" :title="mDisc.nome">
+                                                        {{ mDisc.nome }}
+                                                    </span>
+                                                    <span class="text-[10px] font-bold text-slate-400 shrink-0">
+                                                        Peso {{ mDisc.representatividade_perc }}%
+                                                    </span>
+                                                </div>
+                                                <div class="flex items-center justify-between text-[11px] text-slate-500 dark:text-[#94A3B8] mb-1.5">
+                                                    <span>Atual: <strong>{{ mDisc.taxa_base_atual_perc }}%</strong></span>
+                                                    <span class="font-mono-timer font-black text-blue-600 dark:text-[#60A5FA]">
+                                                        Simulado: {{ cenarioSimuladorOverrides[mDisc.disciplina_id] }}%
+                                                    </span>
+                                                </div>
+                                                <input type="range" min="15" max="98" step="1"
+                                                    v-model.number="cenarioSimuladorOverrides[mDisc.disciplina_id]"
+                                                    class="w-full accent-blue-600 cursor-pointer">
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA B: SIMULAÇÃO DE RECUPERAÇÃO DAS DISCIPLINAS PRIORITÁRIAS -->
+                                    <div v-if="abaSimuladorProb === 'recuperacao' && simuladorAtivo.simulacao_recuperacao_prioridades"
+                                        class="p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-4">
+                                        <div>
+                                            <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                Impacto Potencial da Recuperação das Disciplinas Prioritárias (Integração Etapa 1)
+                                            </h4>
+                                            <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                {{ simuladorAtivo.simulacao_recuperacao_prioridades.aviso_hipotetico }}
+                                            </p>
+                                        </div>
+
+                                        <!-- Cenário Conjunto -->
+                                        <div v-if="simuladorAtivo.simulacao_recuperacao_prioridades.cenario_conjunto_prioridades"
+                                            class="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                            <div class="space-y-1">
+                                                <span class="text-[10px] font-black uppercase tracking-wider text-indigo-600 dark:text-indigo-300 block">
+                                                    Recuperação Conjunta das Top Prioridades
+                                                </span>
+                                                <p class="text-xs text-slate-700 dark:text-[#E2E8F0] leading-relaxed">
+                                                    {{ simuladorAtivo.simulacao_recuperacao_prioridades.cenario_conjunto_prioridades.narrativa }}
+                                                </p>
+                                            </div>
+                                            <button type="button" @click="aplicarCenarioRecuperacaoPrioridades('conjunto')"
+                                                class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-black text-xs shrink-0 cursor-pointer">
+                                                Aplicar no Simulador
+                                            </button>
+                                        </div>
+
+                                        <!-- Cenários Individuais -->
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                            <div v-for="cRec in simuladorAtivo.simulacao_recuperacao_prioridades.cenarios_recuperacao" :key="cRec.disciplina_id"
+                                                class="p-4 rounded-2xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] flex flex-col justify-between gap-3">
+                                                <div class="space-y-1.5">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <span class="text-xs font-black text-slate-900 dark:text-white">{{ cRec.disciplina_nome }}</span>
+                                                        <span class="px-2 py-0.5 rounded text-[9.5px] font-black uppercase bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                                                            {{ cRec.classificacao_prioridade }}
+                                                        </span>
+                                                    </div>
+                                                    <p class="text-xs text-slate-600 dark:text-[#CBD5E1] leading-relaxed">
+                                                        {{ cRec.narrativa }}
+                                                    </p>
+                                                </div>
+                                                <button type="button" @click="aplicarCenarioRecuperacaoPrioridades(cRec)"
+                                                    class="w-full py-1.5 rounded-xl bg-slate-100 dark:bg-[#1B2638] hover:bg-blue-600 hover:text-white text-slate-700 dark:text-[#CBD5E1] font-extrabold text-xs transition-all cursor-pointer">
+                                                    Testar este cenário (+{{ cRec.diferenca_pontos }} pts)
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA C: ANÁLISE DE SENSIBILIDADE POR DISCIPLINA -->
+                                    <div v-if="abaSimuladorProb === 'sensibilidade' && simuladorAtivo.analise_sensibilidade"
+                                        class="p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-4">
+                                        <div>
+                                            <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                Análise de Sensibilidade — Influência Matemática vs. Facilidade de Recuperação &amp; Risco
+                                            </h4>
+                                            <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                {{ simuladorAtivo.analise_sensibilidade.nota_metodologica_sensibilidade }}
+                                            </p>
+                                        </div>
+
+                                        <!-- 4 Destaques de Sensibilidade -->
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                            <div v-if="simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_influencia_matematica"
+                                                class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A]">
+                                                <span class="text-[10px] font-black uppercase text-blue-500 block">Maior Influência na Nota</span>
+                                                <strong class="text-xs text-slate-900 dark:text-white block truncate">{{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_influencia_matematica.nome }}</strong>
+                                                <span class="text-[11px] text-slate-500">+10 p.p. gera +{{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_influencia_matematica.impacto_10pp_nota_final }} p.p. na prova</span>
+                                            </div>
+                                            <div v-if="simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_potencial_ganho"
+                                                class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A]">
+                                                <span class="text-[10px] font-black uppercase text-emerald-500 block">Maior Potencial de Ganho</span>
+                                                <strong class="text-xs text-slate-900 dark:text-white block truncate">{{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_potencial_ganho.nome }}</strong>
+                                                <span class="text-[11px] text-slate-500">Até +{{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_potencial_ganho.potencial_ganho_pontos }} pts recuperáveis</span>
+                                            </div>
+                                            <div v-if="simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_risco_aprovacao"
+                                                class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A]">
+                                                <span class="text-[10px] font-black uppercase text-rose-500 block">Maior Risco ao Resultado</span>
+                                                <strong class="text-xs text-slate-900 dark:text-white block truncate">{{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_risco_aprovacao.nome }}</strong>
+                                                <span class="text-[11px] text-slate-500">Índice de risco: {{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_risco_aprovacao.score_risco_instabilidade }}/100</span>
+                                            </div>
+                                            <div v-if="simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_necessidade_estabilidade"
+                                                class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A]">
+                                                <span class="text-[10px] font-black uppercase text-amber-500 block">Precisa de Maior Estabilidade</span>
+                                                <strong class="text-xs text-slate-900 dark:text-white block truncate">{{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_necessidade_estabilidade.nome }}</strong>
+                                                <span class="text-[11px] text-slate-500">Oscilação: &plusmn;{{ simuladorAtivo.analise_sensibilidade.resumo_destaques.maior_necessidade_estabilidade.oscilacao_pontos_prova }} pts na prova</span>
+                                            </div>
+                                        </div>
+
+                                        <!-- Tabela de Sensibilidade -->
+                                        <div class="overflow-x-auto">
+                                            <table class="w-full text-left border-collapse text-xs">
+                                                <thead>
+                                                    <tr class="border-b border-slate-200 dark:border-[#24324A] text-[10.5px] uppercase text-slate-400">
+                                                        <th class="py-2 pr-3">#</th>
+                                                        <th class="py-2 px-2">Disciplina</th>
+                                                        <th class="py-2 px-2">Influência (+10 p.p. &rarr; Nota)</th>
+                                                        <th class="py-2 px-2">Facilidade / Potencial</th>
+                                                        <th class="py-2 px-2">Oscilação Amostral</th>
+                                                        <th class="py-2 pl-2 text-right">Elasticidade (+10 p.p. &rarr; Prob.)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody class="divide-y divide-slate-200/60 dark:divide-[#24324A]">
+                                                    <tr v-for="sItem in simuladorAtivo.analise_sensibilidade.ranking_influencia" :key="sItem.disciplina_id">
+                                                        <td class="py-2 pr-3 font-mono-timer font-bold text-slate-400">{{ sItem.ranking_influencia }}º</td>
+                                                        <td class="py-2 px-2 font-extrabold text-slate-800 dark:text-[#F1F5F9]">{{ sItem.nome }}</td>
+                                                        <td class="py-2 px-2 font-mono-timer text-blue-600 dark:text-[#60A5FA]">
+                                                            +{{ sItem.influencia_matematica_10pp_nota_final }} p.p. (+{{ sItem.influencia_matematica_10pp_pontos }} pts)
+                                                        </td>
+                                                        <td class="py-2 px-2 font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                                            Score {{ sItem.facilidade_recuperacao_score }}/100 (+{{ sItem.potencial_ganho_pontos }} pts)
+                                                        </td>
+                                                        <td class="py-2 px-2 font-mono-timer text-amber-600 dark:text-[#FBBF24]">
+                                                            &plusmn;{{ sItem.desvio_simulado_perc }}% (&plusmn;{{ sItem.oscilacao_pontos_prova }} pts)
+                                                        </td>
+                                                        <td class="py-2 pl-2 text-right font-mono-timer font-black text-indigo-600 dark:text-[#818CF8]">
+                                                            +{{ sItem.delta_prob_corte_mais_10pp }} p.p.
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA D: EVOLUÇÃO TEMPORAL DA PROBABILIDADE -->
+                                    <div v-if="abaSimuladorProb === 'evolucao' && simuladorAtivo.evolucao_temporal_probabilidade"
+                                        class="p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-4">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                    Evolução Temporal da Probabilidade Estimada
+                                                </h4>
+                                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    {{ simuladorAtivo.evolucao_temporal_probabilidade.aviso_versionamento }}
+                                                </p>
+                                            </div>
+                                            <span class="px-3 py-1 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-indigo-300 font-black text-xs font-mono-timer">
+                                                Variação Acumulada: {{ simuladorAtivo.evolucao_temporal_probabilidade.variacao_acumulada_prob_pp >= 0 ? '+' : '' }}{{ simuladorAtivo.evolucao_temporal_probabilidade.variacao_acumulada_prob_pp }} p.p.
+                                            </span>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                            <div v-for="diag in simuladorAtivo.evolucao_temporal_probabilidade.historico_diagnosticos" :key="diag.ordem_diagnostico"
+                                                class="p-3.5 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] space-y-1">
+                                                <div class="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                                                    <span>{{ diag.rotulo_diagnostico }} ({{ diag.periodo }})</span>
+                                                    <span class="font-mono-timer">{{ diag.versao_modelo }}</span>
+                                                </div>
+                                                <div class="text-lg font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                                    {{ diag.prob_conjunta_perc }}% <span class="text-xs font-normal text-slate-400">prob. conjunta</span>
+                                                </div>
+                                                <div class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                                    Nota Média: <strong>{{ diag.nota_media_simulada_perc }}%</strong> &bull; Pisos: <strong>{{ diag.prob_nota_minima_perc }}%</strong>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- =================================================================== -->
+                                <!-- 5.7 PLANO DE AÇÃO ADAPTATIVO (ETAPA 3 — PLANEJAMENTO EXECUTÁVEL)    -->
+                                <!-- =================================================================== -->
+                                <div v-if="mapaAprovacaoData.plano_acao_adaptativo"
+                                    class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs space-y-6">
+
+                                    <!-- Cabeçalho & Fase da Preparação -->
+                                    <div class="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 dark:border-[#24324A] pb-4">
+                                        <div>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-600/15 text-emerald-600 dark:text-[#34D399] border border-emerald-500/30">
+                                                    Planejamento Inteligente Dinâmico
+                                                </span>
+                                                <span v-if="mapaAprovacaoData.plano_acao_adaptativo.fase_preparacao"
+                                                    class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-600/15 text-blue-600 dark:text-[#60A5FA] border border-blue-500/30">
+                                                    {{ mapaAprovacaoData.plano_acao_adaptativo.fase_preparacao.nome }} &bull; {{ mapaAprovacaoData.plano_acao_adaptativo.fase_preparacao.dias_restantes }} dias
+                                                </span>
+                                                <h3 class="text-base font-extrabold text-slate-900 dark:text-[#F1F5F9] flex items-center gap-2">
+                                                    <i class="fa-solid fa-route text-emerald-500"></i>
+                                                    PLANO DE AÇÃO ADAPTATIVO
+                                                </h3>
+                                            </div>
+                                            <p class="text-xs text-slate-500 dark:text-[#94A3B8] mt-1">
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.fase_preparacao?.descricao_foco }}
+                                            </p>
+                                        </div>
+
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <button type="button"
+                                                @click="executarReplanejamentoAutomatico()"
+                                                :disabled="processandoPlanoAdaptativo"
+                                                class="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-black text-xs transition-all cursor-pointer disabled:opacity-50 flex items-center gap-1.5">
+                                                <i :class="processandoPlanoAdaptativo ? 'fa-solid fa-spinner fa-spin' : 'fa-solid fa-arrows-rotate'"></i>
+                                                <span>Replanejar Semana Automaticamente</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Card Destaque: PRÓXIMA ATIVIDADE RECOMENDADA (O QUE ESTUDAR AGORA) -->
+                                    <div v-if="mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada"
+                                        class="p-5 rounded-2xl bg-gradient-to-r from-emerald-950/90 via-slate-900 to-blue-950/90 border border-emerald-500/30 text-white shadow-md">
+                                        <div class="flex flex-wrap items-center justify-between gap-4">
+                                            <div class="space-y-1.5 max-w-3xl">
+                                                <div class="flex flex-wrap items-center gap-2">
+                                                    <span class="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-black uppercase tracking-wider">
+                                                        <i class="fa-solid fa-bolt mr-1"></i>Próxima Atividade Recomendada
+                                                    </span>
+                                                    <span class="px-2.5 py-0.5 rounded-md bg-white/10 text-slate-200 text-[10px] font-bold">
+                                                        Prioridade {{ mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada.prioridade }}
+                                                    </span>
+                                                    <span class="px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-200 text-[10px] font-mono-timer font-bold">
+                                                        {{ mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada.tempo_estimado_min }} min &bull; {{ mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada.tipo_atividade }}
+                                                    </span>
+                                                </div>
+                                                <h4 class="text-base sm:text-lg font-black text-white">
+                                                    {{ mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada.disciplina }} &mdash;
+                                                    <span class="text-emerald-300">{{ mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada.assunto }}</span>
+                                                </h4>
+                                                <p class="text-xs text-slate-300">
+                                                    <strong>Meta Executável:</strong> {{ mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada.meta_execucao }}
+                                                </p>
+                                                <p class="text-[11px] text-slate-400">
+                                                    <i class="fa-solid fa-bullseye mr-1 text-emerald-400"></i>{{ mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada.objetivo_aprendizagem }}
+                                                </p>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <button type="button"
+                                                    @click="alternarStatusTarefaAdaptativa(mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada, 'concluida')"
+                                                    :disabled="processandoPlanoAdaptativo"
+                                                    class="px-4 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs shadow-lg transition-all cursor-pointer">
+                                                    <i class="fa-solid fa-check mr-1.5"></i>Concluir Agora
+                                                </button>
+                                                <button type="button"
+                                                    @click="abrirRegistroDesempenhoTarefa(mapaAprovacaoData.plano_acao_adaptativo.proxima_atividade_recomendada)"
+                                                    class="px-3.5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs border border-white/20 transition-all cursor-pointer">
+                                                    <i class="fa-solid fa-chart-simple mr-1.5"></i>Registrar Questões
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Indicadores de Execução + Impacto no Simulador Probabilístico -->
+                                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                        <!-- Card 1: Execução do Plano -->
+                                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                                    Execução Semanal
+                                                </span>
+                                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-600 dark:text-[#34D399]">
+                                                    {{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.qtd_tarefas_concluidas }}/{{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.qtd_tarefas_total }} tarefas
+                                                </span>
+                                            </div>
+                                            <div class="text-2xl font-black font-mono-timer text-slate-900 dark:text-white">
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.percentual_execucao }}%
+                                            </div>
+                                            <div class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                                Executadas: <strong>{{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.horas_executadas_semana }}h</strong> de
+                                                <strong>{{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.horas_planejadas_semana }}h</strong> planejadas
+                                            </div>
+                                        </div>
+
+                                        <!-- Card 2: Orçamento de Disponibilidade -->
+                                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                                    Capacidade Semanal
+                                                </span>
+                                                <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                                    {{ mapaAprovacaoData.plano_acao_adaptativo.configuracao_disponibilidade.dias_disponiveis_semana }} dias ativos
+                                                </span>
+                                            </div>
+                                            <div class="text-2xl font-black font-mono-timer text-blue-600 dark:text-[#60A5FA]">
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.horas_disponiveis_semana }}h
+                                            </div>
+                                            <div class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                                Sessão máx: <strong>{{ mapaAprovacaoData.plano_acao_adaptativo.configuracao_disponibilidade.tempo_maximo_sessao_min }} min</strong> &bull;
+                                                Simulados: <strong>{{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.horas_simulado_reservadas }}h</strong>
+                                            </div>
+                                        </div>
+
+                                        <!-- Card 3: Revisões & Pendências -->
+                                        <div class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A]">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-[11px] font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                                    Revisões &amp; Atrasos
+                                                </span>
+                                                <span class="text-[10px] font-bold px-2 py-0.5 rounded"
+                                                    :class="mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.qtd_tarefas_atrasadas > 0 ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400' : 'bg-emerald-500/15 text-emerald-600 dark:text-[#34D399]'">
+                                                    {{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.qtd_tarefas_atrasadas }} atrasada(s)
+                                                </span>
+                                            </div>
+                                            <div class="text-2xl font-black font-mono-timer text-amber-600 dark:text-[#FBBF24]">
+                                                {{ (mapaAprovacaoData.plano_acao_adaptativo.revisoes_programadas || []).length }}
+                                                <span class="text-xs font-normal text-slate-400">revisões ativas</span>
+                                            </div>
+                                            <div class="text-[11px] text-slate-500 dark:text-[#94A3B8] mt-1">
+                                                Pendentes na semana: <strong>{{ mapaAprovacaoData.plano_acao_adaptativo.indicadores_execucao.qtd_tarefas_pendentes }}</strong> tarefas
+                                            </div>
+                                        </div>
+
+                                        <!-- Card 4: Impacto Estimado no Simulador Probabilístico -->
+                                        <div v-if="mapaAprovacaoData.plano_acao_adaptativo.integracao_simulador"
+                                            class="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-500/10 border border-emerald-500/30">
+                                            <div class="flex items-center justify-between mb-1">
+                                                <span class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">
+                                                    Potencial no Simulador
+                                                </span>
+                                                <span class="text-[10px] font-mono-timer font-black px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                                                    +{{ mapaAprovacaoData.plano_acao_adaptativo.integracao_simulador.ganho_potencial_pontos }} pts
+                                                </span>
+                                            </div>
+                                            <div class="text-xl font-black font-mono-timer text-emerald-600 dark:text-[#34D399]">
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.integracao_simulador.nota_media_atual_perc }}% &rarr;
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.integracao_simulador.nota_media_cenario_recuperacao_perc }}%
+                                            </div>
+                                            <div class="text-[11px] text-slate-600 dark:text-[#CBD5E1] mt-1 line-clamp-2"
+                                                :title="mapaAprovacaoData.plano_acao_adaptativo.integracao_simulador.mensagem_oportunidade">
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.integracao_simulador.mensagem_oportunidade }}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Modal / Card Inline de Registro de Desempenho de Questões na Tarefa -->
+                                    <div v-if="tarefaEmRegistroExecucao"
+                                        class="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/30 space-y-3">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <h4 class="text-xs font-black uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                                                    <i class="fa-solid fa-sliders mr-1"></i>Adaptação Baseada em Desempenho — {{ tarefaEmRegistroExecucao.disciplina }} ({{ tarefaEmRegistroExecucao.assunto }})
+                                                </h4>
+                                                <p class="text-[11px] text-slate-600 dark:text-[#CBD5E1]">
+                                                    Informe as questões realizadas nesta atividade para calibrar automaticamente as próximas revisões e prioridades.
+                                                </p>
+                                            </div>
+                                            <button type="button" @click="tarefaEmRegistroExecucao = null"
+                                                class="text-xs font-bold text-slate-500 hover:text-slate-700 cursor-pointer">
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3 items-end">
+                                            <div>
+                                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Questões Realizadas</label>
+                                                <input type="number" min="1" max="300" v-model.number="formExecucaoTarefa.questoes_realizadas"
+                                                    class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3 py-1.5 bg-white dark:bg-[#0E1622] text-xs font-bold text-slate-800 dark:text-white">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Acertos Obtidos</label>
+                                                <input type="number" min="0" :max="formExecucaoTarefa.questoes_realizadas" v-model.number="formExecucaoTarefa.acertos_obtidos"
+                                                    class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3 py-1.5 bg-white dark:bg-[#0E1622] text-xs font-bold text-slate-800 dark:text-white">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-bold uppercase text-slate-500 mb-1">Tempo Executado (min)</label>
+                                                <input type="number" min="5" max="360" v-model.number="formExecucaoTarefa.tempo_executado_min"
+                                                    class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3 py-1.5 bg-white dark:bg-[#0E1622] text-xs font-bold text-slate-800 dark:text-white">
+                                            </div>
+                                            <div>
+                                                <button type="button" @click="confirmarRegistroDesempenhoTarefa()" :disabled="processandoPlanoAdaptativo"
+                                                    class="w-full px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-sm cursor-pointer">
+                                                    Salvar e Adaptar Plano
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Feedback da Última Adaptação de Desempenho ou Replanejamento -->
+                                    <div v-if="mapaAprovacaoData.plano_acao_adaptativo.ultima_adaptacao_desempenho"
+                                        class="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/30 flex flex-wrap items-center justify-between gap-2 text-xs">
+                                        <div>
+                                            <span class="font-black text-indigo-700 dark:text-indigo-300">
+                                                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Adaptação por Desempenho ({{ mapaAprovacaoData.plano_acao_adaptativo.ultima_adaptacao_desempenho.disciplina }} — {{ mapaAprovacaoData.plano_acao_adaptativo.ultima_adaptacao_desempenho.taxa_acerto_sessao_perc }}%):
+                                            </span>
+                                            <span class="text-slate-700 dark:text-[#CBD5E1] ml-1">
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.ultima_adaptacao_desempenho.diagnostico_adaptativo }}
+                                            </span>
+                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 font-bold text-[10px]">
+                                            {{ mapaAprovacaoData.plano_acao_adaptativo.ultima_adaptacao_desempenho.acao_adaptativa }}
+                                        </span>
+                                    </div>
+
+                                    <!-- Sub-navegação do Plano de Ação Adaptativo -->
+                                    <div class="flex flex-wrap items-center gap-2 border-b border-slate-100 dark:border-[#24324A] pb-3">
+                                        <button type="button" @click="abaPlanoAdaptativo = 'hoje'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaPlanoAdaptativo === 'hoje' ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-calendar-day mr-1.5"></i>Agenda do Dia &amp; Tarefas Semanais
+                                        </button>
+                                        <button type="button" @click="abaPlanoAdaptativo = 'semana'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaPlanoAdaptativo === 'semana' ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-calendar-week mr-1.5"></i>Calendário Semanal &amp; Alocação
+                                        </button>
+                                        <button type="button" @click="abaPlanoAdaptativo = 'revisoes'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaPlanoAdaptativo === 'revisoes' ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-rotate-left mr-1.5"></i>Revisões Programadas ({{ (mapaAprovacaoData.plano_acao_adaptativo.revisoes_programadas || []).length }})
+                                        </button>
+                                        <button type="button" @click="abaPlanoAdaptativo = 'disponibilidade'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaPlanoAdaptativo === 'disponibilidade' ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-clock mr-1.5"></i>Disponibilidade Semanal
+                                        </button>
+                                        <button type="button" @click="abaPlanoAdaptativo = 'historico'"
+                                            class="px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer border"
+                                            :class="abaPlanoAdaptativo === 'historico' ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8] border-slate-200 dark:border-[#24324A]'">
+                                            <i class="fa-solid fa-chart-line mr-1.5"></i>Padrões &amp; Histórico
+                                        </button>
+                                    </div>
+
+                                    <!-- ABA 1: AGENDA DO DIA & LISTA DE TAREFAS CONCRETAS -->
+                                    <div v-if="abaPlanoAdaptativo === 'hoje'" class="space-y-4">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                    Tarefas Concretas de Estudo ({{ tarefasSemanaFiltradas.length }})
+                                                </h4>
+                                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    Cada atividade especifica disciplina, assunto do edital, tipo de ação, meta objetiva e duração compatível com sua disponibilidade.
+                                                </p>
+                                            </div>
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                <button type="button" @click="filtroDiaSemanaPlano = 'TODOS'"
+                                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer"
+                                                    :class="filtroDiaSemanaPlano === 'TODOS' ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8]'">
+                                                    Todos os dias
+                                                </button>
+                                                <button v-for="diaCal in mapaAprovacaoData.plano_acao_adaptativo.calendario_semanal" :key="diaCal.dia_sigla"
+                                                    type="button" @click="filtroDiaSemanaPlano = diaCal.dia_sigla"
+                                                    class="px-2.5 py-1 rounded-lg text-[11px] font-bold cursor-pointer uppercase"
+                                                    :class="filtroDiaSemanaPlano === diaCal.dia_sigla ? 'bg-emerald-600 text-white' : 'bg-slate-100 dark:bg-[#1B2638] text-slate-600 dark:text-[#94A3B8]'">
+                                                    {{ diaCal.dia_sigla }} ({{ diaCal.data_fmt }})
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="space-y-2.5">
+                                            <div v-for="tItem in tarefasSemanaFiltradas" :key="tItem.id"
+                                                class="p-4 rounded-2xl border transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-3"
+                                                :class="tItem.status === 'concluida'
+                                                    ? 'bg-emerald-500/5 border-emerald-500/30 opacity-80'
+                                                    : (tItem.status === 'atrasada'
+                                                        ? 'bg-rose-500/5 border-rose-500/40'
+                                                        : 'bg-slate-50 dark:bg-[#1B2638] border-slate-200/80 dark:border-[#24324A]')">
+
+                                                <div class="space-y-1">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase"
+                                                            :class="{
+                                                                'bg-rose-500/15 text-rose-600 dark:text-rose-400': tItem.prioridade === 'CRÍTICA',
+                                                                'bg-amber-500/15 text-amber-600 dark:text-amber-400': tItem.prioridade === 'ALTA',
+                                                                'bg-blue-500/15 text-blue-600 dark:text-blue-400': tItem.prioridade === 'MODERADA',
+                                                                'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400': tItem.prioridade === 'BAIXA' || tItem.prioridade === 'MANUTENÇÃO'
+                                                            }">
+                                                            {{ tItem.prioridade }}
+                                                        </span>
+                                                        <span class="px-2 py-0.5 rounded bg-slate-200/80 dark:bg-[#141D2E] text-slate-700 dark:text-[#CBD5E1] text-[10px] font-bold">
+                                                            {{ tItem.tipo_atividade }}
+                                                        </span>
+                                                        <span class="text-[11px] font-mono-timer font-bold text-slate-500 dark:text-[#94A3B8]">
+                                                            <i class="fa-regular fa-calendar mr-1"></i>{{ tItem.dia_semana_nome }} ({{ tItem.data_programada_fmt }}) &bull; {{ tItem.tempo_estimado_min }} min
+                                                        </span>
+                                                        <span v-if="tItem.eh_hoje"
+                                                            class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-600 dark:text-[#34D399] text-[10px] font-black uppercase">
+                                                            Hoje
+                                                        </span>
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                                                            :class="{
+                                                                'bg-emerald-500/20 text-emerald-700 dark:text-emerald-300': tItem.status === 'concluida',
+                                                                'bg-rose-500/20 text-rose-700 dark:text-rose-300': tItem.status === 'atrasada',
+                                                                'bg-amber-500/20 text-amber-700 dark:text-amber-300': tItem.status === 'reprogramada',
+                                                                'bg-slate-200 dark:bg-[#24324A] text-slate-600 dark:text-[#94A3B8]': tItem.status === 'pendente' || tItem.status === 'descartada'
+                                                            }">
+                                                            {{ tItem.status }}
+                                                        </span>
+                                                    </div>
+
+                                                    <div class="text-sm font-black text-slate-900 dark:text-white">
+                                                        {{ tItem.disciplina }} &mdash; <span class="text-blue-600 dark:text-[#60A5FA]">{{ tItem.assunto }}</span>
+                                                    </div>
+
+                                                    <div class="text-xs text-slate-600 dark:text-[#CBD5E1]">
+                                                        <strong>Meta de Execução:</strong> {{ tItem.meta_execucao }}
+                                                    </div>
+                                                    <div class="text-[11px] text-slate-400">
+                                                        Objetivo: {{ tItem.objetivo_aprendizagem }}
+                                                    </div>
+                                                    <div v-if="tItem.acao_replanejamento" class="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+                                                        <i class="fa-solid fa-arrows-rotate mr-1"></i>{{ tItem.acao_replanejamento }}: {{ tItem.justificativa_replanejamento }}
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                                                    <button type="button"
+                                                        @click="alternarStatusTarefaAdaptativa(tItem)"
+                                                        :disabled="processandoPlanoAdaptativo"
+                                                        class="px-3 py-1.5 rounded-xl font-black text-xs transition-all cursor-pointer"
+                                                        :class="tItem.status === 'concluida'
+                                                            ? 'bg-slate-200 dark:bg-[#141D2E] text-slate-700 dark:text-[#CBD5E1]'
+                                                            : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs'">
+                                                        <i :class="tItem.status === 'concluida' ? 'fa-solid fa-rotate-left mr-1' : 'fa-solid fa-check mr-1'"></i>
+                                                        {{ tItem.status === 'concluida' ? 'Reabrir' : 'Concluir' }}
+                                                    </button>
+                                                    <button type="button"
+                                                        @click="abrirRegistroDesempenhoTarefa(tItem)"
+                                                        class="px-3 py-1.5 rounded-xl bg-blue-500/15 hover:bg-blue-500/25 text-blue-600 dark:text-[#60A5FA] font-bold text-xs cursor-pointer">
+                                                        <i class="fa-solid fa-list-check mr-1"></i>Questões
+                                                    </button>
+                                                    <button v-if="tItem.status === 'pendente'" type="button"
+                                                        @click="alternarStatusTarefaAdaptativa(tItem, 'atrasada')"
+                                                        :disabled="processandoPlanoAdaptativo"
+                                                        class="px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-bold text-[11px] cursor-pointer"
+                                                        title="Marcar como atrasada para replanejar">
+                                                        Atrasou
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA 2: CALENDÁRIO SEMANAL & DISTRIBUIÇÃO POR DISCIPLINA -->
+                                    <div v-if="abaPlanoAdaptativo === 'semana'" class="space-y-6">
+                                        <div>
+                                            <h4 class="text-sm font-black text-slate-900 dark:text-white mb-2">
+                                                Grade Semanal Respeitando Limite Diário de Horas
+                                            </h4>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+                                                <div v-for="dSem in mapaAprovacaoData.plano_acao_adaptativo.calendario_semanal" :key="dSem.dia_sigla"
+                                                    class="p-3.5 rounded-2xl border flex flex-col justify-between space-y-2"
+                                                    :class="dSem.eh_hoje
+                                                        ? 'bg-emerald-500/10 border-emerald-500/50'
+                                                        : (dSem.ativo ? 'bg-slate-50 dark:bg-[#1B2638] border-slate-200 dark:border-[#24324A]' : 'bg-slate-100/50 dark:bg-[#0E1622]/50 border-slate-200/40 dark:border-[#1B2638] opacity-60')">
+                                                    <div>
+                                                        <div class="flex items-center justify-between text-xs font-black text-slate-800 dark:text-white">
+                                                            <span>{{ dSem.dia_nome }}</span>
+                                                            <span class="text-[10px] font-mono-timer text-slate-400">{{ dSem.data_fmt }}</span>
+                                                        </div>
+                                                        <div class="text-[11px] font-mono-timer text-blue-600 dark:text-[#60A5FA] mt-0.5">
+                                                            {{ dSem.horas_planejadas }}h / {{ dSem.capacidade_horas }}h disp.
+                                                        </div>
+                                                        <div class="mt-2 space-y-1.5">
+                                                            <div v-for="tDia in dSem.tarefas" :key="tDia.id"
+                                                                class="p-2 rounded-lg bg-white dark:bg-[#141D2E] border border-slate-200/70 dark:border-[#24324A] text-[11px]">
+                                                                <div class="font-extrabold text-slate-800 dark:text-slate-100 truncate" :title="tDia.disciplina">
+                                                                    {{ tDia.disciplina }}
+                                                                </div>
+                                                                <div class="text-[10px] text-slate-500 dark:text-[#94A3B8] truncate" :title="tDia.assunto">
+                                                                    {{ tDia.assunto }}
+                                                                </div>
+                                                                <div class="flex items-center justify-between mt-1 text-[10px] font-mono-timer">
+                                                                    <span class="text-emerald-600 dark:text-[#34D399]">{{ tDia.tipo_atividade }}</span>
+                                                                    <span>{{ tDia.tempo_estimado_min }}m</span>
+                                                                </div>
+                                                            </div>
+                                                            <div v-if="!dSem.tarefas || dSem.tarefas.length === 0" class="text-[11px] text-slate-400 italic py-2">
+                                                                Descanso / Livre
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <h4 class="text-sm font-black text-slate-900 dark:text-white mb-2">
+                                                Alocação Proporcional por Disciplina (Sem Concentração Excessiva &amp; Com Manutenção)
+                                            </h4>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                                                <div v-for="aloc in mapaAprovacaoData.plano_acao_adaptativo.distribuicao_disciplinas" :key="aloc.disciplina_id"
+                                                    class="p-3.5 rounded-xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200/80 dark:border-[#24324A] space-y-1.5">
+                                                    <div class="flex items-center justify-between gap-2">
+                                                        <span class="text-xs font-black text-slate-900 dark:text-white truncate">{{ aloc.nome }}</span>
+                                                        <span class="px-2 py-0.5 rounded text-[10px] font-black bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                                            {{ aloc.horas_planejadas_semana }}h ({{ aloc.percentual_carga_semanal }}%)
+                                                        </span>
+                                                    </div>
+                                                    <div class="text-[11px] text-slate-500 dark:text-[#94A3B8] flex items-center justify-between">
+                                                        <span>Prioridade: <strong>{{ aloc.classificacao }}</strong> ({{ aloc.indice_prioridade }})</span>
+                                                        <span>{{ aloc.modalidade_foco }}</span>
+                                                    </div>
+                                                    <div class="text-[10px] text-slate-400 font-mono-timer">
+                                                        Atual: {{ aloc.desempenho_atual_perc }}% &bull; Meta: {{ aloc.meta_perc }}% &bull; Potencial: +{{ aloc.potencial_ganho_pts }} pts
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA 3: REVISÕES PROGRAMADAS -->
+                                    <div v-if="abaPlanoAdaptativo === 'revisoes'" class="space-y-3">
+                                        <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                            Motor de Revisões Programadas (Curva de Esquecimento &amp; Taxa de Erro)
+                                        </h4>
+                                        <div v-if="(mapaAprovacaoData.plano_acao_adaptativo.revisoes_programadas || []).length === 0"
+                                            class="p-4 rounded-xl bg-slate-50 dark:bg-[#1B2638] text-xs text-slate-500">
+                                            Nenhuma revisão crítica pendente no momento.
+                                        </div>
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div v-for="rev in mapaAprovacaoData.plano_acao_adaptativo.revisoes_programadas" :key="rev.disciplina_id + '-' + rev.assunto"
+                                                class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-1">
+                                                <div class="flex items-center justify-between">
+                                                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                                                        {{ rev.tipo_atividade }} &bull; Urgência {{ rev.urgencia_score }}
+                                                    </span>
+                                                    <span class="text-xs font-mono-timer font-bold text-slate-500">
+                                                        {{ rev.tempo_sugerido_min }} min
+                                                    </span>
+                                                </div>
+                                                <div class="text-sm font-black text-slate-900 dark:text-white">
+                                                    {{ rev.disciplina }} &mdash; <span class="text-amber-600 dark:text-[#FBBF24]">{{ rev.assunto }}</span>
+                                                </div>
+                                                <div class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    {{ rev.motivo }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA 4: CONFIGURAÇÃO DE DISPONIBILIDADE SEMANAL -->
+                                    <div v-if="abaPlanoAdaptativo === 'disponibilidade'" class="p-5 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-4">
+                                        <div class="flex flex-wrap items-center justify-between gap-2">
+                                            <div>
+                                                <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                    Configuração Individual de Disponibilidade Semanal
+                                                </h4>
+                                                <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                                    Altere seus dias de estudo, carga diária e limite por sessão. O histórico de planejamentos anteriores é integralmente preservado.
+                                                </p>
+                                            </div>
+                                            <button type="button" @click="salvarDisponibilidadeAdaptativa()" :disabled="processandoPlanoAdaptativo"
+                                                class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs shadow-sm cursor-pointer">
+                                                <i class="fa-solid fa-floppy-disk mr-1.5"></i>Salvar Disponibilidade e Recalcular Plano
+                                            </button>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                            <div>
+                                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Horas/Dia Útil (Seg–Sex)</label>
+                                                <input type="number" step="0.5" min="0.5" max="14" v-model.number="formDisponibilidadeAdaptativa.horas_estudo_dia"
+                                                    class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3 py-2 bg-white dark:bg-[#141D2E] text-xs font-bold text-slate-900 dark:text-white">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Horas no Fim de Semana</label>
+                                                <input type="number" step="0.5" min="0" max="14" v-model.number="formDisponibilidadeAdaptativa.horas_fim_de_semana"
+                                                    class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3 py-2 bg-white dark:bg-[#141D2E] text-xs font-bold text-slate-900 dark:text-white">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Máx. Minutos por Sessão</label>
+                                                <input type="number" step="5" min="25" max="90" v-model.number="formDisponibilidadeAdaptativa.tempo_maximo_sessao_min"
+                                                    class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3 py-2 bg-white dark:bg-[#141D2E] text-xs font-bold text-slate-900 dark:text-white">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1">Teto por Disciplina (%)</label>
+                                                <input type="number" step="5" min="20" max="60" v-model.number="formDisponibilidadeAdaptativa.limite_max_concentracao_disciplina_perc"
+                                                    class="w-full rounded-xl border border-slate-300 dark:border-[#3D5A82] px-3 py-2 bg-white dark:bg-[#141D2E] text-xs font-bold text-slate-900 dark:text-white">
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <label class="block text-[11px] font-bold uppercase text-slate-500 mb-1.5">Dias da Semana Disponíveis</label>
+                                            <div class="flex flex-wrap gap-2">
+                                                <button v-for="sig in ['SEG','TER','QUA','QUI','SEX','SAB','DOM']" :key="sig"
+                                                    type="button" @click="alternarDiaDisponivelAdaptativo(sig)"
+                                                    class="px-3.5 py-1.5 rounded-xl text-xs font-black uppercase cursor-pointer border transition-all"
+                                                    :class="formDisponibilidadeAdaptativa.dias_semana_ativos.includes(sig)
+                                                        ? 'bg-emerald-600 text-white border-emerald-500'
+                                                        : 'bg-white dark:bg-[#141D2E] text-slate-500 border-slate-300 dark:border-[#24324A]'">
+                                                    {{ sig }}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- ABA 5: PADRÕES DE EXECUÇÃO & HISTÓRICO DE PLANEJAMENTOS -->
+                                    <div v-if="abaPlanoAdaptativo === 'historico'" class="space-y-4">
+                                        <div v-if="mapaAprovacaoData.plano_acao_adaptativo.padroes_execucao"
+                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-2">
+                                            <div class="flex items-center justify-between">
+                                                <h4 class="text-sm font-black text-slate-900 dark:text-white">
+                                                    Diagnóstico Comportamental de Execução
+                                                </h4>
+                                                <span class="text-xs font-mono-timer font-bold text-emerald-600 dark:text-[#34D399]">
+                                                    {{ mapaAprovacaoData.plano_acao_adaptativo.padroes_execucao.evidencia_suficiente ? 'Padrão Consolidado' : 'Acumulando Amostra' }}
+                                                </span>
+                                            </div>
+                                            <p class="text-xs text-slate-600 dark:text-[#CBD5E1]">
+                                                <i class="fa-solid fa-angle-right text-emerald-500 mr-1.5"></i>{{ mapaAprovacaoData.plano_acao_adaptativo.padroes_execucao.padrao_identificado }}
+                                            </p>
+                                        </div>
+
+                                        <div v-if="mapaAprovacaoData.plano_acao_adaptativo.ultimo_replanejamento"
+                                            class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                                            <h4 class="text-xs font-black uppercase text-amber-700 dark:text-amber-300">
+                                                Último Replanejamento Automático ({{ mapaAprovacaoData.plano_acao_adaptativo.ultimo_replanejamento.executado_em }})
+                                            </h4>
+                                            <p class="text-xs text-slate-700 dark:text-[#CBD5E1]">
+                                                {{ mapaAprovacaoData.plano_acao_adaptativo.ultimo_replanejamento.resumo_replanejamento }}
+                                            </p>
+                                            <div v-if="(mapaAprovacaoData.plano_acao_adaptativo.ultimo_replanejamento.acoes_replanejamento || []).length > 0"
+                                                class="space-y-1 text-[11px] text-slate-600 dark:text-[#94A3B8]">
+                                                <div v-for="ac in mapaAprovacaoData.plano_acao_adaptativo.ultimo_replanejamento.acoes_replanejamento" :key="ac.tarefa_id">
+                                                    &bull; <strong>{{ ac.disciplina }} ({{ ac.assunto }}):</strong> {{ ac.acao_aplicada }} &mdash; {{ ac.justificativa }}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div v-if="(mapaAprovacaoData.plano_acao_adaptativo.historico_planejamentos || []).length > 0"
+                                            class="p-4 rounded-2xl bg-slate-50 dark:bg-[#1B2638] border border-slate-200 dark:border-[#24324A] space-y-2">
+                                            <h4 class="text-xs font-black uppercase text-slate-500">
+                                                Histórico Preservado de Planejamentos e Ajustes
+                                            </h4>
+                                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                                                <div v-for="(hPlan, hIdx) in mapaAprovacaoData.plano_acao_adaptativo.historico_planejamentos" :key="hIdx"
+                                                    class="p-3 rounded-xl bg-white dark:bg-[#141D2E] border border-slate-200/80 dark:border-[#24324A] text-xs">
+                                                    <div class="font-bold text-slate-800 dark:text-white">{{ hPlan.tipo_evento }}</div>
+                                                    <div class="text-[10px] text-slate-400 font-mono-timer">{{ hPlan.data_registro }}</div>
+                                                    <div class="text-[11px] text-slate-500 mt-1">
+                                                        Execução: <strong>{{ hPlan.percentual_execucao }}%</strong> ({{ hPlan.horas_executadas }}h / {{ hPlan.horas_planejadas }}h)
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- ======================================================================= -->
@@ -6126,6 +7781,66 @@
                             <i class="fa-solid fa-circle-info text-amber-500"></i>
                             <span>Nenhum tópico específico cadastrado para esta matéria.</span>
                         </div>
+
+                        <!-- ORIENTAÇÃO SALVA DO TÓPICO SELECIONADO (ONDE PAROU / DIFICULDADES ANTERIORES) -->
+                        <div v-if="observacaoTopicoSelecionadoNoModal"
+                            class="mt-3 rounded-2xl border border-amber-300/90 dark:border-amber-400/40 bg-gradient-to-br from-amber-50/95 via-orange-50/70 to-amber-50/90 dark:from-[#1b283d] dark:via-[#1f2d44] dark:to-[#182336] p-3.5 sm:p-4 shadow-sm transition-all">
+                            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 mb-2 border-b border-amber-200/80 dark:border-amber-500/25">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="w-7 h-7 rounded-xl bg-amber-500/20 dark:bg-amber-400/20 text-amber-700 dark:text-amber-300 border border-amber-400/40 flex items-center justify-center text-xs shadow-2xs">
+                                        <i class="fa-solid fa-compass"></i>
+                                    </span>
+                                    <div>
+                                        <span class="text-[11px] font-black uppercase tracking-wider text-amber-800 dark:text-amber-300 block leading-tight">
+                                            {{ observacaoTopicoSelecionadoNoModal.eh_do_topico_selecionado ? 'Orientação deste Tópico • Onde Você Parou / Dificuldades' : 'Última Anotação na Matéria' }}
+                                        </span>
+                                        <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[10.5px] font-semibold text-amber-700/90 dark:text-slate-300">
+                                            <span v-if="observacaoTopicoSelecionadoNoModal.ultima_observacao_data">
+                                                <i class="fa-regular fa-calendar-check mr-1"></i>Registrado em {{ formatarData(observacaoTopicoSelecionadoNoModal.ultima_observacao_data) }}
+                                            </span>
+                                            <span v-if="observacaoTopicoSelecionadoNoModal.qtd_questoes_total > 0"
+                                                class="px-1.5 py-0.2 rounded bg-amber-500/15 text-amber-800 dark:text-amber-200 border border-amber-400/30 font-bold">
+                                                {{ observacaoTopicoSelecionadoNoModal.percentual_acerto }}% ({{ observacaoTopicoSelecionadoNoModal.qtd_questoes_total }} qst)
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button type="button"
+                                    @click="usarObservacaoAnteriorNoFormulario(observacaoTopicoSelecionadoNoModal.ultima_observacao)"
+                                    class="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-900 dark:bg-amber-400/20 dark:hover:bg-amber-400/30 dark:text-amber-200 border border-amber-400/40 text-[11px] font-extrabold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                                    title="Copia esta anotação para o campo abaixo para você atualizar de onde parou hoje">
+                                    <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                                    <span>Continuar / Editar Nota</span>
+                                </button>
+                            </div>
+                            <div v-if="!observacaoTopicoSelecionadoNoModal.eh_do_topico_selecionado && observacaoTopicoSelecionadoNoModal.topico_titulo"
+                                class="text-[11px] font-bold text-amber-800 dark:text-amber-200 mb-1">
+                                <i class="fa-solid fa-bookmark mr-1"></i>Tópico: {{ observacaoTopicoSelecionadoNoModal.topico_titulo }}
+                            </div>
+                            <p class="text-xs sm:text-[13px] font-semibold text-slate-800 dark:text-[#F8FAFC] whitespace-pre-line leading-relaxed bg-white/75 dark:bg-[#0E1622]/80 rounded-xl p-3 border border-amber-200/70 dark:border-amber-500/20">
+                                {{ observacaoTopicoSelecionadoNoModal.ultima_observacao }}
+                            </p>
+
+                            <!-- Histórico de observações anteriores do mesmo tópico (se houver mais de 1) -->
+                            <div v-if="observacaoTopicoSelecionadoNoModal.historico && observacaoTopicoSelecionadoNoModal.historico.length > 1" class="mt-2 pt-1.5">
+                                <button type="button"
+                                    @click="mostrarHistoricoObsModal = !mostrarHistoricoObsModal"
+                                    class="text-[11px] font-bold text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-1 cursor-pointer">
+                                    <i class="fa-solid text-[9px]" :class="mostrarHistoricoObsModal ? 'fa-chevron-up' : 'fa-clock-rotate-left'"></i>
+                                    <span>{{ mostrarHistoricoObsModal ? 'Ocultar anotações anteriores' : `Ver histórico de anotações neste tópico (${observacaoTopicoSelecionadoNoModal.historico.length})` }}</span>
+                                </button>
+                                <div v-if="mostrarHistoricoObsModal" class="mt-2 space-y-1.5 max-h-36 overflow-y-auto pr-1">
+                                    <div v-for="(hObs, idxH) in observacaoTopicoSelecionadoNoModal.historico.slice(1)" :key="'hobs-' + idxH"
+                                        class="p-2 rounded-lg bg-white/60 dark:bg-[#0E1622]/60 border border-amber-200/50 dark:border-slate-700 text-[11px]">
+                                        <div class="flex items-center justify-between text-[10px] font-bold text-slate-500 dark:text-slate-400 mb-0.5">
+                                            <span>{{ formatarData(hObs.data) }}</span>
+                                            <span v-if="hObs.qtd_questoes_total > 0">{{ hObs.percentual_acerto }}% ({{ hObs.qtd_questoes_total }}q)</span>
+                                        </div>
+                                        <p class="text-slate-700 dark:text-slate-200 whitespace-pre-line">{{ hObs.observacoes }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -6165,6 +7880,120 @@
                                 <input type="number" min="0" :required="!formSessao.is_revisao_anki" v-model.number="formSessao.qtd_erros"
                                     placeholder="0"
                                     class="w-full border border-rose-300 dark:border-rose-500/30 bg-rose-50/70 dark:bg-[#0E1622] text-rose-800 dark:text-[#F87171] rounded-xl px-4 py-2.5 outline-none font-black text-center text-lg focus:ring-2 focus:ring-rose-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- CAMPO DE OBSERVAÇÃO EXPANSÍVEL (ONDE PAROU / DIFICULDADES / DICAS) -->
+                    <div class="border-t border-slate-100 dark:border-[#3D5A82]/60 pt-4">
+                        <div class="rounded-2xl border transition-all overflow-hidden"
+                            :class="observacaoSessaoExpandida || (formSessao.observacoes && formSessao.observacoes.trim())
+                                ? 'border-amber-400/70 dark:border-amber-400/50 bg-amber-50/40 dark:bg-[#162335] shadow-xs'
+                                : 'border-slate-200 dark:border-[#3D5A82] bg-slate-50/70 dark:bg-[#162335]/70 hover:border-blue-400 dark:hover:border-[#22D3EE]/60'">
+                            
+                            <!-- Cabeçalho Clicável que Expande/Recolhe -->
+                            <button type="button"
+                                @click="toggleExpandirObservacaoSessao()"
+                                class="w-full px-4 py-3 flex items-center justify-between gap-3 text-left cursor-pointer transition-colors hover:bg-slate-100/60 dark:hover:bg-white/5"
+                                :aria-expanded="observacaoSessaoExpandida">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 border transition-all"
+                                        :class="observacaoSessaoExpandida || (formSessao.observacoes && formSessao.observacoes.trim())
+                                            ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-xs'
+                                            : 'bg-white dark:bg-[#0E1622] text-amber-500 dark:text-amber-400 border-slate-200 dark:border-[#3D5A82]'">
+                                        <i class="fa-solid fa-note-sticky text-sm"></i>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-[#F8FAFC]">
+                                                Continuar Tópico Próximo Ciclo
+                                            </span>
+                                            <span v-if="formSessao.observacoes && formSessao.observacoes.trim()"
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                                                <i class="fa-solid fa-check mr-0.5"></i> Preenchido
+                                            </span>
+                                            <span v-else
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-200/80 dark:bg-[#0E1622] text-slate-600 dark:text-[#94A3B8]">
+                                                Opcional
+                                            </span>
+                                        </div>
+                                        <p v-if="!observacaoSessaoExpandida && !(formSessao.observacoes && formSessao.observacoes.trim())"
+                                            class="text-[11px] text-slate-500 dark:text-[#94A3B8] truncate mt-0.5">
+                                            Clique para expandir e anotar onde parou na matéria, página/questão ou dificuldades
+                                        </p>
+                                        <p v-else-if="!observacaoSessaoExpandida && formSessao.observacoes && formSessao.observacoes.trim()"
+                                            class="text-[11px] font-semibold text-amber-700 dark:text-amber-300 truncate mt-0.5">
+                                            {{ formSessao.observacoes.trim() }}
+                                        </p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-shrink-0 text-xs font-bold"
+                                    :class="observacaoSessaoExpandida ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-[#22D3EE]'">
+                                    <span class="text-[11px] hidden sm:inline">{{ observacaoSessaoExpandida ? 'Recolher' : 'Expandir' }}</span>
+                                    <i class="fa-solid transition-transform duration-200"
+                                        :class="observacaoSessaoExpandida ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                                </div>
+                            </button>
+
+                            <!-- Corpo Expansível para Escrever a Observação -->
+                            <div v-if="observacaoSessaoExpandida"
+                                class="px-4 pb-4 pt-2 border-t border-slate-200/70 dark:border-[#3D5A82]/60 space-y-3">
+                                
+                                <!-- Atalhos rápidos de estruturação da dica/orientação -->
+                                <div class="flex flex-wrap items-center gap-1.5">
+                                    <span class="text-[10.5px] font-bold text-slate-500 dark:text-[#94A3B8] mr-1">Observação &bull; Onde parei ou dificuldades:</span>
+                                    <button type="button"
+                                        @click="inserirTagObservacaoSessao('📍 Onde parei:')"
+                                        class="px-2 py-1 rounded-lg bg-white hover:bg-amber-50 dark:bg-[#0E1622] dark:hover:bg-[#1E2E46] text-slate-700 dark:text-[#CBD5E1] border border-slate-200 dark:border-[#3D5A82] text-[10.5px] font-bold transition-all cursor-pointer">
+                                        📍 Onde parei
+                                    </button>
+                                    <button type="button"
+                                        @click="inserirTagObservacaoSessao('⚠️ Dificuldade:')"
+                                        class="px-2 py-1 rounded-lg bg-white hover:bg-rose-50 dark:bg-[#0E1622] dark:hover:bg-[#1E2E46] text-slate-700 dark:text-[#CBD5E1] border border-slate-200 dark:border-[#3D5A82] text-[10.5px] font-bold transition-all cursor-pointer">
+                                        ⚠️ Dificuldade
+                                    </button>
+                                    <button type="button"
+                                        @click="inserirTagObservacaoSessao('🎯 Retomar de:')"
+                                        class="px-2 py-1 rounded-lg bg-white hover:bg-blue-50 dark:bg-[#0E1622] dark:hover:bg-[#1E2E46] text-slate-700 dark:text-[#CBD5E1] border border-slate-200 dark:border-[#3D5A82] text-[10.5px] font-bold transition-all cursor-pointer">
+                                        🎯 Retomar de
+                                    </button>
+                                    <button type="button"
+                                        @click="inserirTagObservacaoSessao('💡 Dica / Atenção:')"
+                                        class="px-2 py-1 rounded-lg bg-white hover:bg-emerald-50 dark:bg-[#0E1622] dark:hover:bg-[#1E2E46] text-slate-700 dark:text-[#CBD5E1] border border-slate-200 dark:border-[#3D5A82] text-[10.5px] font-bold transition-all cursor-pointer">
+                                        💡 Dica
+                                    </button>
+                                </div>
+
+                                <textarea id="textarea-observacao-sessao"
+                                    v-model="formSessao.observacoes"
+                                    rows="3"
+                                    placeholder="Ex: Parei na pág. 42 do PDF (item 3.2) / Questão 35 do caderno TEC. Tive dificuldade em diferenciar lançamento por homologação e de ofício..."
+                                    class="w-full border border-slate-300 dark:border-[#3D5A82] rounded-xl px-3.5 py-2.5 bg-white dark:bg-[#0E1622] outline-none text-xs sm:text-sm font-medium text-slate-800 dark:text-[#F8FAFC] placeholder-slate-400 dark:placeholder-slate-500 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400 resize-y leading-relaxed"></textarea>
+
+                                <!-- Opção inteligente para manter o tópico ativo na próxima volta do ciclo caso tenha parado no meio -->
+                                <div v-if="!formSessao.is_revisao_anki && formSessao.topico_id"
+                                    class="flex items-start justify-between gap-3 p-2.5 rounded-xl bg-white/80 dark:bg-[#0E1622]/90 border border-slate-200/80 dark:border-[#3D5A82]/70">
+                                    <label class="flex items-start gap-2.5 cursor-pointer select-none flex-1">
+                                        <input type="checkbox"
+                                            v-model="formSessao.retomar_topico_no_ciclo"
+                                            class="mt-0.5 w-4 h-4 rounded accent-amber-500 cursor-pointer">
+                                        <div class="text-[11px] leading-snug">
+                                            <span class="font-extrabold text-slate-800 dark:text-[#F8FAFC] block">
+                                                Manter este tópico em foco quando o ciclo voltar nesta matéria
+                                            </span>
+                                            <span class="text-slate-500 dark:text-[#94A3B8]">
+                                                Quando o ciclo rodar e voltar nesta disciplina, este tópico e sua observação aparecerão diretamente para você continuar de onde parou.
+                                            </span>
+                                        </div>
+                                    </label>
+                                    <button v-if="formSessao.observacoes && formSessao.observacoes.trim()"
+                                        type="button"
+                                        @click="formSessao.observacoes = ''"
+                                        class="text-[10.5px] font-bold text-rose-500 hover:text-rose-600 dark:text-rose-400 px-2 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors cursor-pointer shrink-0"
+                                        title="Limpar texto da observação">
+                                        Limpar
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -6232,6 +8061,16 @@
                                 <span class="text-emerald-600 dark:text-[#34D399]">{{ resumoSessaoAtual.sessao.qtd_acertos }} certas</span>
                                 <span class="text-rose-600 dark:text-[#F87171]">{{ resumoSessaoAtual.sessao.qtd_erros }} erradas</span>
                             </div>
+                        </div>
+
+                        <div v-if="resumoSessaoAtual.sessao.observacoes && resumoSessaoAtual.sessao.observacoes.trim()"
+                            class="pt-2 border-t border-slate-200/60 dark:border-[#2D4263]">
+                            <span class="text-[11px] font-extrabold uppercase text-amber-600 dark:text-amber-300 flex items-center gap-1.5 mb-1">
+                                <i class="fa-solid fa-compass"></i> Observação / Onde Parou
+                            </span>
+                            <p class="text-xs font-semibold text-slate-700 dark:text-[#F8FAFC] whitespace-pre-line bg-amber-50/80 dark:bg-[#0E1622]/90 border border-amber-200/80 dark:border-amber-500/30 rounded-xl p-2.5 leading-relaxed">
+                                {{ resumoSessaoAtual.sessao.observacoes.trim() }}
+                            </p>
                         </div>
                     </div>
 
@@ -7855,6 +9694,7 @@
                 </div>
             </div>
         </div>
+
         <!-- ======================================================================= -->
         <!-- MODAL: CONFIGURAÇÃO VISUAL DO CICLO (ORDEM, ANKI, ALTERNÂNCIA POR VOLTA) -->
         <!-- ======================================================================= -->

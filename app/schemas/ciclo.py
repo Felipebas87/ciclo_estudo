@@ -21,6 +21,9 @@ class TopicoApontadoCiclo(BaseModel):
     estagio_revisao: Optional[str] = None
     tecnica_recomendada: Optional[str] = None
     eh_revisao_anki: bool = False
+    ultima_observacao: Optional[str] = None
+    ultima_observacao_data: Optional[str] = None
+    ultima_observacao_sessao_id: Optional[int] = None
 
 class BlocoCicloResponse(BaseModel):
     id: int
