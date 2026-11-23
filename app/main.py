@@ -81,6 +81,9 @@ def auto_upgrade_db():
         ("editais", "ia_trilha_banca", "VARCHAR(100)"),
         ("editais", "ia_trilha_resumo", "TEXT"),
 
+        # ciclos_estudo
+        ("ciclos_estudo", "config_ciclo_json", "TEXT"),
+
         # configuracao_painel_prova
         ("configuracao_painel_prova", "area_concurso", "VARCHAR(100) DEFAULT 'Fiscal'"),
         ("configuracao_painel_prova", "tipo_data_prova", "VARCHAR(50) DEFAULT 'Confirmada'"),

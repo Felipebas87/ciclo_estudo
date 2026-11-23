@@ -51,8 +51,23 @@ class CicloResponse(BaseModel):
     cor_hex: str
     voltas_completas: int
     data_criacao: datetime
+    config_ciclo_json: Optional[str] = None
     blocos: List[BlocoCicloResponse] = []
     model_config = ConfigDict(from_attributes=True)
+
+class BlocoConfigItem(BaseModel):
+    disciplina_id: int
+    duracao_minutos: int = 60
+
+class AlternanciaDisciplinasItem(BaseModel):
+    disc_a_id: int
+    disc_b_id: int
+
+class CicloConfigurarRequest(BaseModel):
+    itens: List[BlocoConfigItem]
+    qtd_revisoes_anki: int = 1
+    duracao_revisao_anki: int = 30
+    alternancias: List[AlternanciaDisciplinasItem] = []
 
 class AvancarCicloResponse(BaseModel):
     ciclo_id: int

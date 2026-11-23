@@ -7,8 +7,13 @@ from app.models.sessao import SessaoEstudo
 from app.models.disciplina import Disciplina
 from app.models.topico import Topico
 from app.models.tec_taxonomia import TopicoEstudoTecDePara
-from app.schemas.ciclo import CicloResponse, CicloGerarRequest, AvancarCicloResponse, BlocoCicloResponse
-from app.services.ciclo_service import gerar_ciclo_para_edital
+from app.schemas.ciclo import CicloResponse, CicloGerarRequest, AvancarCicloResponse, BlocoCicloResponse, CicloConfigurarRequest
+from app.services.ciclo_service import (
+    gerar_ciclo_para_edital,
+    configurar_ciclo_personalizado,
+    aplicar_alternancia_volta_ciclo,
+    avancar_bloco_ciclo,
+)
 from app.services.trilha_ia_service import obter_proximo_topico_trilha_disciplina
 from app.services.revisoes_service import mapear_topicos_para_blocos_anki_do_ciclo
 
@@ -113,12 +118,14 @@ def avancar_bloco(ciclo_id: int, db: Session = Depends(get_db)):
     if total_blocos == 0:
         raise HTTPException(status_code=400, detail="Ciclo não possui blocos")
 
-    antigo_index = ciclo.bloco_atual_index
-    novo_index = (antigo_index + 1) % total_blocos
-    if novo_index == 0:
-        ciclo.voltas_completas += 1
-    ciclo.bloco_atual_index = novo_index
+    antigo_index, novo_index = avancar_bloco_ciclo(db, ciclo, marcar_atual_concluido=True)
     db.commit()
+    ciclo = (
+        db.query(CicloEstudos)
+        .options(_ciclo_eager_options())
+        .filter(CicloEstudos.id == ciclo_id)
+        .first()
+    )
     _enriquecer_ciclo_com_topicos_trilha(db, ciclo)
 
     bloco_atual = ciclo.blocos[novo_index] if novo_index < total_blocos else None
@@ -142,3 +149,31 @@ def selecionar_bloco(ciclo_id: int, ordem_index: int, db: Session = Depends(get_
     ciclo.bloco_atual_index = ordem_index
     db.commit()
     return {"mensagem": "Bloco atualizado", "bloco_atual_index": ordem_index}
+
+
+@router.put("/{ciclo_id}/configuracao", response_model=CicloResponse)
+def configurar_ciclo(ciclo_id: int, dados: CicloConfigurarRequest, db: Session = Depends(get_db)):
+    """
+    Reconfigura visualmente o ciclo ativo: ordem das disciplinas, quantidade de blocos de Revisão Anki
+    e regras de alternância de 2 disciplinas por volta.
+    """
+    try:
+        configurar_ciclo_personalizado(
+            db=db,
+            ciclo_id=ciclo_id,
+            itens=[{"disciplina_id": it.disciplina_id, "duracao_minutos": it.duracao_minutos} for it in dados.itens],
+            qtd_revisoes_anki=dados.qtd_revisoes_anki,
+            duracao_revisao_anki=dados.duracao_revisao_anki,
+            alternancias=[{"disc_a_id": a.disc_a_id, "disc_b_id": a.disc_b_id} for a in dados.alternancias],
+        )
+        ciclo_atualizado = (
+            db.query(CicloEstudos)
+            .options(_ciclo_eager_options())
+            .filter(CicloEstudos.id == ciclo_id)
+            .first()
+        )
+        return _enriquecer_ciclo_com_topicos_trilha(db, ciclo_atualizado)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao configurar ciclo: {str(e)}")

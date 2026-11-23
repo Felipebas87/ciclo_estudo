@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.sessao import SessaoEstudo
 from app.models.ciclo import CicloEstudos, BlocoCiclo
 from app.models.disciplina import Disciplina
+from app.services.ciclo_service import avancar_bloco_ciclo
 from app.schemas.sessao import SessaoEstudoCreate, SessaoEstudoResponse
 
 router = APIRouter(prefix="/api/sessoes", tags=["Sessões de Estudo & Questões"])
@@ -118,11 +119,7 @@ def registrar_sessao(dados: SessaoEstudoCreate, db: Session = Depends(get_db)):
             )
 
         if ciclo_para_avancar and ciclo_para_avancar.blocos and len(ciclo_para_avancar.blocos) > 0:
-            total_blocos = len(ciclo_para_avancar.blocos)
-            next_index = (ciclo_para_avancar.bloco_atual_index + 1) % total_blocos
-            if next_index == 0:
-                ciclo_para_avancar.voltas_completas += 1
-            ciclo_para_avancar.bloco_atual_index = next_index
+            avancar_bloco_ciclo(db, ciclo_para_avancar, marcar_atual_concluido=True)
 
     db.commit()
     db.refresh(sessao)

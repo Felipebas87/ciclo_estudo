@@ -2784,7 +2784,7 @@ const app = createApp({
                     const baseColor = discColors[nome];
                     if (idx === currentIndex) {
                         colors.push(isDark ? '#22D3EE' : baseColor);
-                    } else if (idx < currentIndex) {
+                    } else if (b.concluido) {
                         colors.push(baseColor);
                     } else {
                         // Trilho escuro para blocos futuros do ciclo em fundo azul-ardósia
@@ -5470,7 +5470,7 @@ const app = createApp({
                 topico_id: topicoAnki.topico_id || topicoAnki.id || null,
                 topico_titulo: topicoAnki.topico_titulo || topicoAnki.titulo || 'Revisão Espaçada Anki',
                 disciplina_id: topicoAnki.disciplina_id || blocoAtual.value?.disciplina_id || null,
-                disciplina_nome: topicoAnki.disciplina_nome || 'REVISÃO ANKI',
+                disciplina_nome: topicoAnki.disciplina_nome || blocoAtual.value?.disciplina?.nome || 'REVISÃO ANKI',
                 motivo_ia: topicoAnki.motivo_ia || '',
                 taxa_acerto_perc: topicoAnki.taxa_acerto_perc,
                 retencao_estimada_perc: topicoAnki.retencao_estimada_perc
@@ -5774,6 +5774,243 @@ const app = createApp({
                         }
                     }
                 });
+            }
+        };
+
+        // ==========================================
+        // 14B. CONFIGURAÇÃO VISUAL DO CICLO (ORDEM, ANKI, ALTERNÂNCIA)
+        // ==========================================
+        const modalConfigCicloAberto = ref(false);
+        const salvandoConfigCiclo = ref(false);
+        const configCicloForm = ref({
+            itens: [],
+            qtd_revisoes_anki: 1,
+            duracao_revisao_anki: 30,
+            alternancias: [],
+            novaDiscAId: null,
+            novaDiscBId: null
+        });
+
+        const disciplinasDisponiveisEditalAtual = computed(() => {
+            const editalId = cicloAtivo.value?.edital_id;
+            const ed = (editais.value || []).find(e => Number(e.id) === Number(editalId));
+            if (!ed || !Array.isArray(ed.disciplinas)) return [];
+            return ed.disciplinas.filter(d => d.categoria !== 'REVISAO_ANKI' && d.nome !== 'REVISÃO ANKI');
+        });
+
+        const obterNomeDisciplinaPorId = (discId) => {
+            const found = disciplinasDisponiveisEditalAtual.value.find(d => Number(d.id) === Number(discId));
+            return found ? found.nome : `Disciplina #${discId}`;
+        };
+
+        const obterParAlternanciaItem = (discId) => {
+            const idNum = Number(discId);
+            const regra = (configCicloForm.value.alternancias || []).find(
+                r => Number(r.disc_a_id) === idNum || Number(r.disc_b_id) === idNum
+            );
+            if (!regra) return null;
+            const aId = Number(regra.disc_a_id);
+            const bId = Number(regra.disc_b_id);
+            const outraId = idNum === aId ? bId : aId;
+            return {
+                disc_a_id: aId,
+                disc_b_id: bId,
+                nomeA: obterNomeDisciplinaPorId(aId),
+                nomeB: obterNomeDisciplinaPorId(bId),
+                parceiraNome: obterNomeDisciplinaPorId(outraId)
+            };
+        };
+
+        const previewEsteiraConfigCiclo = computed(() => {
+            const regulares = (configCicloForm.value.itens || []).map(it => {
+                const par = obterParAlternanciaItem(it.disciplina_id);
+                return {
+                    nome: par ? `${par.nomeA} ⇄ ${par.nomeB}` : it.nome,
+                    duracao_minutos: it.duracao_minutos,
+                    isAnki: false,
+                    isAlternada: Boolean(par)
+                };
+            });
+            const qtdAnki = Math.max(0, Math.min(10, Number(configCicloForm.value.qtd_revisoes_anki || 0)));
+            const durAnki = Math.max(10, Math.min(180, Number(configCicloForm.value.duracao_revisao_anki || 30)));
+            if (qtdAnki === 0 || regulares.length === 0) return regulares;
+
+            const ankiItem = { nome: 'REVISÃO ANKI', duracao_minutos: durAnki, isAnki: true, isAlternada: false };
+            const n = regulares.length;
+            if (qtdAnki === 1) {
+                const meio = Math.floor(n / 2);
+                return [...regulares.slice(0, meio), ankiItem, ...regulares.slice(meio)];
+            }
+            const pontos = new Set();
+            for (let i = 0; i < qtdAnki; i++) {
+                let pos = Math.max(1, Math.min(n, Math.round(((i + 1) * n) / qtdAnki)));
+                while (pontos.has(pos) && pos < n) pos += 1;
+                pontos.add(pos);
+            }
+            const out = [];
+            regulares.forEach((item, idx) => {
+                out.push(item);
+                if (pontos.has(idx + 1)) out.push(ankiItem);
+            });
+            const extras = Math.max(0, qtdAnki - pontos.size);
+            for (let i = 0; i < extras; i++) out.push(ankiItem);
+            return out;
+        });
+
+        const abrirModalConfigCiclo = () => {
+            if (!cicloAtivo.value) return;
+            const blocos = Array.isArray(cicloAtivo.value.blocos) ? cicloAtivo.value.blocos : [];
+            const ankiBlocos = blocos.filter(b => b.disciplina?.categoria === 'REVISAO_ANKI' || b.disciplina?.nome === 'REVISÃO ANKI');
+            const regulares = blocos
+                .filter(b => b.disciplina?.categoria !== 'REVISAO_ANKI' && b.disciplina?.nome !== 'REVISÃO ANKI')
+                .map(b => ({
+                    disciplina_id: Number(b.disciplina_id),
+                    nome: b.disciplina?.nome || obterNomeDisciplinaPorId(b.disciplina_id),
+                    duracao_minutos: Number(b.duracao_minutos || 60)
+                }));
+
+            let alternancias = [];
+            let durAnki = ankiBlocos.length > 0 ? Number(ankiBlocos[0].duracao_minutos || 30) : 30;
+            let qtdAnki = ankiBlocos.length;
+            if (cicloAtivo.value.config_ciclo_json) {
+                try {
+                    const parsed = JSON.parse(cicloAtivo.value.config_ciclo_json);
+                    if (Array.isArray(parsed.alternancias)) {
+                        alternancias = parsed.alternancias.map(r => ({
+                            disc_a_id: Number(r.disc_a_id),
+                            disc_b_id: Number(r.disc_b_id)
+                        }));
+                    }
+                    if (parsed.duracao_revisao_anki) durAnki = Number(parsed.duracao_revisao_anki);
+                    if (parsed.qtd_revisoes_anki !== undefined && parsed.qtd_revisoes_anki !== null) {
+                        qtdAnki = Number(parsed.qtd_revisoes_anki);
+                    }
+                } catch (e) { /* ignore malformed */ }
+            }
+
+            const disp = disciplinasDisponiveisEditalAtual.value;
+            configCicloForm.value = {
+                itens: regulares,
+                qtd_revisoes_anki: qtdAnki,
+                duracao_revisao_anki: durAnki,
+                alternancias,
+                novaDiscAId: disp[0] ? Number(disp[0].id) : null,
+                novaDiscBId: disp[1] ? Number(disp[1].id) : null
+            };
+            modalConfigCicloAberto.value = true;
+        };
+
+        const moverDisciplinaConfigCiclo = (idx, delta) => {
+            const lista = [...configCicloForm.value.itens];
+            const novoIdx = idx + delta;
+            if (novoIdx < 0 || novoIdx >= lista.length) return;
+            const [removido] = lista.splice(idx, 1);
+            lista.splice(novoIdx, 0, removido);
+            configCicloForm.value.itens = lista;
+        };
+
+        const adicionarAlternanciaConfigCiclo = () => {
+            const aId = Number(configCicloForm.value.novaDiscAId);
+            const bId = Number(configCicloForm.value.novaDiscBId);
+            if (!aId || !bId || aId === bId) {
+                mostrarAlerta('Selecione duas disciplinas diferentes para alternar.', 'erro');
+                return;
+            }
+            const jaUsa = (configCicloForm.value.alternancias || []).some(
+                r => [Number(r.disc_a_id), Number(r.disc_b_id)].includes(aId) || [Number(r.disc_a_id), Number(r.disc_b_id)].includes(bId)
+            );
+            if (jaUsa) {
+                mostrarAlerta('Uma dessas disciplinas já está em uma regra de alternância.', 'erro');
+                return;
+            }
+            configCicloForm.value.alternancias.push({ disc_a_id: aId, disc_b_id: bId });
+
+            const lista = [...configCicloForm.value.itens];
+            const idxA = lista.findIndex(it => Number(it.disciplina_id) === aId);
+            const idxB = lista.findIndex(it => Number(it.disciplina_id) === bId);
+            if (idxA !== -1 && idxB !== -1) {
+                lista.splice(idxB, 1);
+            } else if (idxA === -1 && idxB === -1) {
+                lista.push({
+                    disciplina_id: aId,
+                    nome: obterNomeDisciplinaPorId(aId),
+                    duracao_minutos: 60
+                });
+            }
+            configCicloForm.value.itens = lista;
+        };
+
+        const removerAlternanciaConfigCiclo = (idx) => {
+            const removida = configCicloForm.value.alternancias[idx];
+            configCicloForm.value.alternancias.splice(idx, 1);
+            if (removida) {
+                const aId = Number(removida.disc_a_id);
+                const bId = Number(removida.disc_b_id);
+                const lista = [...configCicloForm.value.itens];
+                const temA = lista.some(it => Number(it.disciplina_id) === aId);
+                const temB = lista.some(it => Number(it.disciplina_id) === bId);
+                if (temA && !temB) {
+                    const posA = lista.findIndex(it => Number(it.disciplina_id) === aId);
+                    lista.splice(posA + 1, 0, {
+                        disciplina_id: bId,
+                        nome: obterNomeDisciplinaPorId(bId),
+                        duracao_minutos: lista[posA]?.duracao_minutos || 60
+                    });
+                } else if (temB && !temA) {
+                    const posB = lista.findIndex(it => Number(it.disciplina_id) === bId);
+                    lista.splice(posB + 1, 0, {
+                        disciplina_id: aId,
+                        nome: obterNomeDisciplinaPorId(aId),
+                        duracao_minutos: lista[posB]?.duracao_minutos || 60
+                    });
+                }
+                configCicloForm.value.itens = lista;
+            }
+        };
+
+        const salvarConfiguracaoCiclo = async () => {
+            if (!cicloAtivo.value) return;
+            if (!configCicloForm.value.itens.length) {
+                mostrarAlerta('Adicione pelo menos uma disciplina à esteira.', 'erro');
+                return;
+            }
+            salvandoConfigCiclo.value = true;
+            try {
+                const payload = {
+                    itens: configCicloForm.value.itens.map(it => ({
+                        disciplina_id: Number(it.disciplina_id),
+                        duracao_minutos: Number(it.duracao_minutos || 60)
+                    })),
+                    qtd_revisoes_anki: Number(configCicloForm.value.qtd_revisoes_anki || 0),
+                    duracao_revisao_anki: Number(configCicloForm.value.duracao_revisao_anki || 30),
+                    alternancias: (configCicloForm.value.alternancias || []).map(r => ({
+                        disc_a_id: Number(r.disc_a_id),
+                        disc_b_id: Number(r.disc_b_id)
+                    }))
+                };
+                const resp = await fetch(`/api/ciclos/${cicloAtivo.value.id}/configuracao`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!resp.ok) {
+                    const errData = await resp.json().catch(() => ({}));
+                    throw new Error(errData.detail || `Erro HTTP ${resp.status}`);
+                }
+                const atualizado = await resp.json();
+                cicloAtivo.value = atualizado;
+                modalConfigCicloAberto.value = false;
+                mostrarAlerta('Configuração do ciclo atualizada com sucesso!', 'sucesso');
+                await nextTick();
+                renderDonut();
+                if (typeof carregarRoteiroEstudo === 'function') {
+                    carregarRoteiroEstudo(true);
+                }
+            } catch (e) {
+                console.error('Erro ao salvar configuração do ciclo:', e);
+                mostrarAlerta(e.message || 'Erro ao salvar configuração do ciclo.', 'erro');
+            } finally {
+                salvandoConfigCiclo.value = false;
             }
         };
 
@@ -6103,7 +6340,19 @@ const app = createApp({
             abrirBaralhoNoAnki,
             abrirModalEstudoAnki,
             irParaMapeamentoAnkiDoModal,
-            concluirDoModalEstudoAnki
+            concluirDoModalEstudoAnki,
+            modalConfigCicloAberto,
+            salvandoConfigCiclo,
+            configCicloForm,
+            disciplinasDisponiveisEditalAtual,
+            previewEsteiraConfigCiclo,
+            obterNomeDisciplinaPorId,
+            obterParAlternanciaItem,
+            abrirModalConfigCiclo,
+            moverDisciplinaConfigCiclo,
+            adicionarAlternanciaConfigCiclo,
+            removerAlternanciaConfigCiclo,
+            salvarConfiguracaoCiclo
         };
     }
 });

@@ -1,9 +1,11 @@
+import json
 import math
-from typing import List, Dict, Tuple
-from sqlalchemy.orm import Session
+from typing import List, Dict, Tuple, Optional, Any
+from sqlalchemy.orm import Session, selectinload
 from app.models.edital import Edital
 from app.models.disciplina import Disciplina
 from app.models.ciclo import CicloEstudos, BlocoCiclo
+from app.models.sessao import SessaoEstudo
 
 def calcular_fatores_importancia(disciplinas: List[Disciplina]) -> Dict[int, float]:
     """
@@ -268,6 +270,298 @@ def gerar_ciclo_para_edital(
             concluido=False
         )
         db.add(bloco)
+
+    db.commit()
+    db.refresh(ciclo)
+    return ciclo
+
+
+def _obter_ou_criar_disciplina_anki(db: Session, edital_id: int) -> Disciplina:
+    revisao_disc = (
+        db.query(Disciplina)
+        .filter(Disciplina.edital_id == edital_id, Disciplina.nome == "REVISÃO ANKI")
+        .first()
+    )
+    if not revisao_disc:
+        revisao_disc = Disciplina(
+            edital_id=edital_id,
+            nome="REVISÃO ANKI",
+            categoria="REVISAO_ANKI",
+            grupo_conhecimento="BASICOS",
+            peso_prova=1.0,
+            incluir_no_ciclo=True,
+        )
+        db.add(revisao_disc)
+        db.flush()
+    return revisao_disc
+
+
+def aplicar_alternancia_volta_ciclo(db: Session, ciclo: CicloEstudos) -> bool:
+    """
+    Aplica as regras de alternância de 2 disciplinas conforme a paridade de `ciclo.voltas_completas`.
+    Voltas pares (0, 2, 4...): usa `disc_a_id`.
+    Voltas ímpares (1, 3, 5...): usa `disc_b_id`.
+    """
+    if not ciclo or not getattr(ciclo, "config_ciclo_json", None):
+        return False
+    try:
+        cfg = json.loads(ciclo.config_ciclo_json)
+    except Exception:
+        return False
+
+    alternancias = cfg.get("alternancias") or []
+    if not alternancias:
+        return False
+
+    volta_impar = ((ciclo.voltas_completas or 0) % 2) == 1
+    alterou = False
+    for regra in alternancias:
+        try:
+            disc_a_id = int(regra.get("disc_a_id"))
+            disc_b_id = int(regra.get("disc_b_id"))
+        except (TypeError, ValueError):
+            continue
+        if not disc_a_id or not disc_b_id or disc_a_id == disc_b_id:
+            continue
+
+        alvo_id = disc_b_id if volta_impar else disc_a_id
+        outro_id = disc_a_id if volta_impar else disc_b_id
+        for bloco in ciclo.blocos:
+            if bloco.disciplina_id == outro_id:
+                bloco.disciplina_id = alvo_id
+                alterou = True
+
+    if alterou:
+        db.flush()
+    return alterou
+
+
+def avancar_bloco_ciclo(
+    db: Session,
+    ciclo: CicloEstudos,
+    marcar_atual_concluido: bool = True,
+) -> Tuple[int, int]:
+    """
+    Avança a esteira do ciclo de forma inteligente:
+    - Marca o bloco atual como concluído (se solicitado).
+    - Pula blocos que já estejam com `concluido=True` nesta volta (evita repetir matéria já feita após reordenar).
+    - Quando todos os blocos da volta estiverem concluídos, incrementa `voltas_completas`,
+      reseta `concluido=False` para a nova volta, aplica alternâncias de volta e volta ao índice 0.
+    """
+    blocos_ord = sorted(list(ciclo.blocos), key=lambda b: b.ordem)
+    total_blocos = len(blocos_ord)
+    if total_blocos == 0:
+        return (0, 0)
+
+    antigo_index = max(0, min(ciclo.bloco_atual_index or 0, total_blocos - 1))
+    if marcar_atual_concluido:
+        blocos_ord[antigo_index].concluido = True
+
+    # 1. Procura o próximo bloco pendente à frente na ordem da esteira
+    novo_index: Optional[int] = None
+    for idx in range(antigo_index + 1, total_blocos):
+        if not blocos_ord[idx].concluido:
+            novo_index = idx
+            break
+
+    # 2. Se não houver pendente à frente, verifica se restou algum pendente antes (caso de reordenação no meio da volta)
+    if novo_index is None:
+        for idx in range(0, antigo_index + 1):
+            if not blocos_ord[idx].concluido:
+                novo_index = idx
+                break
+
+    # 3. Se todos os blocos da volta estão concluídos, conclui a volta e inicia a próxima sequencialmente do 0
+    if novo_index is None:
+        ciclo.voltas_completas = (ciclo.voltas_completas or 0) + 1
+        for b in blocos_ord:
+            b.concluido = False
+        aplicar_alternancia_volta_ciclo(db, ciclo)
+        novo_index = 0
+
+    ciclo.bloco_atual_index = novo_index
+    db.flush()
+    return (antigo_index, novo_index)
+
+
+def configurar_ciclo_personalizado(
+    db: Session,
+    ciclo_id: int,
+    itens: List[Dict[str, Any]],
+    qtd_revisoes_anki: int = 1,
+    duracao_revisao_anki: int = 30,
+    alternancias: Optional[List[Dict[str, Any]]] = None,
+) -> CicloEstudos:
+    """
+    Reorganiza a esteira do ciclo com ordem personalizada das disciplinas,
+    quantidade de blocos de Revisão Anki distribuídos uniformemente e regras de alternância por volta.
+    """
+    ciclo = (
+        db.query(CicloEstudos)
+        .options(selectinload(CicloEstudos.blocos).joinedload(BlocoCiclo.disciplina))
+        .filter(CicloEstudos.id == ciclo_id)
+        .first()
+    )
+    if not ciclo:
+        raise ValueError("Ciclo não encontrado.")
+
+    disciplinas_edital = db.query(Disciplina).filter(Disciplina.edital_id == ciclo.edital_id).all()
+    disc_map = {d.id: d for d in disciplinas_edital}
+
+    regras_limpas: List[Dict[str, int]] = []
+    usados_alt = set()
+    for reg in (alternancias or []):
+        try:
+            a_id = int(reg.get("disc_a_id"))
+            b_id = int(reg.get("disc_b_id"))
+        except (TypeError, ValueError):
+            continue
+        if (
+            a_id in disc_map
+            and b_id in disc_map
+            and a_id != b_id
+            and disc_map[a_id].categoria != "REVISAO_ANKI"
+            and disc_map[b_id].categoria != "REVISAO_ANKI"
+            and a_id not in usados_alt
+            and b_id not in usados_alt
+        ):
+            regras_limpas.append({"disc_a_id": a_id, "disc_b_id": b_id})
+            usados_alt.add(a_id)
+            usados_alt.add(b_id)
+
+    volta_impar = ((ciclo.voltas_completas or 0) % 2) == 1
+    alt_substituicao: Dict[int, int] = {}
+    for reg in regras_limpas:
+        ativo_id = reg["disc_b_id"] if volta_impar else reg["disc_a_id"]
+        inativo_id = reg["disc_a_id"] if volta_impar else reg["disc_b_id"]
+        alt_substituicao[inativo_id] = ativo_id
+        alt_substituicao[ativo_id] = ativo_id
+
+    regulares: List[Tuple[int, int]] = []
+    alt_ja_incluido = set()
+    for item in itens:
+        try:
+            d_id = int(item.get("disciplina_id"))
+            dur = max(15, min(360, int(item.get("duracao_minutos") or 60)))
+        except (TypeError, ValueError):
+            continue
+        disc = disc_map.get(d_id)
+        if not disc or disc.categoria == "REVISAO_ANKI":
+            continue
+        if d_id in alt_substituicao:
+            ativo_id = alt_substituicao[d_id]
+            if ativo_id in alt_ja_incluido:
+                continue
+            alt_ja_incluido.add(ativo_id)
+            regulares.append((ativo_id, dur))
+        else:
+            regulares.append((d_id, dur))
+
+    if not regulares:
+        raise ValueError("Selecione pelo menos uma disciplina para compor a esteira do ciclo.")
+
+    qtd_anki = max(0, min(10, int(qtd_revisoes_anki)))
+    dur_anki = max(10, min(180, int(duracao_revisao_anki or 30)))
+
+    sequencia_final: List[Tuple[int, int]] = []
+    if qtd_anki == 0:
+        sequencia_final = list(regulares)
+    else:
+        revisao_disc = _obter_ou_criar_disciplina_anki(db, ciclo.edital_id)
+        n = len(regulares)
+        if qtd_anki == 1:
+            meio = n // 2
+            sequencia_final = regulares[:meio] + [(revisao_disc.id, dur_anki)] + regulares[meio:]
+        else:
+            pontos_insercao = set()
+            for i in range(qtd_anki):
+                pos = max(1, min(n, round((i + 1) * n / qtd_anki)))
+                # Evita colisão quando qtd_anki <= n
+                while pos in pontos_insercao and pos < n:
+                    pos += 1
+                pontos_insercao.add(pos)
+
+            extras = max(0, qtd_anki - len(pontos_insercao))
+            for idx, reg_item in enumerate(regulares, start=1):
+                sequencia_final.append(reg_item)
+                if idx in pontos_insercao:
+                    sequencia_final.append((revisao_disc.id, dur_anki))
+            for _ in range(extras):
+                sequencia_final.append((revisao_disc.id, dur_anki))
+
+    blocos_atuais = sorted(list(ciclo.blocos), key=lambda b: b.ordem)
+    idx_atual_antigo = ciclo.bloco_atual_index or 0
+    bloco_atual_antigo = (
+        blocos_atuais[idx_atual_antigo]
+        if 0 <= idx_atual_antigo < len(blocos_atuais)
+        else None
+    )
+
+    # Mapeia parceiro de alternância para reaproveitar o bloco existente sem quebrar sessões nem progresso
+    parceiro_alt: Dict[int, int] = {}
+    for reg in regras_limpas:
+        parceiro_alt[reg["disc_a_id"]] = reg["disc_b_id"]
+        parceiro_alt[reg["disc_b_id"]] = reg["disc_a_id"]
+
+    # Pool de blocos existentes por disciplina_id (preserva IDs, status concluido e vínculos de SessaoEstudo)
+    pools_existentes: Dict[int, List[BlocoCiclo]] = {}
+    for b in blocos_atuais:
+        pools_existentes.setdefault(b.disciplina_id, []).append(b)
+
+    blocos_finais: List[BlocoCiclo] = []
+    ids_reutilizados = set()
+    for ordem, (d_id, dur) in enumerate(sequencia_final):
+        reutilizado: Optional[BlocoCiclo] = None
+        if pools_existentes.get(d_id):
+            reutilizado = pools_existentes[d_id].pop(0)
+        elif d_id in parceiro_alt and pools_existentes.get(parceiro_alt[d_id]):
+            reutilizado = pools_existentes[parceiro_alt[d_id]].pop(0)
+
+        if reutilizado is not None:
+            reutilizado.disciplina_id = d_id
+            reutilizado.ordem = ordem
+            reutilizado.duracao_minutos = dur
+            blocos_finais.append(reutilizado)
+            ids_reutilizados.add(reutilizado.id)
+        else:
+            novo_bloco = BlocoCiclo(
+                ciclo_id=ciclo.id,
+                disciplina_id=d_id,
+                ordem=ordem,
+                duracao_minutos=dur,
+                concluido=False,
+            )
+            db.add(novo_bloco)
+            blocos_finais.append(novo_bloco)
+
+    # Remove apenas blocos que realmente deixaram de existir, preservando 100% do histórico de SessaoEstudo
+    blocos_obsoletos = [b for b in blocos_atuais if b.id not in ids_reutilizados]
+    if blocos_obsoletos:
+        obsoletos_ids = [b.id for b in blocos_obsoletos]
+        db.query(SessaoEstudo).filter(SessaoEstudo.bloco_ciclo_id.in_(obsoletos_ids)).update(
+            {"bloco_ciclo_id": None}, synchronize_session=False
+        )
+        for b_obs in blocos_obsoletos:
+            db.delete(b_obs)
+        db.flush()
+
+    # Define o bloco atual como o primeiro bloco ainda não concluído na nova ordem,
+    # garantindo que disciplinas colocadas no início sem conclusão não sejam puladas/burladas.
+    primeiro_pendente = next((i for i, b in enumerate(blocos_finais) if not b.concluido), None)
+    if primeiro_pendente is not None:
+        ciclo.bloco_atual_index = primeiro_pendente
+    else:
+        ciclo.bloco_atual_index = 0
+
+    ciclo.carga_horaria_semanal = round(sum(dur for _, dur in sequencia_final) / 60.0, 1)
+    ciclo.config_ciclo_json = json.dumps(
+        {
+            "qtd_revisoes_anki": qtd_anki,
+            "duracao_revisao_anki": dur_anki,
+            "alternancias": regras_limpas,
+        },
+        ensure_ascii=False,
+    )
 
     db.commit()
     db.refresh(ciclo)

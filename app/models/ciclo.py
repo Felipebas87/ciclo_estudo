@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, Boolean, ForeignKey, DateTime, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -20,6 +20,7 @@ class CicloEstudos(Base):
     cor_hex = Column(String(20), default="#10b981")
     data_criacao = Column(DateTime, default=utc_now)
     voltas_completas = Column(Integer, default=0)
+    config_ciclo_json = Column(Text, nullable=True)
 
     edital = relationship("Edital", back_populates="ciclos")
     blocos = relationship("BlocoCiclo", back_populates="ciclo", cascade="all, delete-orphan", order_by="BlocoCiclo.ordem")

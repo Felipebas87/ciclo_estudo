@@ -765,30 +765,20 @@
                                                     </div>
                                                 </div>
                                                 <div class="flex flex-wrap items-center gap-2 flex-shrink-0 self-end sm:self-center">
-                                                    <template v-if="proximoTopicoBlocoAtual.eh_revisao_anki">
-                                                        <button type="button"
-                                                            @click="abrirModalEstudoAnki(proximoTopicoBlocoAtual)"
-                                                            title="Abre o baralho correlacionado diretamente no seu Anki Desktop via AnkiConnect"
-                                                            class="whitespace-nowrap px-3.5 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:text-purple-200 border border-purple-500/25 text-xs sm:text-[13px] font-bold shadow-xs transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
-                                                            <i class="fa-solid fa-up-right-from-square text-[11px]"></i>
-                                                            <span>Anki</span>
-                                                        </button>
-                                                        <a :href="obterUrlTecTopico(proximoTopicoBlocoAtual)"
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            :title="proximoTopicoBlocoAtual.tec_vinculo?.caderno_id ? ('Abrir Caderno #' + proximoTopicoBlocoAtual.tec_vinculo.caderno_id + ' no TEC Concursos') : ('Abrir Questões de ' + (proximoTopicoBlocoAtual.tec_vinculo?.nome_assunto_tec || proximoTopicoBlocoAtual.titulo) + ' no TEC Concursos')"
-                                                            class="whitespace-nowrap px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-[13px] font-bold shadow-sm hover:shadow-blue-500/25 transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer no-underline">
-                                                            <i class="fa-solid fa-play text-[10px]"></i>
-                                                            <span>Questões</span>
-                                                        </a>
-                                                    </template>
-                                                    <a v-else :href="obterUrlTecTopico(proximoTopicoBlocoAtual)"
+                                                    <button type="button"
+                                                        @click="abrirModalEstudoAnki(proximoTopicoBlocoAtual)"
+                                                        title="Abre o baralho correlacionado diretamente no seu Anki Desktop via AnkiConnect"
+                                                        class="whitespace-nowrap px-3.5 py-2 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 text-purple-700 dark:bg-purple-500/20 dark:hover:bg-purple-500/30 dark:text-purple-200 border border-purple-500/25 text-xs sm:text-[13px] font-bold shadow-xs transition-all flex items-center gap-1.5 flex-shrink-0 cursor-pointer">
+                                                        <i class="fa-solid fa-up-right-from-square text-[11px]"></i>
+                                                        <span>Anki</span>
+                                                    </button>
+                                                    <a :href="obterUrlTecTopico(proximoTopicoBlocoAtual)"
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         :title="proximoTopicoBlocoAtual.tec_vinculo?.caderno_id ? ('Abrir Caderno #' + proximoTopicoBlocoAtual.tec_vinculo.caderno_id + ' no TEC Concursos') : ('Abrir Questões de ' + (proximoTopicoBlocoAtual.tec_vinculo?.nome_assunto_tec || proximoTopicoBlocoAtual.titulo) + ' no TEC Concursos')"
                                                         class="whitespace-nowrap px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs sm:text-[13px] font-bold shadow-sm hover:shadow-blue-500/25 transition-all flex items-center gap-2 flex-shrink-0 cursor-pointer no-underline">
                                                         <i class="fa-solid fa-play text-[10px]"></i>
-                                                        <span>Estudar este Tópico</span>
+                                                        <span>Questões</span>
                                                     </a>
                                                 </div>
                                             </div>
@@ -878,24 +868,29 @@
                                         <span class="text-xs font-extrabold text-slate-900 dark:text-[#F8FAFC]">{{ getTempoTotalCicloAtual()
                                             }}</span>
                                     </div>
-                                    <div
-                                        class="card-subcard flex justify-between px-3 py-1.5 bg-slate-50 dark:bg-[#162335] rounded-lg items-center border border-slate-100 dark:border-[#3D5A82]">
-                                        <span class="text-[11px] text-slate-500 dark:text-[#CBD5E1] font-semibold">Tamanho da Esteira</span>
-                                        <span class="text-xs font-extrabold text-slate-900 dark:text-[#F8FAFC]">{{ cicloAtivo.blocos.length
-                                            }} blocos</span>
-                                    </div>
+                                    <button type="button" @click="abrirModalConfigCiclo()"
+                                        class="w-full card-subcard flex justify-between px-3 py-1.5 bg-blue-50/80 hover:bg-blue-100/90 dark:bg-[#162335] dark:hover:bg-[#1E2E46] rounded-lg items-center border border-blue-200 dark:border-[#3D5A82] hover:border-blue-400 dark:hover:border-[#22D3EE] transition-all cursor-pointer group"
+                                        title="Ajustar ordem das disciplinas, revisões Anki e alternância por volta">
+                                        <span class="text-[11px] text-blue-700 dark:text-[#22D3EE] font-bold flex items-center gap-1.5">
+                                            <i class="fa-solid fa-sliders text-[10px]"></i>
+                                            Configuração do Ciclo
+                                        </span>
+                                        <span class="text-xs font-extrabold text-slate-900 dark:text-[#F8FAFC] flex items-center gap-1.5">
+                                            {{ cicloAtivo.blocos.length }} blocos
+                                            <i class="fa-solid fa-chevron-right text-[9px] text-blue-500 dark:text-[#22D3EE] group-hover:translate-x-0.5 transition-transform"></i>
+                                        </span>
+                                    </button>
                                     <!-- Barra de progresso com percentual fora da barra -->
                                     <div
                                         class="card-subcard px-3 py-1.5 bg-blue-50/60 dark:bg-[#162335] rounded-lg border border-blue-100 dark:border-[#3D5A82] space-y-1">
                                         <div class="flex justify-between items-center">
                                             <span class="text-[11px] text-blue-700 dark:text-[#CBD5E1] font-semibold">Progresso da Volta</span>
                                             <span class="text-xs font-extrabold text-blue-700 dark:text-[#22D3EE]">{{
-                                                Math.round(((cicloAtivo.bloco_atual_index + 1) / cicloAtivo.blocos.length) *
-                                                100) }}%</span>
+                                                cicloAtivo.blocos.length ? Math.round((cicloAtivo.blocos.filter(b => b.concluido).length / cicloAtivo.blocos.length) * 100) : 0 }}%</span>
                                         </div>
                                         <div class="w-full h-1.5 rounded-full bg-slate-200 dark:bg-[#0B1220] overflow-hidden">
                                             <div class="h-full rounded-full bg-blue-600 dark:bg-[#22D3EE] transition-all duration-300"
-                                                 :style="{ width: Math.round(((cicloAtivo.bloco_atual_index + 1) / cicloAtivo.blocos.length) * 100) + '%' }"></div>
+                                                 :style="{ width: (cicloAtivo.blocos.length ? Math.round((cicloAtivo.blocos.filter(b => b.concluido).length / cicloAtivo.blocos.length) * 100) : 0) + '%' }"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -914,13 +909,13 @@
                                 class="flex space-x-3 overflow-x-auto pb-5 pt-4 px-2 -mx-2 snap-x esteira-scroll">
                                 <div v-for="(b, idx) in cicloAtivo.blocos" :key="b.id" :id="'bloco-' + idx"
                                     @click="selecionarBlocoManual(idx)"
-                                    :class="idx === cicloAtivo.bloco_atual_index ? 'bloco-ativo border-l-4 border-l-blue-600 dark:border-l-[#22D3EE] border-blue-600/30 dark:border-[#3D5A82] bg-blue-50/70 dark:bg-[#162335] shadow-lg ring-2 ring-blue-500/20 dark:ring-[#22D3EE]/30 pulse-active' : (idx < cicloAtivo.bloco_atual_index ? 'bloco-concluido border-l-4 border-l-emerald-500 dark:border-l-[#34D399] border-slate-200 dark:border-[#3D5A82] bg-slate-50/70 dark:bg-[#162335] hover:border-slate-300 dark:hover:border-[#4C6F9F]' : 'bloco-pendente border-l-4 border-l-slate-300 dark:border-l-[#3D5A82] border-slate-200 dark:border-[#3D5A82] bg-white dark:bg-[#162335] hover:border-slate-300 dark:hover:border-[#4C6F9F]')"
+                                    :class="idx === cicloAtivo.bloco_atual_index ? 'bloco-ativo border-l-4 border-l-blue-600 dark:border-l-[#22D3EE] border-blue-600/30 dark:border-[#3D5A82] bg-blue-50/70 dark:bg-[#162335] shadow-lg ring-2 ring-blue-500/20 dark:ring-[#22D3EE]/30 pulse-active' : (b.concluido ? 'bloco-concluido border-l-4 border-l-emerald-500 dark:border-l-[#34D399] border-slate-200 dark:border-[#3D5A82] bg-slate-50/70 dark:bg-[#162335] hover:border-slate-300 dark:hover:border-[#4C6F9F]' : 'bloco-pendente border-l-4 border-l-slate-300 dark:border-l-[#3D5A82] border-slate-200 dark:border-[#3D5A82] bg-white dark:bg-[#162335] hover:border-slate-300 dark:hover:border-[#4C6F9F]')"
                                     class="card-subcard snap-start cursor-pointer border rounded-xl p-3 min-w-[215px] max-w-[240px] flex-shrink-0 transition-card flex flex-col justify-between">
                                     <div>
                                         <div class="flex justify-between mb-1.5 items-center">
                                             <span class="text-xs font-extrabold"
-                                                :class="idx === cicloAtivo.bloco_atual_index ? 'text-blue-600 dark:text-[#22D3EE]' : (idx < cicloAtivo.bloco_atual_index ? 'text-emerald-600 dark:text-[#34D399]' : 'text-slate-400 dark:text-[#CBD5E1]')">
-                                                <span v-if="idx < cicloAtivo.bloco_atual_index" class="mr-1">✓</span>#{{ idx + 1 }}
+                                                :class="idx === cicloAtivo.bloco_atual_index ? 'text-blue-600 dark:text-[#22D3EE]' : (b.concluido ? 'text-emerald-600 dark:text-[#34D399]' : 'text-slate-400 dark:text-[#CBD5E1]')">
+                                                <span v-if="b.concluido" class="mr-1">✓</span>#{{ idx + 1 }}
                                             </span>
                                             <div class="flex space-x-1">
                                                 <span v-if="b.disciplina.categoria !== 'REVISAO_ANKI'"
@@ -7844,10 +7839,229 @@
                 </div>
             </div>
         </div>
+        <!-- ======================================================================= -->
+        <!-- MODAL: CONFIGURAÇÃO VISUAL DO CICLO (ORDEM, ANKI, ALTERNÂNCIA POR VOLTA) -->
+        <!-- ======================================================================= -->
+        <div v-if="modalConfigCicloAberto"
+            class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-sm">
+            <div
+                class="w-full max-w-3xl max-h-[90vh] flex flex-col bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] shadow-2xl overflow-hidden">
+                <!-- Cabeçalho -->
+                <div class="px-6 py-4 border-b border-slate-200 dark:border-[#24324A] flex items-center justify-between bg-slate-50/70 dark:bg-[#0F1726]">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-2xl bg-blue-600/15 text-blue-600 dark:text-[#22D3EE] flex items-center justify-center">
+                            <i class="fa-solid fa-sliders text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-white">
+                                Configuração do Ciclo
+                            </h3>
+                            <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
+                                Ajuste a ordem na esteira, quantidade de revisões Anki e alternância entre disciplinas por volta
+                            </p>
+                        </div>
+                    </div>
+                    <button type="button" @click="modalConfigCicloAberto = false"
+                        class="w-8 h-8 rounded-xl bg-slate-200/70 hover:bg-slate-300/70 dark:bg-[#1E293B] dark:hover:bg-[#283548] text-slate-600 dark:text-slate-300 flex items-center justify-center cursor-pointer transition-colors">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <!-- Corpo rolável -->
+                <div class="p-6 overflow-y-auto space-y-6">
+                    <!-- BLOCO 1: REVISÕES ANKI NO CICLO -->
+                    <div class="rounded-2xl border border-purple-200/80 dark:border-purple-500/30 bg-purple-50/50 dark:bg-purple-500/10 p-4 space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div>
+                                <div class="text-xs font-black uppercase tracking-wider text-purple-700 dark:text-purple-300 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-brain"></i>
+                                    Revisões Anki por Volta
+                                </div>
+                                <p class="text-xs text-slate-600 dark:text-[#94A3B8] mt-0.5">
+                                    Escolha quantos blocos de Revisão Anki serão distribuídos automaticamente ao longo da esteira
+                                </p>
+                            </div>
+                            <div class="flex items-center gap-3 self-start sm:self-center">
+                                <div class="flex items-center gap-1 bg-white dark:bg-[#0F1726] rounded-xl border border-purple-200 dark:border-purple-500/30 p-1">
+                                    <button type="button"
+                                        @click="configCicloForm.qtd_revisoes_anki = Math.max(0, Number(configCicloForm.qtd_revisoes_anki || 0) - 1)"
+                                        class="w-8 h-8 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-black cursor-pointer">
+                                        -
+                                    </button>
+                                    <span class="w-8 text-center font-mono-timer text-sm font-black text-slate-900 dark:text-white">
+                                        {{ configCicloForm.qtd_revisoes_anki }}
+                                    </span>
+                                    <button type="button"
+                                        @click="configCicloForm.qtd_revisoes_anki = Math.min(10, Number(configCicloForm.qtd_revisoes_anki || 0) + 1)"
+                                        class="w-8 h-8 rounded-lg hover:bg-purple-100 dark:hover:bg-purple-500/20 text-purple-700 dark:text-purple-300 font-black cursor-pointer">
+                                        +
+                                    </button>
+                                </div>
+                                <select v-model.number="configCicloForm.duracao_revisao_anki"
+                                    class="text-xs font-bold bg-white dark:bg-[#0F1726] text-slate-700 dark:text-white border border-purple-200 dark:border-purple-500/30 rounded-xl px-2.5 py-2 outline-none">
+                                    <option :value="15">15 min cada</option>
+                                    <option :value="30">30 min cada</option>
+                                    <option :value="45">45 min cada</option>
+                                    <option :value="60">60 min cada</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOCO 2: ALTERNÂNCIA DE 2 DISCIPLINAS POR VOLTA -->
+                    <div class="rounded-2xl border border-cyan-200/80 dark:border-cyan-500/30 bg-cyan-50/50 dark:bg-cyan-500/10 p-4 space-y-3">
+                        <div>
+                            <div class="text-xs font-black uppercase tracking-wider text-cyan-700 dark:text-cyan-300 flex items-center gap-1.5">
+                                <i class="fa-solid fa-arrows-rotate"></i>
+                                Alternância entre 2 Disciplinas por Volta
+                            </div>
+                            <p class="text-xs text-slate-600 dark:text-[#94A3B8] mt-0.5">
+                                Ex.: escolha Estatística e Matemática — em uma volta do ciclo entra Estatística, na próxima entra Matemática automaticamente.
+                            </p>
+                        </div>
+
+                        <!-- Regras ativas -->
+                        <div v-if="configCicloForm.alternancias.length > 0" class="space-y-2">
+                            <div v-for="(regra, idxReg) in configCicloForm.alternancias" :key="'alt-' + idxReg"
+                                class="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-white dark:bg-[#0F1726] border border-cyan-200 dark:border-cyan-500/30">
+                                <div class="flex flex-wrap items-center gap-2 text-xs font-bold text-slate-800 dark:text-white">
+                                    <span class="px-2 py-0.5 rounded-lg bg-blue-500/15 text-blue-700 dark:text-blue-300">
+                                        Volta Par: {{ obterNomeDisciplinaPorId(regra.disc_a_id) }}
+                                    </span>
+                                    <i class="fa-solid fa-right-left text-cyan-500"></i>
+                                    <span class="px-2 py-0.5 rounded-lg bg-cyan-500/15 text-cyan-700 dark:text-cyan-300">
+                                        Volta Ímpar: {{ obterNomeDisciplinaPorId(regra.disc_b_id) }}
+                                    </span>
+                                </div>
+                                <button type="button" @click="removerAlternanciaConfigCiclo(idxReg)"
+                                    class="px-2.5 py-1 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-500/10 cursor-pointer"
+                                    title="Remover alternância">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Adicionar nova alternância -->
+                        <div class="grid grid-cols-1 sm:grid-cols-12 gap-2 items-center pt-1">
+                            <div class="sm:col-span-5">
+                                <select v-model.number="configCicloForm.novaDiscAId"
+                                    class="w-full text-xs font-bold bg-white dark:bg-[#0F1726] text-slate-700 dark:text-white border border-slate-200 dark:border-[#24324A] rounded-xl px-3 py-2 outline-none">
+                                    <option v-for="d in disciplinasDisponiveisEditalAtual" :key="'da-' + d.id" :value="Number(d.id)">
+                                        1ª Volta: {{ d.nome }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-5">
+                                <select v-model.number="configCicloForm.novaDiscBId"
+                                    class="w-full text-xs font-bold bg-white dark:bg-[#0F1726] text-slate-700 dark:text-white border border-slate-200 dark:border-[#24324A] rounded-xl px-3 py-2 outline-none">
+                                    <option v-for="d in disciplinasDisponiveisEditalAtual" :key="'db-' + d.id" :value="Number(d.id)">
+                                        2ª Volta: {{ d.nome }}
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="sm:col-span-2">
+                                <button type="button" @click="adicionarAlternanciaConfigCiclo()"
+                                    class="w-full px-3 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-black cursor-pointer transition-colors">
+                                    + Alternar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BLOCO 3: ORDEM DAS DISCIPLINAS NA ESTEIRA -->
+                    <div class="space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-[#CBD5E1]">
+                                    Ordem das Disciplinas na Esteira
+                                </h4>
+                                <p class="text-[11px] text-slate-500 dark:text-[#94A3B8]">
+                                    Use as setas para definir a sequência exata de estudo
+                                </p>
+                            </div>
+                            <span class="text-[11px] font-bold text-slate-500 dark:text-[#94A3B8]">
+                                {{ configCicloForm.itens.length }} matérias base
+                            </span>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <div v-for="(item, idx) in configCicloForm.itens" :key="'cfg-item-' + item.disciplina_id + '-' + idx"
+                                class="flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-2xl border border-slate-200 dark:border-[#24324A] bg-slate-50/70 dark:bg-[#1B2638]">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <span class="w-6 h-6 rounded-lg bg-blue-600/15 text-blue-700 dark:text-[#22D3EE] text-xs font-black flex items-center justify-center shrink-0">
+                                        {{ idx + 1 }}
+                                    </span>
+                                    <div class="min-w-0">
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span class="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                                                {{ item.nome }}
+                                            </span>
+                                            <span v-if="obterParAlternanciaItem(item.disciplina_id)"
+                                                class="px-2 py-0.5 rounded-full text-[10px] font-black bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border border-cyan-500/25">
+                                                ⇄ Alterna com {{ obterParAlternanciaItem(item.disciplina_id).parceiraNome }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-2 shrink-0">
+                                    <span class="text-[11px] font-mono-timer font-bold text-slate-500 dark:text-[#94A3B8]">
+                                        {{ item.duracao_minutos }} min
+                                    </span>
+                                    <div class="flex items-center gap-1">
+                                        <button type="button" @click="moverDisciplinaConfigCiclo(idx, -1)" :disabled="idx === 0"
+                                            class="w-7 h-7 rounded-lg bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-[#24324A] text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-[#24324A] disabled:opacity-30 cursor-pointer flex items-center justify-center text-xs">
+                                            <i class="fa-solid fa-chevron-up"></i>
+                                        </button>
+                                        <button type="button" @click="moverDisciplinaConfigCiclo(idx, 1)" :disabled="idx === configCicloForm.itens.length - 1"
+                                            class="w-7 h-7 rounded-lg bg-white dark:bg-[#0F1726] border border-slate-200 dark:border-[#24324A] text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-[#24324A] disabled:opacity-30 cursor-pointer flex items-center justify-center text-xs">
+                                            <i class="fa-solid fa-chevron-down"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PRÉ-VISUALIZAÇÃO DA ESTEIRA -->
+                    <div class="rounded-2xl border border-slate-200 dark:border-[#24324A] bg-slate-50 dark:bg-[#0F1726] p-3.5 space-y-2">
+                        <div class="flex items-center justify-between">
+                            <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-[#94A3B8]">
+                                Pré-visualização da Esteira ({{ previewEsteiraConfigCiclo.length }} blocos)
+                            </span>
+                        </div>
+                        <div class="flex flex-wrap gap-1.5">
+                            <span v-for="(pv, pvIdx) in previewEsteiraConfigCiclo" :key="'pv-' + pvIdx"
+                                class="px-2.5 py-1 rounded-lg text-[11px] font-bold border"
+                                :class="pv.isAnki
+                                    ? 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30'
+                                    : (pv.isAlternada
+                                        ? 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30'
+                                        : 'bg-white dark:bg-[#1B2638] text-slate-700 dark:text-slate-200 border-slate-200 dark:border-[#24324A]')">
+                                #{{ pvIdx + 1 }} {{ pv.nome }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rodapé -->
+                <div class="px-6 py-4 border-t border-slate-200 dark:border-[#24324A] flex items-center justify-end gap-3 bg-slate-50/70 dark:bg-[#0F1726]">
+                    <button type="button" @click="modalConfigCicloAberto = false"
+                        class="px-4 py-2 rounded-xl border border-slate-200 dark:border-[#24324A] text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-[#1B2638] cursor-pointer">
+                        Cancelar
+                    </button>
+                    <button type="button" @click="salvarConfiguracaoCiclo()" :disabled="salvandoConfigCiclo"
+                        class="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-xs font-black shadow-md shadow-blue-500/20 cursor-pointer flex items-center gap-2">
+                        <i class="fa-solid" :class="salvandoConfigCiclo ? 'fa-spinner fa-spin' : 'fa-check'"></i>
+                        <span>{{ salvandoConfigCiclo ? 'Salvando...' : 'Salvar Configuração' }}</span>
+                    </button>
+                </div>
+            </div>
+        </div>
     </div>
 
     
-            <script src="/static/js/app.js?v=20261119_avatar_humano_v2"></script>
+            <script src="/static/js/app.js?v=20261123_config_ciclo_v3"></script>
 </body>
 
 </html>
