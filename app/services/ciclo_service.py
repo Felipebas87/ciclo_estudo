@@ -563,6 +563,15 @@ def configurar_ciclo_personalizado(
         ensure_ascii=False,
     )
 
+    # Sincroniza incluir_no_ciclo nas disciplinas da preparação
+    ids_no_ciclo = {d_id for d_id, _ in regulares}
+    for reg in regras_limpas:
+        ids_no_ciclo.add(reg["disc_a_id"])
+        ids_no_ciclo.add(reg["disc_b_id"])
+    for d in disciplinas_edital:
+        if d.categoria != "REVISAO_ANKI" and d.nome != "REVISÃO ANKI":
+            d.incluir_no_ciclo = d.id in ids_no_ciclo
+
     db.commit()
     db.refresh(ciclo)
     return ciclo

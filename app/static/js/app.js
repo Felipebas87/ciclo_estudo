@@ -5909,6 +5909,73 @@ const app = createApp({
             configCicloForm.value.itens = lista;
         };
 
+        const disciplinasForaDoCicloConfig = computed(() => {
+            const idsNoCiclo = new Set((configCicloForm.value.itens || []).map(it => Number(it.disciplina_id)));
+            (configCicloForm.value.alternancias || []).forEach(r => {
+                const aId = Number(r.disc_a_id);
+                const bId = Number(r.disc_b_id);
+                if (idsNoCiclo.has(aId) || idsNoCiclo.has(bId)) {
+                    idsNoCiclo.add(aId);
+                    idsNoCiclo.add(bId);
+                }
+            });
+            return disciplinasDisponiveisEditalAtual.value.filter(d => !idsNoCiclo.has(Number(d.id)));
+        });
+
+        const incluirDisciplinaConfigCiclo = (disc) => {
+            if (!disc) return;
+            const dId = Number(disc.id);
+            if (configCicloForm.value.itens.some(it => Number(it.disciplina_id) === dId)) return;
+            configCicloForm.value.itens = [
+                ...configCicloForm.value.itens,
+                {
+                    disciplina_id: dId,
+                    nome: disc.nome,
+                    duracao_minutos: Number(cicloAtivo.value?.duracao_bloco_minutos || 60)
+                }
+            ];
+        };
+
+        const removerDisciplinaConfigCiclo = (idx) => {
+            if (configCicloForm.value.itens.length <= 1) {
+                mostrarAlerta('O ciclo precisa ter pelo menos 1 disciplina.', 'erro');
+                return;
+            }
+            const lista = [...configCicloForm.value.itens];
+            const [removido] = lista.splice(idx, 1);
+            configCicloForm.value.itens = lista;
+            if (removido) {
+                const remId = Number(removido.disciplina_id);
+                configCicloForm.value.alternancias = (configCicloForm.value.alternancias || []).filter(
+                    r => Number(r.disc_a_id) !== remId && Number(r.disc_b_id) !== remId
+                );
+            }
+        };
+
+        const ajustarQuantidadeDisciplinasConfigCiclo = (novaQtd) => {
+            const atualLen = configCicloForm.value.itens.length;
+            const maxDisponivel = atualLen + disciplinasForaDoCicloConfig.value.length;
+            const alvo = Math.max(1, Math.min(maxDisponivel, Number(novaQtd || 1)));
+            if (alvo === atualLen) return;
+
+            if (alvo < atualLen) {
+                const mantidos = configCicloForm.value.itens.slice(0, alvo);
+                const idsMantidos = new Set(mantidos.map(it => Number(it.disciplina_id)));
+                configCicloForm.value.itens = mantidos;
+                configCicloForm.value.alternancias = (configCicloForm.value.alternancias || []).filter(
+                    r => idsMantidos.has(Number(r.disc_a_id)) || idsMantidos.has(Number(r.disc_b_id))
+                );
+            } else {
+                const faltam = alvo - atualLen;
+                const paraAdicionar = disciplinasForaDoCicloConfig.value.slice(0, faltam).map(d => ({
+                    disciplina_id: Number(d.id),
+                    nome: d.nome,
+                    duracao_minutos: Number(cicloAtivo.value?.duracao_bloco_minutos || 60)
+                }));
+                configCicloForm.value.itens = [...configCicloForm.value.itens, ...paraAdicionar];
+            }
+        };
+
         const adicionarAlternanciaConfigCiclo = () => {
             const aId = Number(configCicloForm.value.novaDiscAId);
             const bId = Number(configCicloForm.value.novaDiscBId);
@@ -6350,6 +6417,10 @@ const app = createApp({
             obterParAlternanciaItem,
             abrirModalConfigCiclo,
             moverDisciplinaConfigCiclo,
+            disciplinasForaDoCicloConfig,
+            incluirDisciplinaConfigCiclo,
+            removerDisciplinaConfigCiclo,
+            ajustarQuantidadeDisciplinasConfigCiclo,
             adicionarAlternanciaConfigCiclo,
             removerAlternanciaConfigCiclo,
             salvarConfiguracaoCiclo
