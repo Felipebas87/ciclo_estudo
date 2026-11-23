@@ -2567,6 +2567,7 @@
                                 <tr>
                                     <th class="py-3.5 px-4 font-bold">Data</th>
                                     <th class="py-3.5 px-4 font-bold">Disciplina</th>
+                                    <th class="py-3.5 px-4 font-bold">Tópico</th>
                                     <th class="py-3.5 px-4 font-bold text-center">Duração</th>
                                     <th class="py-3.5 px-4 font-bold text-center">Certas</th>
                                     <th class="py-3.5 px-4 font-bold text-center">Total Qst.</th>
@@ -2579,6 +2580,12 @@
                                     <td class="py-3 px-4 font-semibold text-slate-500 dark:text-[#94A3B8]">{{ formatarData(s.data) }}</td>
                                     <td class="py-3 px-4 font-bold text-slate-800 dark:text-[#F1F5F9]">{{ getNomeDisciplina(s.disciplina_id)
                                         }}</td>
+                                    <td class="py-3 px-4 text-slate-600 dark:text-[#CBD5E1] max-w-[260px]">
+                                        <span v-if="getNomeTopico(s.topico_id)" class="font-medium leading-snug block truncate" :title="getNomeTopico(s.topico_id)">
+                                            {{ getNomeTopico(s.topico_id) }}
+                                        </span>
+                                        <span v-else class="text-slate-400 dark:text-slate-500">-</span>
+                                    </td>
                                     <td class="py-3 px-4 text-center font-semibold text-slate-800 dark:text-[#F1F5F9]">{{ s.tempo_estudado_minutos }} min
                                     </td>
                                     <td class="py-3 px-4 text-center">
@@ -6194,6 +6201,14 @@
 
                     <!-- Quadro menor com informações da sessão no tema mais escuro -->
                     <div class="modal-subcard w-full p-4 rounded-2xl bg-slate-50 dark:bg-[#162335] border border-slate-100 dark:border-[#3D5A82] space-y-3 mb-6">
+                        <div v-if="resumoSessaoAtual.topicoTitulo"
+                            class="flex flex-col gap-1 py-1.5 border-b border-slate-200/60 dark:border-[#2D4263]">
+                            <span class="text-xs font-bold uppercase text-slate-400 dark:text-[#CBD5E1]">Tópico Estudado</span>
+                            <span class="text-xs sm:text-sm font-extrabold text-slate-800 dark:text-[#F8FAFC] leading-snug">
+                                {{ resumoSessaoAtual.topicoTitulo }}
+                            </span>
+                        </div>
+
                         <div class="flex justify-between items-center py-1.5 border-b border-slate-200/60 dark:border-[#2D4263]">
                             <span class="text-xs font-bold uppercase text-slate-400 dark:text-[#CBD5E1]">Tempo Dedicado</span>
                             <span class="text-sm font-black text-slate-800 dark:text-[#F8FAFC]">{{
@@ -8105,7 +8120,7 @@
     </div>
 
     
-            <script src="/static/js/app.js?v=20261123_config_ciclo_v5"></script>
+            <script src="/static/js/app.js?v=20261123_config_ciclo_v7"></script>
 </body>
 
 </html>

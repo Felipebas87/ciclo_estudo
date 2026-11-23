@@ -1022,6 +1022,22 @@ const app = createApp({
             return `ID: ${id}`;
         };
 
+        const getNomeTopico = (topicoId) => {
+            if (!topicoId) return '';
+            const idNum = Number(topicoId);
+            for (const d of (todasDisciplinas.value || [])) {
+                const t = (d.topicos || []).find(x => Number(x.id) === idNum);
+                if (t) return t.titulo;
+            }
+            for (const ed of (editais.value || [])) {
+                for (const d of (ed.disciplinas || [])) {
+                    const t = (d.topicos || []).find(x => Number(x.id) === idNum);
+                    if (t) return t.titulo;
+                }
+            }
+            return '';
+        };
+
         const toggleVerticalizado = (id) => {
             verticalizadoAberto.value[id] = !verticalizadoAberto.value[id];
         };
@@ -2146,9 +2162,14 @@ const app = createApp({
             }
             if (sessoesBloco.length > 0) {
                 const ultimaSessao = sessoesBloco.reduce((a, b) => (new Date(a.data_criacao) > new Date(b.data_criacao) ? a : b));
+                let topicoTitulo = '';
+                if (ultimaSessao.topico_id) {
+                    topicoTitulo = getNomeTopico(ultimaSessao.topico_id);
+                }
                 resumoSessaoAtual.value = {
                     sessao: ultimaSessao,
-                    bloco: blocoClicado
+                    bloco: blocoClicado,
+                    topicoTitulo
                 };
                 modalResumoAberto.value = true;
             } else {
@@ -6198,6 +6219,7 @@ const app = createApp({
             badgeTextTaxa,
             getAproveitamentoClasses,
             getNomeDisciplina,
+            getNomeTopico,
             getEstatisticasDisciplina,
             getEstatisticasEdital,
             getTempoEstudadoCicloAtual,
