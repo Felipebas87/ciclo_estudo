@@ -931,7 +931,7 @@
                                             </div>
                                         </div>
                                         <h4 class="font-bold text-xs sm:text-[13px] break-words line-clamp-2 leading-snug"
-                                            :class="idx === cicloAtivo.bloco_atual_index ? 'text-slate-900 dark:text-[#F8FAFC]' : (idx < cicloAtivo.bloco_atual_index ? 'text-slate-500 dark:text-[#CBD5E1]' : 'text-slate-800 dark:text-[#F8FAFC]')"
+                                            :class="idx === cicloAtivo.bloco_atual_index ? 'text-slate-900 dark:text-[#F8FAFC]' : (b.concluido ? 'text-slate-500 dark:text-[#CBD5E1]' : 'text-slate-800 dark:text-[#F8FAFC]')"
                                             :title="b.disciplina.nome">
                                             {{ b.disciplina.nome }}
                                         </h4>
@@ -939,9 +939,10 @@
                                         <div v-if="b.disciplina.categoria !== 'REVISAO_ANKI' && (b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))"
                                             class="mt-1.5 p-1.5 sm:p-2 rounded-lg bg-slate-100/90 dark:bg-[#0F1826]/90 border border-slate-200/80 dark:border-[#2A3F5F] text-[10.5px]"
                                             :title="(b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.titulo">
-                                            <div class="flex items-center gap-1 font-extrabold text-blue-600 dark:text-cyan-300 mb-0.5">
-                                                <i class="fa-solid fa-crosshairs text-[9px]"></i>
-                                                <span>Estudar:</span>
+                                            <div class="flex items-center gap-1 font-extrabold mb-0.5"
+                                                :class="(b.concluido && idx !== cicloAtivo.bloco_atual_index) ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-600 dark:text-cyan-300'">
+                                                <i class="fa-solid text-[9px]" :class="(b.concluido && idx !== cicloAtivo.bloco_atual_index) ? 'fa-forward' : 'fa-crosshairs'"></i>
+                                                <span>{{ (b.concluido && idx !== cicloAtivo.bloco_atual_index) ? 'Próximo tópico:' : 'Estudar:' }}</span>
                                                 <span v-if="(b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.prioridade === 1" class="text-rose-500 dark:text-rose-400">⚡P1</span>
                                                 <span v-if="(b.proximo_topico || getProximoTopicoTrilha(b.disciplina_id))?.mais_cobrado" class="text-amber-500">🔥</span>
                                             </div>
