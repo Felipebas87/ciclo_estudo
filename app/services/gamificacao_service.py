@@ -1188,6 +1188,47 @@ def calcular_gamificacao_aluno(
         perc_nivel = 100.0
         faltam_xp_proximo = 0
 
+    # Verifica se o usuário subiu para um novo nível/patente ainda não celebrado
+    nivel_recem_alcancado = None
+    nivel_atual_num = int(rank_atual.get("nivel") or 1)
+    nivel_chave_vista = f"nivel_rank_{nivel_atual_num}"
+    if nivel_atual_num >= 2 and nivel_chave_vista not in vistas_set:
+        tier_labels_rank = {
+            "bronze": "Bronze",
+            "prata": "Prata",
+            "ouro": "Ouro",
+            "platina": "Platina",
+            "diamante": "Diamante",
+            "lendario": "Lendário",
+            "mitico": "Mítico",
+        }
+        xp_fmt = f"{xp_total:,}".replace(",", ".")
+        pers_nome = rank_atual.get("personagem") or ""
+        desc_rank = (
+            f"Parabéns! Você atingiu {xp_fmt} XP e evoluiu para a patente "
+            f"\"{rank_atual['titulo']}\"{f' ({pers_nome})' if pers_nome else ''}!"
+        )
+        nivel_recem_alcancado = {
+            "id": nivel_chave_vista,
+            "tipo_celebracao": "NIVEL",
+            "nivel": nivel_atual_num,
+            "titulo": f"Nível {nivel_atual_num} — {rank_atual['titulo']}",
+            "rank_titulo": rank_atual["titulo"],
+            "personagem": pers_nome,
+            "avatar_url": rank_atual.get("avatar_url", ""),
+            "categoria": "Evolução de Patente • Level Up!",
+            "tier": rank_atual.get("cor", "ouro"),
+            "tier_label": tier_labels_rank.get(rank_atual.get("cor", "ouro"), "Especial"),
+            "icone": rank_atual.get("icone", "crown"),
+            "xp": xp_total,
+            "xp_min": rank_atual.get("xp_min", 0),
+            "proximo_rank_titulo": proximo_rank["titulo"] if proximo_rank else None,
+            "faltam_xp_proximo": faltam_xp_proximo,
+            "descricao": desc_rank,
+            "conquistada": True,
+            "eh_nova": True,
+        }
+
     # Próxima medalha mais próxima de ser conquistada
     nao_conquistadas = [m for m in medalhas_processadas if not m["conquistada"]]
     nao_conquistadas.sort(key=lambda x: (-x["percentual_progresso"], x["xp"]))
@@ -1235,10 +1276,11 @@ def calcular_gamificacao_aluno(
         "resumo_conquistas": {
             "conquistadas": qtd_conquistadas,
             "total": len(medalhas_processadas),
-            "novas_nao_vistas": len(medalhas_recem_conquistadas),
+            "novas_nao_vistas": len(medalhas_recem_conquistadas) + (1 if nivel_recem_alcancado else 0),
         },
         "proxima_medalha": proxima_medalha,
         "medalhas": medalhas_processadas,
         "medalhas_recem_conquistadas": medalhas_recem_conquistadas,
+        "nivel_recem_alcancado": nivel_recem_alcancado,
         "todos_ranks": todos_ranks,
     }

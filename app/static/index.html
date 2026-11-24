@@ -8982,11 +8982,16 @@
                             'bg-gradient-to-r from-amber-500/40 to-fuchsia-500/40 text-amber-200 border-amber-300': medalhaEmCelebracao.tier === 'lendario',
                             'bg-gradient-to-r from-emerald-500/40 via-violet-500/40 to-amber-400/40 text-emerald-200 border-emerald-300': medalhaEmCelebracao.tier === 'mitico'
                         }">
-                        🎉 Nova Conquista Desbloqueada &bull; {{ medalhaEmCelebracao.tier_label }}
+                        <span v-if="medalhaEmCelebracao.tipo_celebracao === 'NIVEL'">
+                            🚀 LEVEL UP! Novo Nível Alcançado &bull; {{ medalhaEmCelebracao.tier_label }}
+                        </span>
+                        <span v-else>
+                            🎉 Nova Conquista Desbloqueada &bull; {{ medalhaEmCelebracao.tier_label }}
+                        </span>
                     </span>
                 </div>
 
-                <!-- Desenho Visual Exclusivo da Medalha (Anel Metálico + Fita + Ícone de Dificuldade) -->
+                <!-- Desenho Visual Exclusivo da Medalha ou Avatar do Novo Nível -->
                 <div class="relative z-10 flex flex-col items-center justify-center py-2">
                     <div class="relative w-32 h-32 rounded-full flex items-center justify-center shadow-2xl border-4 transition-transform duration-500 scale-105"
                         :class="{
@@ -8998,8 +9003,17 @@
                             'bg-gradient-to-br from-[#FDE047] via-[#E11D48] to-[#581C87] border-[#FDE047] shadow-rose-500/60': medalhaEmCelebracao.tier === 'lendario',
                             'bg-gradient-to-br from-[#34D399] via-[#7C3AED] to-[#0F172A] border-[#A7F3D0] shadow-emerald-400/60': medalhaEmCelebracao.tier === 'mitico'
                         }">
-                        <!-- Anel interno pontilhado -->
-                        <div class="w-24 h-24 rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/15">
+                        <!-- Avatar do Personagem quando for Level Up -->
+                        <template v-if="medalhaEmCelebracao.tipo_celebracao === 'NIVEL' && medalhaEmCelebracao.avatar_url">
+                            <img :src="medalhaEmCelebracao.avatar_url"
+                                :alt="medalhaEmCelebracao.titulo"
+                                class="w-28 h-28 rounded-full object-cover border-2 border-white/60 shadow-inner">
+                            <span class="absolute -bottom-2 px-3 py-0.5 rounded-full bg-slate-950/90 text-amber-300 border border-amber-400/70 font-mono-timer font-black text-xs shadow-lg">
+                                NV. {{ medalhaEmCelebracao.nivel }}
+                            </span>
+                        </template>
+                        <!-- Anel interno pontilhado para Medalhas -->
+                        <div v-else class="w-24 h-24 rounded-full border-2 border-dashed border-white/50 flex items-center justify-center bg-black/15">
                             <i class="text-4xl text-white drop-shadow-md fa-solid"
                                 :class="{
                                     'fa-bullseye': medalhaEmCelebracao.icone === 'target',
@@ -9018,8 +9032,8 @@
                                 }"></i>
                         </div>
                     </div>
-                    <!-- Fita da Medalha -->
-                    <div class="flex -mt-2 z-0">
+                    <!-- Fita da Medalha (apenas para medalhas) -->
+                    <div v-if="medalhaEmCelebracao.tipo_celebracao !== 'NIVEL'" class="flex -mt-2 z-0">
                         <div class="w-5 h-8 bg-blue-600 transform -skew-x-12 rounded-b-sm shadow-md"></div>
                         <div class="w-5 h-8 bg-indigo-700 transform skew-x-12 rounded-b-sm shadow-md"></div>
                     </div>
@@ -9036,9 +9050,16 @@
                     <p class="text-sm text-slate-300 leading-relaxed">
                         {{ medalhaEmCelebracao.descricao }}
                     </p>
-                    <div class="pt-2 inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono-timer font-black text-sm">
-                        <i class="fa-solid fa-bolt"></i>
-                        <span>+{{ medalhaEmCelebracao.xp }} XP Conquistados</span>
+                    <div class="pt-2 flex flex-col items-center gap-1.5">
+                        <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 font-mono-timer font-black text-sm">
+                            <i class="fa-solid fa-bolt"></i>
+                            <span v-if="medalhaEmCelebracao.tipo_celebracao === 'NIVEL'">{{ medalhaEmCelebracao.xp }} XP Acumulados</span>
+                            <span v-else>+{{ medalhaEmCelebracao.xp }} XP Conquistados</span>
+                        </div>
+                        <span v-if="medalhaEmCelebracao.tipo_celebracao === 'NIVEL' && medalhaEmCelebracao.proximo_rank_titulo"
+                            class="text-[11px] font-semibold text-slate-400">
+                            Próxima patente: <strong class="text-amber-300">{{ medalhaEmCelebracao.proximo_rank_titulo }}</strong> (faltam {{ medalhaEmCelebracao.faltam_xp_proximo }} XP)
+                        </span>
                     </div>
                 </div>
 
@@ -9057,7 +9078,7 @@
                     <button type="button"
                         @click="fecharOuProximaMedalhaCelebracao()"
                         class="flex-1 py-2.5 px-5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-black text-xs shadow-lg transition-all cursor-pointer">
-                        {{ filaMedalhasParaCelebrar.length > 1 ? `Próxima Medalha (${filaMedalhasParaCelebrar.length - 1})` : 'Continuar Vencendo!' }}
+                        {{ filaMedalhasParaCelebrar.length > 1 ? `Próxima Conquista (${filaMedalhasParaCelebrar.length - 1})` : 'Continuar Vencendo!' }}
                     </button>
                 </div>
             </div>

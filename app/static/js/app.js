@@ -5408,11 +5408,24 @@ const app = createApp({
         };
 
         const verificarNovasMedalhasConquistadas = (gam) => {
-            if (!gam || !Array.isArray(gam.medalhas_recem_conquistadas)) return;
-            const novas = gam.medalhas_recem_conquistadas;
-            if (novas.length > 0 && !modalCelebracaoMedalhaAberto.value) {
+            if (!gam) return;
+            const novas = Array.isArray(gam.medalhas_recem_conquistadas) ? [...gam.medalhas_recem_conquistadas] : [];
+            if (gam.nivel_recem_alcancado && gam.nivel_recem_alcancado.id) {
+                novas.push(gam.nivel_recem_alcancado);
+            }
+            if (novas.length === 0) return;
+
+            if (!modalCelebracaoMedalhaAberto.value) {
                 filaMedalhasParaCelebrar.value = [...novas];
                 abrirCelebracaoDeMedalha(filaMedalhasParaCelebrar.value[0]);
+            } else {
+                const idsNaFila = new Set(filaMedalhasParaCelebrar.value.map(x => x.id));
+                for (const item of novas) {
+                    if (item && item.id && !idsNaFila.has(item.id)) {
+                        filaMedalhasParaCelebrar.value.push(item);
+                        idsNaFila.add(item.id);
+                    }
+                }
             }
         };
 
@@ -5428,6 +5441,9 @@ const app = createApp({
                             edital_id: cicloAtivo.value?.edital_id || null
                         })
                     });
+                    if (atual.tipo_celebracao === 'NIVEL' && gamificacaoData.value) {
+                        gamificacaoData.value.nivel_recem_alcancado = null;
+                    }
                     if (gamificacaoData.value && Array.isArray(gamificacaoData.value.medalhas)) {
                         const mObj = gamificacaoData.value.medalhas.find(x => x.id === atual.id);
                         if (mObj) mObj.eh_nova = false;
@@ -5481,6 +5497,7 @@ const app = createApp({
                     }
                     dispararFogosEConfetesMedalha();
                     mostrarAlerta('🎉 +150 XP do Desafio Diário resgatados com sucesso!', 'sucesso');
+                    verificarNovasMedalhasConquistadas(novoGam);
                 }
             } catch (e) {
                 console.error(e);
