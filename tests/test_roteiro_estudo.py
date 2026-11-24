@@ -97,6 +97,74 @@ class TestRoteiroEstudo(unittest.TestCase):
         for t_esp in ("bronze", "prata", "ouro", "platina", "diamante", "lendario", "mitico"):
             self.assertIn(t_esp, tiers_encontrados)
 
+    def test_05_alternancia_disciplinas_projetada_no_roteiro(self):
+        """Valida que disciplinas configuradas em alternância no ciclo são ambas projetadas nas voltas pares/ímpares do roteiro até a prova."""
+        import json
+        from app.models.ciclo import CicloEstudos
+        from app.models.disciplina import Disciplina
+
+        ciclo = self.db.query(CicloEstudos).filter(CicloEstudos.ativo == True).first()
+        if not ciclo or not ciclo.blocos:
+            self.skipTest("Sem ciclo ativo no banco de teste")
+
+        blocos_regulares = [
+            b for b in sorted(ciclo.blocos, key=lambda x: x.ordem)
+            if b.disciplina and b.disciplina.categoria != "REVISAO_ANKI"
+        ]
+        if not blocos_regulares:
+            self.skipTest("Sem blocos regulares no ciclo ativo")
+
+        disc_a_id = blocos_regulares[0].disciplina_id
+        ids_no_ciclo = {b.disciplina_id for b in blocos_regulares}
+        disc_b = (
+            self.db.query(Disciplina)
+            .filter(
+                Disciplina.edital_id == ciclo.edital_id,
+                Disciplina.categoria != "REVISAO_ANKI",
+                ~Disciplina.id.in_(ids_no_ciclo),
+            )
+            .first()
+        )
+        if not disc_b:
+            # Fallback: pega outra disciplina diferente de disc_a_id
+            disc_b = (
+                self.db.query(Disciplina)
+                .filter(
+                    Disciplina.edital_id == ciclo.edital_id,
+                    Disciplina.categoria != "REVISAO_ANKI",
+                    Disciplina.id != disc_a_id,
+                )
+                .first()
+            )
+        if not disc_b:
+            self.skipTest("Sem segunda disciplina disponível para teste de alternância")
+
+        cfg_original = ciclo.config_ciclo_json
+        try:
+            cfg = json.loads(cfg_original) if cfg_original else {}
+            cfg["alternancias"] = [{"disc_a_id": disc_a_id, "disc_b_id": disc_b.id}]
+            ciclo.config_ciclo_json = json.dumps(cfg, ensure_ascii=False)
+            self.db.flush()
+
+            rot = calcular_roteiro_estudo(
+                db=self.db,
+                horas_por_dia_override=3.0,
+                dias_por_semana_override=6,
+                data_prova_override=(self.hoje + timedelta(days=90)).isoformat(),
+                hoje_ref=self.hoje,
+            )
+
+            por_disc = {d["disciplina_id"]: d for d in rot["roteiro_por_disciplina"]}
+            self.assertIn(disc_a_id, por_disc)
+            self.assertIn(disc_b.id, por_disc)
+
+            aloc_a = por_disc[disc_a_id]["novos_ate_prova"] + por_disc[disc_a_id]["revisoes_apos_fechar"]
+            aloc_b = por_disc[disc_b.id]["novos_ate_prova"] + por_disc[disc_b.id]["revisoes_apos_fechar"]
+            self.assertGreater(aloc_a, 0, "Disciplina A da alternância deve receber missões nas voltas pares")
+            self.assertGreater(aloc_b, 0, "Disciplina B da alternância deve receber missões nas voltas ímpares")
+        finally:
+            self.db.rollback()
+
 
 if __name__ == "__main__":
     unittest.main()

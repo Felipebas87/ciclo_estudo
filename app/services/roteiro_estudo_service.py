@@ -308,54 +308,103 @@ def calcular_roteiro_estudo(
     vistos_mc_atual = sum(1 for t in topicos_mc_lista if t.id in topicos_concluidos_hoje_set)
     vistos_elite_atual = sum(1 for t in topicos_elite_lista if t.id in topicos_concluidos_hoje_set)
 
-    # 6. Sequência da Esteira do Ciclo Atual (incluindo blocos de Revisão Anki na ordem exata da esteira)
-    sequencia_blocos: List[Dict[str, Any]] = []
-    if ciclo and ciclo.blocos:
-        mapa_anki = mapear_topicos_para_blocos_anki_do_ciclo(db, ciclo)
-        blocos_ordenados = sorted(ciclo.blocos, key=lambda b: b.ordem)
-        idx_inicial = (ciclo.bloco_atual_index or 0) % len(blocos_ordenados)
-        # Rotaciona a lista para começar exatamente do bloco_atual_index da esteira
-        blocos_rotacionados = blocos_ordenados[idx_inicial:] + blocos_ordenados[:idx_inicial]
-        for b in blocos_rotacionados:
-            if not b.disciplina:
-                continue
-            eh_anki = b.disciplina.categoria == "REVISAO_ANKI" or b.disciplina.nome == "REVISÃO ANKI"
-            if eh_anki:
-                anki_info = mapa_anki.get(b.id)
-                sequencia_blocos.append({
-                    "bloco_id": b.id,
-                    "ordem_ciclo": b.ordem,
-                    "disciplina_id": anki_info["disciplina_id"] if anki_info else b.disciplina_id,
-                    "disciplina_nome": f"REVISÃO ANKI • {anki_info['disciplina_nome']}" if anki_info else "REVISÃO ANKI",
-                    "grupo_conhecimento": b.disciplina.grupo_conhecimento,
-                    "peso_prova": b.disciplina.peso_prova,
-                    "is_revisao_anki": True,
-                    "anki_info": anki_info,
-                    "duracao_minutos": int(b.duracao_minutos or 30),
-                })
-            else:
-                sequencia_blocos.append({
-                    "bloco_id": b.id,
-                    "ordem_ciclo": b.ordem,
-                    "disciplina_id": b.disciplina_id,
-                    "disciplina_nome": b.disciplina.nome,
-                    "grupo_conhecimento": b.disciplina.grupo_conhecimento,
-                    "peso_prova": b.disciplina.peso_prova,
-                    "is_revisao_anki": False,
-                    "anki_info": None,
-                    "duracao_minutos": int(b.duracao_minutos or 60),
-                })
+    # 6. Sequência da Esteira do Ciclo Atual (incluindo blocos de Revisão Anki e Regras de Alternância por Volta)
+    alternancias_validas: List[Tuple[int, int]] = []
+    parceiro_alternancia_map: Dict[int, Tuple[int, int]] = {}  # disc_id -> (disc_a_id, disc_b_id)
+    if ciclo and getattr(ciclo, "config_ciclo_json", None):
+        try:
+            cfg_ciclo = json.loads(ciclo.config_ciclo_json)
+            if isinstance(cfg_ciclo, dict):
+                for reg in (cfg_ciclo.get("alternancias") or []):
+                    try:
+                        a_id = int(reg.get("disc_a_id"))
+                        b_id = int(reg.get("disc_b_id"))
+                    except (TypeError, ValueError):
+                        continue
+                    if a_id in mapa_disc and b_id in mapa_disc and a_id != b_id:
+                        alternancias_validas.append((a_id, b_id))
+                        parceiro_alternancia_map[a_id] = (a_id, b_id)
+                        parceiro_alternancia_map[b_id] = (a_id, b_id)
+        except Exception:
+            alternancias_validas = []
+            parceiro_alternancia_map = {}
 
-    if not sequencia_blocos:
+    blocos_ordenados_ciclo: List[BlocoCiclo] = []
+    mapa_anki_ciclo: Dict[int, Dict[str, Any]] = {}
+    if ciclo and ciclo.blocos:
+        mapa_anki_ciclo = mapear_topicos_para_blocos_anki_do_ciclo(db, ciclo)
+        blocos_ordenados_ciclo = sorted(ciclo.blocos, key=lambda b: b.ordem)
+
+    def _construir_item_bloco_para_volta(b: BlocoCiclo, volta_num: int) -> Optional[Dict[str, Any]]:
+        if not b.disciplina:
+            return None
+        eh_anki = b.disciplina.categoria == "REVISAO_ANKI" or b.disciplina.nome == "REVISÃO ANKI"
+        if eh_anki:
+            anki_info = mapa_anki_ciclo.get(b.id)
+            return {
+                "bloco_id": b.id,
+                "ordem_ciclo": b.ordem,
+                "disciplina_id": anki_info["disciplina_id"] if anki_info else b.disciplina_id,
+                "disciplina_nome": f"REVISÃO ANKI • {anki_info['disciplina_nome']}" if anki_info else "REVISÃO ANKI",
+                "grupo_conhecimento": b.disciplina.grupo_conhecimento,
+                "peso_prova": b.disciplina.peso_prova,
+                "is_revisao_anki": True,
+                "anki_info": anki_info,
+                "duracao_minutos": int(b.duracao_minutos or 30),
+                "volta_simulada": volta_num,
+            }
+
+        did_efetivo = b.disciplina_id
+        if did_efetivo in parceiro_alternancia_map:
+            a_id, b_id = parceiro_alternancia_map[did_efetivo]
+            did_efetivo = b_id if (volta_num % 2 == 1) else a_id
+
+        d_efetivo = mapa_disc.get(did_efetivo) or b.disciplina
+        return {
+            "bloco_id": b.id,
+            "ordem_ciclo": b.ordem,
+            "disciplina_id": d_efetivo.id,
+            "disciplina_nome": d_efetivo.nome,
+            "grupo_conhecimento": d_efetivo.grupo_conhecimento,
+            "peso_prova": d_efetivo.peso_prova,
+            "is_revisao_anki": False,
+            "anki_info": None,
+            "duracao_minutos": int(b.duracao_minutos or 60),
+            "volta_simulada": volta_num,
+        }
+
+    volta_simulada = int(ciclo.voltas_completas or 0) if ciclo else 0
+    fila_volta_atual: List[Dict[str, Any]] = []
+    sequencia_fallback: List[Dict[str, Any]] = []
+
+    if blocos_ordenados_ciclo:
+        idx_inicial = (ciclo.bloco_atual_index or 0) % len(blocos_ordenados_ciclo)
+        # Respeita exatamente a ordem restante da volta atual (como em avancar_bloco_ciclo):
+        # primeiro os blocos pendentes a partir de bloco_atual_index, depois eventuais pendentes anteriores.
+        pendentes_frente = [b for b in blocos_ordenados_ciclo[idx_inicial:] if not b.concluido]
+        pendentes_antes = [b for b in blocos_ordenados_ciclo[:idx_inicial] if not b.concluido]
+        restantes_volta_atual = pendentes_frente + pendentes_antes
+        if not restantes_volta_atual:
+            restantes_volta_atual = blocos_ordenados_ciclo[idx_inicial:] + blocos_ordenados_ciclo[:idx_inicial]
+
+        for b in restantes_volta_atual:
+            item_b = _construir_item_bloco_para_volta(b, volta_simulada)
+            if item_b:
+                fila_volta_atual.append(item_b)
+
+    if not blocos_ordenados_ciclo:
         discs_fallback = [d for d in disciplinas_validas if getattr(d, "incluir_no_ciclo", True)] or disciplinas_validas
         for idx_d, d in enumerate(discs_fallback):
-            sequencia_blocos.append({
+            sequencia_fallback.append({
                 "bloco_id": None,
                 "ordem_ciclo": idx_d,
                 "disciplina_id": d.id,
                 "disciplina_nome": d.nome,
                 "grupo_conhecimento": d.grupo_conhecimento,
                 "peso_prova": d.peso_prova,
+                "is_revisao_anki": False,
+                "anki_info": None,
+                "duracao_minutos": 60,
             })
 
     # 7. Monta as Missões do Dia (Agenda de Hoje) sincronizadas com os estudos já marcados hoje no ciclo
@@ -392,12 +441,24 @@ def calcular_roteiro_estudo(
     # Ponteiros de simulação da fila verticalizada por disciplina
     cursor_pendentes: Dict[int, int] = {d.id: 0 for d in disciplinas_validas}
     cursor_revisao: Dict[int, int] = {d.id: 0 for d in disciplinas_validas}
-    ponteiro_esteira = 0
+    ponteiro_fallback = 0
+
+    def _obter_proximo_bloco_simulado() -> Dict[str, Any]:
+        nonlocal volta_simulada, fila_volta_atual, ponteiro_fallback
+        if blocos_ordenados_ciclo:
+            if not fila_volta_atual:
+                volta_simulada += 1
+                for b_prox in blocos_ordenados_ciclo:
+                    item_prox = _construir_item_bloco_para_volta(b_prox, volta_simulada)
+                    if item_prox:
+                        fila_volta_atual.append(item_prox)
+            return fila_volta_atual.pop(0)
+        item_fb = sequencia_fallback[ponteiro_fallback % len(sequencia_fallback)]
+        ponteiro_fallback += 1
+        return item_fb
 
     def _alocar_proxima_missao(data_alvo: date, ordem_no_dia: int) -> Dict[str, Any]:
-        nonlocal ponteiro_esteira
-        item_ciclo = sequencia_blocos[ponteiro_esteira % len(sequencia_blocos)]
-        ponteiro_esteira += 1
+        item_ciclo = _obter_proximo_bloco_simulado()
 
         did = item_ciclo["disciplina_id"]
         is_anki = bool(item_ciclo.get("is_revisao_anki"))
