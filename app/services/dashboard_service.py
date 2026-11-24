@@ -256,7 +256,7 @@ def get_calendario_estudos(db: Session, edital_id: int, dias: int = 30) -> Dict[
                 "horas": horas_por_dia.get(d, 0.0)
             })
                 
-        d_curr = hoje
+        d_curr = hoje if horas_por_dia.get(hoje, 0.0) > 0 else (hoje - timedelta(days=1))
         while d_curr in horas_por_dia and horas_por_dia[d_curr] > 0:
             current_streak += 1
             d_curr -= timedelta(days=1)
