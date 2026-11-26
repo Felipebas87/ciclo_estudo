@@ -810,11 +810,37 @@ const app = createApp({
             return [];
         });
 
-        const percentualGlobalEdital = computed(() => {
-            if (!cicloAtivo.value || !editais.value) return 0;
+        const estatisticasEditalAtivo = computed(() => {
+            if (!cicloAtivo.value || !editais.value) {
+                return { horas: '0h', topicos_vistos: 0, topicos_total: 0, topicos_mes: 0, perc_visto: 0 };
+            }
             const ed = editais.value.find(e => e.id === cicloAtivo.value.edital_id);
-            if (!ed) return 0;
-            return Number(getEstatisticasEdital(ed).perc_visto.toFixed(1));
+            return getEstatisticasEdital(ed);
+        });
+
+        const percentualGlobalEdital = computed(() => {
+            return Number(estatisticasEditalAtivo.value.perc_visto.toFixed(1));
+        });
+
+        const aproveitamentoUltimoMes = computed(() => {
+            const d = new Date();
+            d.setDate(d.getDate() - 30);
+            const ano = d.getFullYear();
+            const mes = String(d.getMonth() + 1).padStart(2, '0');
+            const dia = String(d.getDate()).padStart(2, '0');
+            const dataCorte = `${ano}-${mes}-${dia}`;
+
+            let acertos = 0;
+            let total = 0;
+            (sessoes.value || []).forEach(s => {
+                const dataSessao = typeof s.data === 'string' ? s.data.slice(0, 10) : '';
+                if (dataSessao && dataSessao >= dataCorte) {
+                    acertos += Number(s.qtd_acertos) || 0;
+                    total += Number(s.qtd_questoes_total) || 0;
+                }
+            });
+            const perc = total > 0 ? Number(((acertos / total) * 100).toFixed(1)) : 0;
+            return { perc, acertos, total };
         });
 
         const totaisEncerramento = computed(() => {
@@ -1833,9 +1859,11 @@ const app = createApp({
         }
 
         function getEstatisticasEdital(ed) {
-            if (!ed) return { horas: '0h', topicos_vistos: 0, topicos_total: 0, perc_visto: 0 };
+            if (!ed) return { horas: '0h', topicos_vistos: 0, topicos_total: 0, topicos_mes: 0, perc_visto: 0 };
             let topicos_total = 0;
             const topicosVistos = new Set();
+            const topicosVistosMes = new Set();
+            const mesAtualPrefix = getDataHojeLocal().slice(0, 7);
 
             const discIds = (ed.disciplinas || []).map(d => d.id);
             const sessoesEdital = (sessoes.value || []).filter(s => discIds.includes(s.disciplina_id));
@@ -1848,7 +1876,13 @@ const app = createApp({
             });
 
             sessoesEdital.forEach(s => {
-                if (s.topico_id !== null && s.topico_id !== undefined) topicosVistos.add(s.topico_id);
+                if (s.topico_id !== null && s.topico_id !== undefined) {
+                    topicosVistos.add(s.topico_id);
+                    const dataSessao = typeof s.data === 'string' ? s.data.slice(0, 7) : '';
+                    if (dataSessao === mesAtualPrefix) {
+                        topicosVistosMes.add(s.topico_id);
+                    }
+                }
             });
 
             const perc_visto = topicos_total > 0 ? (topicosVistos.size / topicos_total) * 100 : 0;
@@ -1856,6 +1890,7 @@ const app = createApp({
                 horas: formatarHorasDecimais(horas),
                 topicos_vistos: topicosVistos.size,
                 topicos_total,
+                topicos_mes: topicosVistosMes.size,
                 perc_visto
             };
         }
@@ -6909,7 +6944,9 @@ const app = createApp({
             blocoAtual,
             todasDisciplinas,
             topicosDaDisciplina,
+            estatisticasEditalAtivo,
             percentualGlobalEdital,
+            aproveitamentoUltimoMes,
             avancarBloco,
             selecionarBlocoManual,
             gerarCicloNovoComEdital,

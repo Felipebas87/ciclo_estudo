@@ -889,26 +889,41 @@
                                                 <i class="fa-solid fa-chart-pie text-xs"></i>
                                             </span>
                                         </div>
-                                        <div class="text-2xl sm:text-3xl font-black text-emerald-400 dark:text-[#34D399] font-mono-timer my-0.5 leading-tight">
-                                            {{ dashboardData && dashboardData.metricas_gerais ? dashboardData.metricas_gerais.percentual_acerto_geral : 0 }}%
+                                        <div class="flex items-baseline flex-wrap gap-x-1.5 my-0.5 leading-tight">
+                                            <span class="text-2xl sm:text-3xl font-black text-emerald-400 dark:text-[#34D399] font-mono-timer">
+                                                {{ dashboardData && dashboardData.metricas_gerais ? dashboardData.metricas_gerais.percentual_acerto_geral : 0 }}%
+                                            </span>
+                                            <span class="text-xs sm:text-sm font-medium text-slate-400 dark:text-[#CBD5E1]">
+                                                ({{ dashboardData && dashboardData.metricas_gerais ? dashboardData.metricas_gerais.total_acertos : 0 }}/{{ dashboardData && dashboardData.metricas_gerais ? dashboardData.metricas_gerais.total_questoes : 0 }})
+                                            </span>
                                         </div>
-                                        <p class="text-[10.5px] text-slate-400 dark:text-[#CBD5E1] leading-tight">Média de acertos em questões registradas</p>
+                                        <p class="text-[11px] sm:text-xs text-slate-400 dark:text-[#CBD5E1] leading-tight">
+                                            No último mês: <strong class="font-extrabold text-slate-800 dark:text-[#F8FAFC]">{{ aproveitamentoUltimoMes.perc }}%</strong>
+                                            <span class="opacity-85">({{ aproveitamentoUltimoMes.acertos }}/{{ aproveitamentoUltimoMes.total }})</span>
+                                        </p>
                                     </div>
 
                                     <div class="hero-subcard bg-slate-900/80 dark:bg-[#162234]/90 rounded-2xl p-3 sm:p-3.5 flex flex-col justify-between border border-slate-700/60 dark:border-[#3d5a82] transition-all">
                                         <div class="flex items-center justify-between mb-1">
-                                            <span class="text-slate-400 dark:text-[#CBD5E1] text-xs font-bold uppercase tracking-wider">Cobertura do Edital</span>
+                                            <span class="text-slate-400 dark:text-[#CBD5E1] text-xs font-bold uppercase tracking-wider">Progresso no Edital</span>
                                             <span class="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-400 dark:text-[#60A5FA] flex items-center justify-center text-xs font-bold">
                                                 <i class="fa-solid fa-book-open text-xs"></i>
                                             </span>
                                         </div>
-                                        <div class="text-2xl sm:text-3xl font-black text-blue-400 dark:text-[#60A5FA] font-mono-timer my-0.5 leading-tight">
-                                            {{ percentualGlobalEdital }}%
+                                        <div class="flex items-baseline flex-wrap gap-x-1.5 my-0.5 leading-tight">
+                                            <span class="text-2xl sm:text-3xl font-black text-blue-400 dark:text-[#60A5FA] font-mono-timer">
+                                                {{ percentualGlobalEdital }}%
+                                            </span>
+                                            <span class="text-xs sm:text-sm font-medium text-slate-400 dark:text-[#CBD5E1]">
+                                                ({{ estatisticasEditalAtivo.topicos_vistos }} de {{ estatisticasEditalAtivo.topicos_total }} tópicos)
+                                            </span>
                                         </div>
                                         <div class="w-full bg-slate-800 dark:bg-[#0B1220] h-1.5 rounded-full overflow-hidden mt-1 mb-1">
                                             <div class="bg-blue-500 dark:bg-[#60A5FA] h-full rounded-full transition-all duration-300" :style="{ width: percentualGlobalEdital + '%' }"></div>
                                         </div>
-                                        <p class="text-[10.5px] text-slate-400 dark:text-[#CBD5E1] leading-tight">Tópicos do edital já concluídos no ciclo</p>
+                                        <p class="text-[11px] sm:text-xs text-slate-400 dark:text-[#CBD5E1] leading-tight">
+                                            Neste mês: <strong class="font-extrabold text-slate-800 dark:text-[#F8FAFC]">{{ estatisticasEditalAtivo.topicos_mes }}</strong> {{ estatisticasEditalAtivo.topicos_mes === 1 ? 'tópico concluído' : 'tópicos concluídos' }}
+                                        </p>
                                     </div>
                                 </div>
 
