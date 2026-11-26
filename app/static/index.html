@@ -3700,27 +3700,27 @@
                 <div v-if="abaAtiva === 'dashboard'" class="space-y-6">
                     <!-- KPIs -->
                     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div class="bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
-                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Horas Líquidas
-                            </div>
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Horas Líquidas:</strong> soma total de horas efetivamente estudadas nas sessões. No <em>Dashboard Geral</em>, acompanha seu volume acumulado de esforço.<span class="kpi-meta">Padrão ideal: 20h a 35h/semana (3h–5h/dia) com constância.</span></span></span>
+                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1 pr-6">Horas Líquidas</div>
                             <div class="text-3xl font-black text-blue-600 dark:text-[#7DD3FC]">{{
                                 formatarHorasDecimais(dashboardData?.metricas_gerais?.tempo_total_horas) }}</div>
                         </div>
-                        <div class="bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
-                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Sessões
-                                Concluídas</div>
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Sessões Concluídas:</strong> quantidade total de blocos finalizados. Mede a frequência de execução do seu ciclo.<span class="kpi-meta">Padrão ideal: 2 a 4 blocos/dia (50–90 min cada) para alta retenção.</span></span></span>
+                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1 pr-6">Sessões Concluídas</div>
                             <div class="text-3xl font-black text-indigo-600 dark:text-[#C4B5FD]">{{
                                 dashboardData?.metricas_gerais?.total_sessoes || 0 }}</div>
                         </div>
-                        <div class="bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
-                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Questões
-                                Resolvidas</div>
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Questões Resolvidas:</strong> total de questões registradas nas sessões. Indica a maturidade e confiabilidade estatística da sua prática.<span class="kpi-meta">Meta ideal: 150 a 300+ questões/semana (mín. 30–50 por tópico).</span></span></span>
+                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1 pr-6">Questões Resolvidas</div>
                             <div class="text-3xl font-black text-slate-800 dark:text-[#F1F5F9]">{{
                                 dashboardData?.metricas_gerais?.total_questoes || 0 }}</div>
                         </div>
-                        <div class="bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
-                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1">Aproveitamento
-                                Global</div>
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-2xl border border-slate-200 dark:border-[#24324A] p-5 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Aproveitamento Global:</strong> percentual médio de acertos em todas as questões registradas. Resume sua precisão geral.<span class="kpi-meta">Meta ideal: ≥ 80% competitivo (70%–79% atenção; &lt; 70% revisar base).</span></span></span>
+                            <div class="text-xs text-slate-500 dark:text-[#94A3B8] font-bold uppercase tracking-wider mb-1 pr-6">Aproveitamento Global</div>
                             <div class="text-3xl font-black text-emerald-600 dark:text-[#6EE7B7]">{{
                                 dashboardData?.metricas_gerais?.percentual_acerto_geral || 0 }}%</div>
                         </div>
@@ -3729,7 +3729,10 @@
                     <!-- MATRIZ SEMANAL -->
                     <div v-if="matrizSemanalData && matrizSemanalData.labels && matrizSemanalData.labels.length > 0"
                         class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                        <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-lg mb-1">Matriz de Resultados Semanais</h4>
+                        <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-lg mb-1 flex items-center gap-2">
+                            <span>Matriz de Resultados Semanais</span>
+                            <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Matriz de Resultados Semanais:</strong> evolução de acertos/resolvidas e % por disciplina em cada semana. Serve para identificar avanço ou queda de rendimento.<span class="kpi-meta">Padrão ideal: manter ≥ 80% por disciplina e tendência crescente semana a semana.</span></span></span>
+                        </h4>
                         <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-6 font-medium">Evolução consolidada por semana (Acertos /
                             Total Resolvido)</p>
                         <div class="overflow-x-auto rounded-2xl border border-slate-200 dark:border-[#24324A]">
@@ -3827,8 +3830,9 @@
                     <!-- TOP 3 MELHORES E PIORES -->
                     <div v-if="dashboardData && dashboardData.rendimento_disciplinas"
                         class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-rose-200 dark:border-rose-500/30 p-6 shadow-xs">
-                            <h4 class="font-extrabold text-rose-900 dark:text-[#FCA5A5] text-base mb-4 flex items-center">
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-rose-200 dark:border-rose-500/30 p-6 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Pontos de Atenção:</strong> as 3 disciplinas com menor % de acerto. Aponta onde você precisa reforçar teoria e revisão ativa.<span class="kpi-meta">Alerta: matérias &lt; 70% exigem reforço; meta mínima ≥ 75%.</span></span></span>
+                            <h4 class="font-extrabold text-rose-900 dark:text-[#FCA5A5] text-base mb-4 flex items-center pr-6">
                                 <span
                                     class="bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-[#FCA5A5] w-8 h-8 flex items-center justify-center rounded-xl mr-3"><i
                                         class="fa-solid fa-triangle-exclamation"></i></span>
@@ -3850,8 +3854,9 @@
                             </ul>
                         </div>
 
-                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-emerald-200 dark:border-emerald-500/30 p-6 shadow-xs">
-                            <h4 class="font-extrabold text-emerald-900 dark:text-[#6EE7B7] text-base mb-4 flex items-center">
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-emerald-200 dark:border-emerald-500/30 p-6 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Destaques de Performance:</strong> as 3 matérias com maior % de acerto. Valida disciplinas já consolidadas.<span class="kpi-meta">Padrão ideal: acima de 85%, passe para manutenção (revisões + questões).</span></span></span>
+                            <h4 class="font-extrabold text-emerald-900 dark:text-[#6EE7B7] text-base mb-4 flex items-center pr-6">
                                 <span
                                     class="bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-[#6EE7B7] w-8 h-8 flex items-center justify-center rounded-xl mr-3"><i
                                         class="fa-solid fa-trophy"></i></span>
@@ -3876,18 +3881,21 @@
 
                     <!-- GRÁFICOS DO DASHBOARD -->
                     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                            <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm">Evolução Semanal</h4>
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Evolução Semanal:</strong> curva de acertos consolidada por semana. Mostra a tendência de aprendizado de médio prazo.<span class="kpi-meta">Padrão ideal: tendência estável ou crescente rumo a ≥ 80%.</span></span></span>
+                            <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm pr-6">Evolução Semanal</h4>
                             <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-4">% Acertos consolidados por semana</p>
                             <div class="h-56 relative"><canvas id="chartEvolucaoSemanal"></canvas></div>
                         </div>
-                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                            <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm">Rendimento Diário</h4>
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Rendimento Diário:</strong> percentual de acertos por dia de estudo. Permite observar oscilações diárias nas baterias.<span class="kpi-meta">Padrão ideal: manter consistência ≥ 75%–80%, evitando quedas bruscas.</span></span></span>
+                            <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm pr-6">Rendimento Diário</h4>
                             <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-4">% Global de acertos por dia</p>
                             <div class="h-56 relative"><canvas id="chartEvolucao"></canvas></div>
                         </div>
-                        <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                            <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm">Taxa por Disciplina</h4>
+                        <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Taxa por Disciplina:</strong> comparação visual da precisão em cada matéria. Identifica desequilíbrios no edital.<span class="kpi-meta">Meta ideal: nenhuma matéria relevante &lt; 70%; foco em ≥ 80% nas de maior peso.</span></span></span>
+                            <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm pr-6">Taxa por Disciplina</h4>
                             <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-4">Comparativo de precisão por matéria</p>
                             <div class="h-56 relative"><canvas id="chartDisciplinas"></canvas></div>
                         </div>
@@ -3900,7 +3908,10 @@
                 <div v-if="abaAtiva === 'heatmap'" class="space-y-6">
                     <div v-if="calendarioData && calendarioData.dias_labels && calendarioData.dias_labels.length > 0"
                         class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                        <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-lg mb-1">Mapa de Constância (Heatmap)</h4>
+                        <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-lg mb-1 flex items-center gap-2">
+                            <span>Mapa de Constância (Heatmap)</span>
+                            <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Mapa de Constância:</strong> calendário visual com os dias estudados por matéria e volta do ciclo. Mostra sua regularidade e lacunas de hábito.<span class="kpi-meta">Padrão ideal: preencher 5 a 6 dias/semana sem pausas &gt; 2 dias seguidos.</span></span></span>
+                        </h4>
                         <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-6 font-medium">Preenchimento diário por disciplina e volta
                             do ciclo</p>
 
@@ -3971,7 +3982,8 @@
                         class="space-y-6">
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
                             <div
-                                class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs flex flex-col justify-center items-center text-center space-y-5">
+                                class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs flex flex-col justify-center items-center text-center space-y-5">
+                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Métricas de Constância:</strong> mostra sequência atual (Streak), recorde histórico e média diária. Mede a disciplina contínua.<span class="kpi-meta">Padrão ideal: 5–6 dias/semana de estudo e média estável de 2h30 a 4h/dia.</span></span></span>
                                 <div class="w-full">
                                     <h4 class="text-3xl font-black text-blue-600 dark:text-[#22D3EE]">{{
                                         calendarioData.analytics.current_streak }} DIAS</h4>
@@ -3991,26 +4003,28 @@
                             </div>
 
                             <div
-                                class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs flex flex-col items-center justify-center">
+                                class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs flex flex-col items-center justify-center">
+                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Taxa de Aderência:</strong> proporção de dias com estudo efetivo no período analisado. Avalia o cumprimento da rotina.<span class="kpi-meta">Meta ideal: ≥ 75% para boas chances de aprovação (≥ 85% alta competitividade).</span></span></span>
                                 <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm mb-4">Taxa de Aderência</h4>
                                 <div class="relative w-48 h-48"><canvas id="chartAderencia"></canvas></div>
                             </div>
 
-                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                                <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm mb-4">Horas Médias por Dia da Semana</h4>
+                            <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Horas Médias por Dia:</strong> média de horas estudadas em cada dia da semana. Identifica dias mais produtivos e gargalos.<span class="kpi-meta">Padrão ideal: manter equilíbrio nos dias úteis (evitar zerar vários dias seguidos).</span></span></span>
+                                <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm mb-4 pr-6">Horas Médias por Dia da Semana</h4>
                                 <div class="relative h-48 w-full"><canvas id="chartDiaSemana"></canvas></div>
                             </div>
                         </div>
 
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                                <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm mb-4">Distribuição de Intensidade Diária
-                                </h4>
+                            <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Distribuição de Intensidade:</strong> agrupa seus dias por faixas de carga horária para avaliar sustentabilidade.<span class="kpi-meta">Padrão ideal: maioria dos dias entre 2h e 5h (evitar muitos dias zerados ou &gt; 8h).</span></span></span>
+                                <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm mb-4 pr-6">Distribuição de Intensidade Diária</h4>
                                 <div class="relative h-64 w-full"><canvas id="chartIntensidade"></canvas></div>
                             </div>
-                            <div class="md:col-span-2 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
-                                <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm mb-4">Carga Diária &amp; Médias Móveis (7d /
-                                    30d)</h4>
+                            <div class="relative md:col-span-2 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-6 shadow-xs">
+                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Carga Diária &amp; Médias Móveis:</strong> compara minutos diários com médias móveis de 7d e 30d para detectar queda de ritmo.<span class="kpi-meta">Padrão ideal: média de 7d acima ou próxima da de 30d indica ritmo mantido/crescente.</span></span></span>
+                                <h4 class="font-bold text-slate-900 dark:text-[#F1F5F9] text-sm mb-4 pr-6">Carga Diária &amp; Médias Móveis (7d / 30d)</h4>
                                 <div class="relative h-64 w-full"><canvas id="chartEvolucaoRisco"></canvas></div>
                             </div>
                         </div>
@@ -4444,9 +4458,12 @@
                                     <div class="bg-white dark:bg-[#1B2638] rounded-2xl border border-slate-200 dark:border-[#2D3D54] p-5 flex flex-col justify-between shadow-xs">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#B8C4D6]">Última Nota</span>
-                                            <span class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-[#60A5FA]/15 text-blue-600 dark:text-[#60A5FA] flex items-center justify-center text-sm">
-                                                <i class="fa-solid fa-graduation-cap"></i>
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Última Nota:</strong> pontuação obtida no simulado ou prova mais recente. Mostra seu patamar atual em provas reais.<span class="kpi-meta">Meta ideal: igualar ou superar a nota de corte (geralmente ≥ 75%–85%).</span></span></span>
+                                                <span class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-[#60A5FA]/15 text-blue-600 dark:text-[#60A5FA] flex items-center justify-center text-sm">
+                                                    <i class="fa-solid fa-graduation-cap"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                         <div class="text-3xl font-extrabold text-slate-900 dark:text-[#F3F4F6] font-mono-timer my-1">
                                             {{ resumoProvasAvulsas.ultimaNota.valor }}
@@ -4460,10 +4477,13 @@
                                     <div class="bg-white dark:bg-[#1B2638] rounded-2xl border border-slate-200 dark:border-[#2D3D54] p-5 flex flex-col justify-between shadow-xs">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#B8C4D6]">Distância do Corte</span>
-                                            <span :class="resumoProvasAvulsas.distanciaCorte.status === 'positivo' ? 'bg-emerald-50 dark:bg-[#34D399]/15 text-emerald-600 dark:text-[#34D399]' : (resumoProvasAvulsas.distanciaCorte.status === 'negativo' ? 'bg-rose-50 dark:bg-[#F87171]/15 text-rose-600 dark:text-[#F87171]' : 'bg-slate-50 dark:bg-[#243247] text-slate-500 dark:text-[#B8C4D6]')"
-                                                  class="w-8 h-8 rounded-lg flex items-center justify-center text-sm">
-                                                <i :class="resumoProvasAvulsas.distanciaCorte.status === 'positivo' ? 'fa-solid fa-arrow-trend-up' : (resumoProvasAvulsas.distanciaCorte.status === 'negativo' ? 'fa-solid fa-arrow-trend-down' : 'fa-solid fa-minus')"></i>
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Distância do Corte:</strong> diferença entre sua última nota e o corte alvo da prova.<span class="kpi-meta">Meta ideal: ≥ 0 p.p. (acima do corte); até -5 p.p. é zona competitiva.</span></span></span>
+                                                <span :class="resumoProvasAvulsas.distanciaCorte.status === 'positivo' ? 'bg-emerald-50 dark:bg-[#34D399]/15 text-emerald-600 dark:text-[#34D399]' : (resumoProvasAvulsas.distanciaCorte.status === 'negativo' ? 'bg-rose-50 dark:bg-[#F87171]/15 text-rose-600 dark:text-[#F87171]' : 'bg-slate-50 dark:bg-[#243247] text-slate-500 dark:text-[#B8C4D6]')"
+                                                      class="w-8 h-8 rounded-lg flex items-center justify-center text-sm">
+                                                    <i :class="resumoProvasAvulsas.distanciaCorte.status === 'positivo' ? 'fa-solid fa-arrow-trend-up' : (resumoProvasAvulsas.distanciaCorte.status === 'negativo' ? 'fa-solid fa-arrow-trend-down' : 'fa-solid fa-minus')"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                         <div :class="resumoProvasAvulsas.distanciaCorte.status === 'positivo' ? 'text-emerald-600 dark:text-[#34D399]' : (resumoProvasAvulsas.distanciaCorte.status === 'negativo' ? 'text-rose-600 dark:text-[#F87171]' : 'text-slate-800 dark:text-[#F3F4F6]')"
                                              class="text-3xl font-extrabold font-mono-timer my-1">
@@ -4478,9 +4498,12 @@
                                     <div class="bg-white dark:bg-[#1B2638] rounded-2xl border border-slate-200 dark:border-[#2D3D54] p-5 flex flex-col justify-between shadow-xs">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#B8C4D6]">Melhor Desempenho</span>
-                                            <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-[#FBBF24]/15 text-amber-600 dark:text-[#FBBF24] flex items-center justify-center text-sm">
-                                                <i class="fa-solid fa-medal"></i>
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Melhor Desempenho:</strong> sua maior nota registrada em provas e simulados. Mostra seu potencial máximo atual.<span class="kpi-meta">Padrão ideal: repetir esse teto com consistência acima da nota de corte.</span></span></span>
+                                                <span class="w-8 h-8 rounded-lg bg-amber-50 dark:bg-[#FBBF24]/15 text-amber-600 dark:text-[#FBBF24] flex items-center justify-center text-sm">
+                                                    <i class="fa-solid fa-medal"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                         <div class="text-3xl font-extrabold text-slate-900 dark:text-[#F3F4F6] font-mono-timer my-1">
                                             {{ resumoProvasAvulsas.melhorDesempenho.valor }}
@@ -4494,9 +4517,12 @@
                                     <div class="bg-white dark:bg-[#1B2638] rounded-2xl border border-slate-200 dark:border-[#2D3D54] p-5 flex flex-col justify-between shadow-xs">
                                         <div class="flex items-center justify-between mb-2">
                                             <span class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-[#B8C4D6]">Ponto de Atenção</span>
-                                            <span class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-[#C4B5FD]/15 text-purple-600 dark:text-[#C4B5FD] flex items-center justify-center text-sm">
-                                                <i class="fa-solid fa-bullseye"></i>
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Ponto de Atenção:</strong> bloco (Básicos ou Específicos) com maior fragilidade nas provas.<span class="kpi-meta">Meta ideal: ≥ 75% em ambos os blocos, sem risco de nota mínima.</span></span></span>
+                                                <span class="w-8 h-8 rounded-lg bg-purple-50 dark:bg-[#C4B5FD]/15 text-purple-600 dark:text-[#C4B5FD] flex items-center justify-center text-sm">
+                                                    <i class="fa-solid fa-bullseye"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                         <div class="text-xl sm:text-2xl font-extrabold text-slate-900 dark:text-[#F3F4F6] my-1">
                                             {{ resumoProvasAvulsas.pontoMelhoria.valor }}
@@ -4508,16 +4534,16 @@
                                 </div>
 
                                 <div v-if="resultadosAvulsos.length > 0" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    <div class="bg-white dark:bg-[#1B2638] p-5 rounded-3xl border border-slate-200 dark:border-[#2D3D54] shadow-xs">
-                                        <h4
-                                            class="text-xs font-bold text-slate-600 dark:text-[#F3F4F6] uppercase tracking-wider text-center mb-4">
+                                    <div class="relative bg-white dark:bg-[#1B2638] p-5 rounded-3xl border border-slate-200 dark:border-[#2D3D54] shadow-xs">
+                                        <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Evolução de Notas:</strong> linha temporal da sua nota frente ao corte de cada prova.<span class="kpi-meta">Padrão ideal: curva ascendente cruzando e se mantendo acima de 0 p.p.</span></span></span>
+                                        <h4 class="text-xs font-bold text-slate-600 dark:text-[#F3F4F6] uppercase tracking-wider text-center mb-4">
                                             Evolução de Notas (Distância % para o Corte)</h4>
                                         <div class="relative h-64 w-full"><canvas id="chartEvolucaoAvulsos"></canvas>
                                         </div>
                                     </div>
-                                    <div class="bg-white dark:bg-[#1B2638] p-5 rounded-3xl border border-slate-200 dark:border-[#2D3D54] shadow-xs">
-                                        <h4
-                                            class="text-xs font-bold text-slate-600 dark:text-[#F3F4F6] uppercase tracking-wider text-center mb-4">
+                                    <div class="relative bg-white dark:bg-[#1B2638] p-5 rounded-3xl border border-slate-200 dark:border-[#2D3D54] shadow-xs">
+                                        <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Desempenho por Bloco:</strong> compara sua pontuação entre Conhecimentos Básicos e Específicos.<span class="kpi-meta">Meta ideal: Específicos (maior peso) ≥ 80% e Básicos ≥ 75%.</span></span></span>
+                                        <h4 class="text-xs font-bold text-slate-600 dark:text-[#F3F4F6] uppercase tracking-wider text-center mb-4">
                                             Desempenho por Bloco (Básicos x Específicos)</h4>
                                         <div class="relative h-64 w-full"><canvas id="chartDesempenhoAvulsos"></canvas>
                                         </div>
@@ -4743,9 +4769,10 @@
                                     </div>
 
                                     <div class="bg-slate-900 dark:bg-[#10192A] rounded-3xl p-6 text-white border border-slate-800 dark:border-[#2D3D54] shadow-lg">
-                                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4"><i
-                                                class="fa-solid fa-chart-line mr-2 text-indigo-400"></i> Bagagem
-                                            Acumulada na Preparação</h3>
+                                        <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                                            <span><i class="fa-solid fa-chart-line mr-2 text-indigo-400"></i> Bagagem Acumulada na Preparação</span>
+                                            <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Bagagem Acumulada:</strong> resume dias, horas, cobertura, questões e acerto do ciclo encerrado para correlacionar esforço e nota.<span class="kpi-meta">Padrão ideal: cobertura ≥ 80% do edital com ≥ 80% de acerto no ciclo.</span></span></span>
+                                        </h3>
                                         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                                             <div>
                                                 <p class="text-xs text-slate-400 uppercase font-semibold">Dias Estudados</p>
@@ -4780,16 +4807,16 @@
                                     </div>
 
                                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-                                            <h3
-                                                class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 text-center">
+                                        <div class="relative bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+                                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Desempenho Comparativo:</strong> gráfico radar da nota em cada disciplina do ciclo.<span class="kpi-meta">Padrão ideal: polígono amplo e simétrico (≥ 75%–80% em todas as pontas).</span></span></span>
+                                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 text-center">
                                                 Desempenho Comparativo (Notas)</h3>
                                             <div class="relative h-64 w-full flex justify-center"><canvas
                                                     id="radarChartNotas"></canvas></div>
                                         </div>
-                                        <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-                                            <h3
-                                                class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 text-center">
+                                        <div class="relative bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+                                            <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Acerto vs. Edital Visto:</strong> cruza % de acerto com % de tópicos estudados por matéria.<span class="kpi-meta">Meta ideal: ambas as barras ≥ 80% (alto edital visto + baixo acerto = falta revisão).</span></span></span>
+                                            <h3 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-4 text-center">
                                                 Taxa de Acerto vs. Edital Visto</h3>
                                             <div class="relative h-64 w-full flex justify-center"><canvas
                                                     id="barChartDisciplinas"></canvas></div>
@@ -4800,9 +4827,9 @@
                                     <div class="pt-4">
                                         <div v-if="insightsRaioX && insightsRaioX.length > 0"
                                             class="bg-indigo-50/90 p-6 rounded-3xl border border-indigo-100 mb-6">
-                                            <h3 class="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-3">
-                                                <i class="fa-solid fa-lightbulb mr-2 text-amber-500"></i> Diagnóstico
-                                                Automático do Raio-X
+                                            <h3 class="text-xs font-bold text-indigo-900 uppercase tracking-wider mb-3 flex items-center gap-2">
+                                                <span><i class="fa-solid fa-lightbulb mr-2 text-amber-500"></i> Diagnóstico Automático do Raio-X</span>
+                                                <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Diagnóstico do Raio-X:</strong> gera recomendações automáticas cruzando tempo, revisões e nota na prova.<span class="kpi-meta">Uso ideal: aplicar os ajustes sugeridos ao montar o próximo ciclo.</span></span></span>
                                             </h3>
                                             <ul class="space-y-2.5 text-sm">
                                                 <li v-for="(insight, idx) in insightsRaioX" :key="idx"
@@ -4814,19 +4841,19 @@
                                         </div>
 
                                         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                                            <div class="bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
-                                                <h3
-                                                    class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 text-center">
+                                            <div class="relative bg-white p-6 rounded-3xl border border-slate-200 shadow-xs">
+                                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Dispersão Horas x Acerto:</strong> posiciona cada matéria pelo tempo estudado e pela nota na prova.<span class="kpi-meta">Padrão ideal: pontos concentrados na faixa superior (≥ 75%–80% de acerto).</span></span></span>
+                                                <h3 class="text-xs font-bold text-slate-600 uppercase tracking-wider mb-1 text-center">
                                                     Dispersão: Horas Estudadas x Acerto na Prova</h3>
                                                 <div class="relative h-72 w-full flex justify-center"><canvas
                                                         id="scatterRaioX"></canvas></div>
                                             </div>
 
                                             <div
-                                                class="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden flex flex-col">
-                                                <div class="p-4 bg-slate-50 border-b border-slate-200">
-                                                    <h3
-                                                        class="text-xs font-bold text-slate-700 uppercase tracking-wider text-center">
+                                                class="relative bg-white rounded-3xl border border-slate-200 shadow-xs flex flex-col">
+                                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Revisões x Resultado:</strong> relaciona quantidade de revisões por matéria com a nota obtida.<span class="kpi-meta">Meta ideal: 2 a 3+ revisões por disciplina para sustentar ≥ 75%–80% na prova.</span></span></span>
+                                                <div class="p-4 bg-slate-50 border-b border-slate-200 rounded-t-3xl">
+                                                    <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider text-center">
                                                         Volume de Revisões x Resultado</h3>
                                                 </div>
                                                 <div class="flex-1 overflow-y-auto max-h-72 p-4">
@@ -4858,10 +4885,10 @@
 
                                         <!-- QUADRANTES -->
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            <div class="bg-emerald-50/80 border border-emerald-200 p-5 rounded-2xl">
-                                                <h4 class="font-bold text-emerald-900 text-sm mb-1"><i
-                                                        class="fa-solid fa-star mr-1.5 text-emerald-600"></i> Dominado
-                                                    (Alto Tempo, Alto Acerto)</h4>
+                                            <div class="relative bg-emerald-50/80 border border-emerald-200 p-5 rounded-2xl">
+                                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Quadrante Dominado:</strong> alto investimento de horas e alta nota.<span class="kpi-meta">Padrão ideal: manter ≥ 80% apenas com revisões periódicas.</span></span></span>
+                                                <h4 class="font-bold text-emerald-900 text-sm mb-1 pr-6"><i
+                                                        class="fa-solid fa-star mr-1.5 text-emerald-600"></i> Dominado (Alto Tempo, Alto Acerto)</h4>
                                                 <p class="text-xs text-emerald-700 mb-3">Esforço convertido em nota
                                                     alta.</p>
                                                 <div class="flex flex-wrap gap-2">
@@ -4875,10 +4902,10 @@
                                                         neste quadrante.</span>
                                                 </div>
                                             </div>
-                                            <div class="bg-blue-50/80 border border-blue-200 p-5 rounded-2xl">
-                                                <h4 class="font-bold text-blue-900 text-sm mb-1"><i
-                                                        class="fa-solid fa-bolt mr-1.5 text-blue-600"></i> Alta
-                                                    Eficiência (Baixo Tempo, Alto Acerto)</h4>
+                                            <div class="relative bg-blue-50/80 border border-blue-200 p-5 rounded-2xl">
+                                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Quadrante Alta Eficiência:</strong> alta nota com pouco tempo investido.<span class="kpi-meta">Padrão ideal: sustentar ≥ 80% e realocar horas excedentes para lacunas.</span></span></span>
+                                                <h4 class="font-bold text-blue-900 text-sm mb-1 pr-6"><i
+                                                        class="fa-solid fa-bolt mr-1.5 text-blue-600"></i> Alta Eficiência (Baixo Tempo, Alto Acerto)</h4>
                                                 <p class="text-xs text-blue-700 mb-3">Ótima base prévia. Manter por
                                                     revisões.</p>
                                                 <div class="flex flex-wrap gap-2">
@@ -4892,10 +4919,10 @@
                                                         quadrante.</span>
                                                 </div>
                                             </div>
-                                            <div class="bg-amber-50/80 border border-amber-200 p-5 rounded-2xl">
-                                                <h4 class="font-bold text-amber-900 text-sm mb-1"><i
-                                                        class="fa-solid fa-person-digging mr-1.5 text-amber-600"></i>
-                                                    Baixa Conversão (Alto Tempo, Baixo Acerto)</h4>
+                                            <div class="relative bg-amber-50/80 border border-amber-200 p-5 rounded-2xl">
+                                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Quadrante Baixa Conversão:</strong> muitas horas com nota abaixo do esperado.<span class="kpi-meta">Meta ideal: 0 matérias aqui — troque leitura passiva por questões + revisão ativa até ≥ 75%.</span></span></span>
+                                                <h4 class="font-bold text-amber-900 text-sm mb-1 pr-6"><i
+                                                        class="fa-solid fa-person-digging mr-1.5 text-amber-600"></i> Baixa Conversão (Alto Tempo, Baixo Acerto)</h4>
                                                 <p class="text-xs text-amber-700 mb-3">Muito tempo investido com retorno
                                                     baixo. Ajustar método.</p>
                                                 <div class="flex flex-wrap gap-2">
@@ -4909,10 +4936,10 @@
                                                         neste quadrante.</span>
                                                 </div>
                                             </div>
-                                            <div class="bg-rose-50/80 border border-rose-200 p-5 rounded-2xl">
-                                                <h4 class="font-bold text-rose-900 text-sm mb-1"><i
-                                                        class="fa-solid fa-triangle-exclamation mr-1.5 text-rose-600"></i>
-                                                    Lacuna Crítica (Baixo Tempo, Baixo Acerto)</h4>
+                                            <div class="relative bg-rose-50/80 border border-rose-200 p-5 rounded-2xl">
+                                                <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Quadrante Lacuna Crítica:</strong> pouco tempo estudado e baixa nota.<span class="kpi-meta">Meta ideal: zerar este quadrante priorizando carga horária até superar 70%–75%.</span></span></span>
+                                                <h4 class="font-bold text-rose-900 text-sm mb-1 pr-6"><i
+                                                        class="fa-solid fa-triangle-exclamation mr-1.5 text-rose-600"></i> Lacuna Crítica (Baixo Tempo, Baixo Acerto)</h4>
                                                 <p class="text-xs text-rose-700 mb-3">Prioridade máxima de carga horária
                                                     no próximo ciclo.</p>
                                                 <div class="flex flex-wrap gap-2">
@@ -5119,8 +5146,9 @@
                                                 <span class="text-[11px] font-black uppercase tracking-widest text-blue-600 dark:text-[#22D3EE]">
                                                     {{ mapaAprovacaoData.estimativa_nota.eh_nota_liquida ? 'ESTIMATIVA DE NOTA LÍQUIDA (PENALIDADE POR ERRO)' : 'DISTRIBUIÇÃO PROBABILÍSTICA DA PONTUAÇÃO' }}
                                                 </span>
-                                                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-[#F1F5F9]">
-                                                    Nota Estimada &amp; Margem de Incerteza
+                                                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-[#F1F5F9] flex items-center gap-2">
+                                                    <span>Nota Estimada &amp; Margem de Incerteza</span>
+                                                    <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Nota Estimada &amp; Incerteza:</strong> curva probabilística da sua nota projetada na prova com intervalo de confiança.<span class="kpi-meta">Meta ideal: nota estimada e limite inferior acima da nota de corte (consolidação ≥ 70%).</span></span></span>
                                                 </h3>
                                                 <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
                                                     {{ mapaAprovacaoData.estimativa_nota.modo_pontuacao }} &bull; {{ mapaAprovacaoData.estimativa_nota.total_questoes_amostra }} questões &bull; cobertura {{ mapaAprovacaoData.estimativa_nota.cobertura_edital_perc }}%
@@ -5245,8 +5273,9 @@
                                                 <span class="text-[11px] font-black uppercase tracking-widest text-indigo-500 dark:text-[#818CF8]">
                                                     HISTÓRICO CONSOLIDADO
                                                 </span>
-                                                <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-[#F1F5F9]">
-                                                    Evolução da Estimativa ao Longo do Tempo (com Banda de Incerteza)
+                                                <h3 class="text-base sm:text-lg font-black text-slate-900 dark:text-[#F1F5F9] flex items-center gap-2">
+                                                    <span>Evolução da Estimativa ao Longo do Tempo (com Banda de Incerteza)</span>
+                                                    <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Evolução da Estimativa:</strong> mostra como sua nota projetada evoluiu semana a semana conforme o volume de questões cresce.<span class="kpi-meta">Padrão ideal: curva subindo rumo ao corte com banda de incerteza cada vez mais estreita.</span></span></span>
                                                 </h3>
                                                 <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
                                                     Acompanhe como sua nota estimada ponderada evoluiu semana a semana e como a margem de incerteza se estreita
@@ -5262,8 +5291,9 @@
                                 <!-- Card Direito (5 cols): Critérios Eliminatórios & Disciplinas que Comprometem -->
                                 <div class="xl:col-span-5 flex flex-col gap-6">
                                     <!-- Subcard: Critérios Eliminatórios -->
-                                    <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs">
-                                        <div class="flex items-center justify-between mb-3">
+                                    <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs">
+                                        <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Critérios Eliminatórios:</strong> verifica automaticamente se você atende aos pisos mínimos do edital.<span class="kpi-meta">Padrão obrigatório: 100% dos critérios no status "Apto" (sem risco na incerteza).</span></span></span>
+                                        <div class="flex items-center justify-between mb-3 pr-6">
                                             <div>
                                                 <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base flex items-center gap-2">
                                                     <i class="fa-solid fa-shield-halved text-indigo-500 dark:text-[#818CF8]"></i>
@@ -5304,8 +5334,9 @@
                                     </div>
 
                                     <!-- Subcard: Disciplinas que Mais Comprometem a Pontuação -->
-                                    <div class="bg-white dark:bg-[#141D2E] rounded-3xl border border-rose-200 dark:border-rose-500/30 p-5 sm:p-6 shadow-xs">
-                                        <h4 class="font-extrabold text-rose-700 dark:text-[#FCA5A5] text-base mb-1 flex items-center gap-2">
+                                    <div class="relative bg-white dark:bg-[#141D2E] rounded-3xl border border-rose-200 dark:border-rose-500/30 p-5 sm:p-6 shadow-xs">
+                                        <span class="kpi-help kpi-help-right kpi-help-corner" tabindex="0">?<span class="kpi-help-box"><strong>Gargalos de Pontuação:</strong> ranqueia as matérias que mais drenam pontos da nota final (Peso × Questões × Erro).<span class="kpi-meta">Meta ideal: atacar primeiro matérias que perdem &gt; 3 a 5 pontos na prova.</span></span></span>
+                                        <h4 class="font-extrabold text-rose-700 dark:text-[#FCA5A5] text-base mb-1 flex items-center gap-2 pr-6">
                                             <i class="fa-solid fa-triangle-exclamation"></i>
                                             Disciplinas que Mais Comprometem a Pontuação
                                         </h4>
@@ -5344,8 +5375,9 @@
                                         <span class="text-[11px] font-black uppercase tracking-widest text-emerald-600 dark:text-[#34D399]">
                                             RAIO-X DE APROVAÇÃO POR DISCIPLINA
                                         </span>
-                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5">
-                                            Quanto Cada Disciplina Representa na Nota Final &amp; Meta Necessária
+                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5 flex items-center gap-2">
+                                            <span>Quanto Cada Disciplina Representa na Nota Final &amp; Meta Necessária</span>
+                                            <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Raio-X por Disciplina:</strong> detalha o peso de cada matéria na prova, sua nota estimada e a meta necessária para bater o corte.<span class="kpi-meta">Padrão ideal: atingir ou superar a meta individual nas matérias de maior peso (&gt; 10% da prova).</span></span></span>
                                         </h3>
                                         <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
                                             Comparativo entre nota estimada (com incerteza), peso na prova e meta necessária para alcançar {{ mapaAprovacaoData.parametros_prova.nota_corte }}%
@@ -5469,8 +5501,9 @@
                                             <i class="fa-solid fa-compass-drafting"></i>
                                             MOTOR DE DECISÃO ESTRATÉGICA &amp; ALOCAÇÃO DE ESFORÇO
                                         </span>
-                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5">
-                                            INTELIGÊNCIA DE PRIORIDADES
+                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5 flex items-center gap-2">
+                                            <span>INTELIGÊNCIA DE PRIORIDADES</span>
+                                            <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Inteligência de Prioridades:</strong> calcula índice de 0 a 100 e ROI de estudo por disciplina e assunto para orientar suas horas semanais.<span class="kpi-meta">Uso ideal: concentrar esforço nas disciplinas com índice ≥ 70 (Crítica/Alta) e maior ROI.</span></span></span>
                                         </h3>
                                         <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
                                             Priorização automática (0 a 100), Retorno sobre o Tempo de Estudo (ROI), diagnóstico de assuntos críticos e distribuição semanal inteligente
@@ -5883,8 +5916,9 @@
                                                 Cenário Simulado Ativo ({{ simuladorAtivo.comparativo_cenario.qtd_disciplinas_alteradas }} disciplina(s) alterada(s))
                                             </span>
                                         </div>
-                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5">
-                                            SIMULADOR PROBABILÍSTICO DE APROVAÇÃO
+                                        <h3 class="text-xl font-black text-slate-900 dark:text-[#F1F5F9] mt-0.5 flex items-center gap-2">
+                                            <span>SIMULADOR PROBABILÍSTICO DE APROVAÇÃO</span>
+                                            <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Simulador Probabilístico:</strong> executa simulações de Monte Carlo com seu histórico para calcular a chance real de aprovação e testar cenários.<span class="kpi-meta">Meta ideal: probabilidade de aprovação ≥ 70% (≥ 85% alta segurança) e confiabilidade ≥ 60/100.</span></span></span>
                                         </h3>
                                         <p class="text-xs text-slate-500 dark:text-[#94A3B8]">
                                             Distribuição Beta-Binomial ponderada por disciplina respeitando pesos, questões, penalidade da banca e critérios eliminatórios
@@ -7202,9 +7236,12 @@
                                             <span class="text-[11px] font-extrabold uppercase tracking-wider text-blue-600 dark:text-[#22D3EE]">
                                                 Meta Semanal do Edital
                                             </span>
-                                            <span class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 dark:text-[#22D3EE] flex items-center justify-center text-sm">
-                                                <i class="fa-solid fa-gauge-high"></i>
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Meta Semanal do Edital:</strong> ritmo de tópicos/semana exigido para cumprir sua cobertura antes da revisão.<span class="kpi-meta">Padrão ideal: manter ritmo real ≥ 100% da meta semanal planejada.</span></span></span>
+                                                <span class="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-600 dark:text-[#22D3EE] flex items-center justify-center text-sm">
+                                                    <i class="fa-solid fa-gauge-high"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
                                             {{ mapaAprovacaoData.gestao_temporal.ritmo_semanal.perc_edital_por_semana_ate_revisao }}% <span class="text-sm font-bold text-slate-400">/ sem</span>
@@ -7225,9 +7262,12 @@
                                             <span class="text-[11px] font-extrabold uppercase tracking-wider text-indigo-600 dark:text-[#C4B5FD]">
                                                 Início da Fase de Revisão
                                             </span>
-                                            <span class="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-[#C4B5FD] flex items-center justify-center text-sm">
-                                                <i class="fa-solid fa-rotate"></i>
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Início da Fase de Revisão:</strong> data-marco para encerrar teoria nova e focar na revisão intensiva pré-prova.<span class="kpi-meta">Padrão ideal: reservar 30 a 45 dias finais exclusivos para revisão e questões.</span></span></span>
+                                                <span class="w-8 h-8 rounded-xl bg-indigo-500/15 text-indigo-600 dark:text-[#C4B5FD] flex items-center justify-center text-sm">
+                                                    <i class="fa-solid fa-rotate"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
                                             {{ mapaAprovacaoData.gestao_temporal.fase_revisao.data_inicio_revisao_fmt }}
@@ -7248,9 +7288,12 @@
                                             <span class="text-[11px] font-extrabold uppercase tracking-wider text-amber-600 dark:text-[#FBBF24]">
                                                 Reserva para Simulados
                                             </span>
-                                            <span class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-[#FBBF24] flex items-center justify-center text-sm">
-                                                <i class="fa-solid fa-stopwatch"></i>
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Reserva para Simulados:</strong> horas semanais e total de simulados recomendados até a prova.<span class="kpi-meta">Padrão ideal: destinar 15% a 20% da carga semanal (1 simulado a cada 1–2 semanas).</span></span></span>
+                                                <span class="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-600 dark:text-[#FBBF24] flex items-center justify-center text-sm">
+                                                    <i class="fa-solid fa-stopwatch"></i>
+                                                </span>
+                                            </div>
                                         </div>
                                         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
                                             {{ mapaAprovacaoData.gestao_temporal.reserva_simulados.horas_simulado_semana }}h <span class="text-sm font-bold text-slate-400">/ sem</span>
@@ -7271,10 +7314,13 @@
                                             <span class="text-[11px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-[#34D399]">
                                                 Conteúdo Não Estudado
                                             </span>
-                                            <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase"
-                                                :class="mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'emerald' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300' : (mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'amber' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300' : 'bg-rose-500/20 text-rose-600 dark:text-rose-300')">
-                                                {{ mapaAprovacaoData.gestao_temporal.viabilidade_projeto.status }}
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Conteúdo Não Estudado:</strong> tópicos ainda pendentes no edital e status de viabilidade do prazo.<span class="kpi-meta">Meta ideal: zerar 100% dos tópicos P1 e atingir ≥ 80%–90% do edital antes da revisão.</span></span></span>
+                                                <span class="px-2 py-0.5 rounded-md text-[10px] font-black uppercase"
+                                                    :class="mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'emerald' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-300' : (mapaAprovacaoData.gestao_temporal.viabilidade_projeto.cor === 'amber' ? 'bg-amber-500/20 text-amber-600 dark:text-amber-300' : 'bg-rose-500/20 text-rose-600 dark:text-rose-300')">
+                                                    {{ mapaAprovacaoData.gestao_temporal.viabilidade_projeto.status }}
+                                                </span>
+                                            </div>
                                         </div>
                                         <div class="text-2xl sm:text-3xl font-black text-slate-900 dark:text-[#F1F5F9] font-mono-timer">
                                             {{ mapaAprovacaoData.gestao_temporal.conteudo_nao_estudado }} <span class="text-sm font-bold text-slate-400">tópicos</span>
@@ -7295,8 +7341,9 @@
                                 <div class="lg:col-span-5 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs flex flex-col justify-between space-y-4">
                                     <div class="space-y-4">
                                         <div class="flex items-center justify-between mb-2">
-                                            <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base">
-                                                Alocação Semanal do Projeto ({{ mapaAprovacaoData.gestao_temporal.carga_semanal_total }}h/sem)
+                                            <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base flex items-center gap-2">
+                                                <span>Alocação Semanal do Projeto ({{ mapaAprovacaoData.gestao_temporal.carga_semanal_total }}h/sem)</span>
+                                                <span class="kpi-help kpi-help-left" tabindex="0">?<span class="kpi-help-box"><strong>Alocação Semanal:</strong> divide suas horas entre avanço teórico, revisão ativa e simulados com parecer de viabilidade.<span class="kpi-meta">Padrão ideal: ~50–60% teoria nova, ~25–30% revisão/questões e ~15–20% simulados.</span></span></span>
                                             </h4>
                                             <button type="button" @click="subAbaTemporal = 'configuracao'"
                                                 class="text-xs font-bold text-emerald-600 dark:text-[#34D399] hover:underline">
@@ -7354,8 +7401,9 @@
 
                                 <!-- Roadmap / Cronograma das 4 Fases do Projeto (7 cols) -->
                                 <div class="lg:col-span-7 bg-white dark:bg-[#141D2E] rounded-3xl border border-slate-200 dark:border-[#24324A] p-5 sm:p-6 shadow-xs flex flex-col justify-between">
-                                    <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base mb-1">
-                                        Cronograma de Fases do Projeto da Aprovação
+                                    <h4 class="font-extrabold text-slate-900 dark:text-[#F1F5F9] text-base mb-1 flex items-center gap-2">
+                                        <span>Cronograma de Fases do Projeto da Aprovação</span>
+                                        <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Cronograma de Fases:</strong> organiza a preparação em etapas (base teórica, revisão e sprint final), mostrando sua fase atual.<span class="kpi-meta">Padrão ideal: cumprir a fase de base antes do marco de revisão para evitar atraso acumulado.</span></span></span>
                                     </h4>
                                     <p class="text-xs text-slate-500 dark:text-[#94A3B8] mb-4">
                                         Transição planejada entre estudo de conteúdo inédito, revisão intensiva e sprint de simulados
@@ -7398,9 +7446,12 @@
                                             <span class="text-xs font-extrabold uppercase tracking-wider text-slate-500 dark:text-[#94A3B8] flex items-center gap-1.5">
                                                 <i class="fa-solid fa-chart-simple text-blue-500"></i> Progresso Global do Edital
                                             </span>
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
-                                                Meta: {{ mapaAprovacaoData.gestao_temporal.meta_conclusao_edital_perc }}%
-                                            </span>
+                                            <div class="flex items-center gap-1.5">
+                                                <span class="kpi-help kpi-help-right" tabindex="0">?<span class="kpi-help-box"><strong>Progresso Global:</strong> consolida tópicos concluídos, em estudo e pendentes, permitindo inspecionar cada disciplina.<span class="kpi-meta">Meta ideal: alcançar ≥ 80%–90% de cobertura global antes da reta final.</span></span></span>
+                                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-[#60A5FA]">
+                                                    Meta: {{ mapaAprovacaoData.gestao_temporal.meta_conclusao_edital_perc }}%
+                                                </span>
+                                            </div>
                                         </div>
 
                                         <div class="flex items-baseline gap-2 my-1">
@@ -7478,8 +7529,9 @@
                                                 <span class="text-[10px] font-black uppercase tracking-widest text-blue-600 dark:text-[#22D3EE]">
                                                     CONTROLE DE CONTEÚDO DA DISCIPLINA
                                                 </span>
-                                                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white">
-                                                    {{ disciplinaSelecionadaMapa.nome }}
+                                                <h3 class="text-lg sm:text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+                                                    <span>{{ disciplinaSelecionadaMapa.nome }}</span>
+                                                    <span class="kpi-help" tabindex="0">?<span class="kpi-help-box"><strong>Controle de Conteúdo:</strong> lista os tópicos da matéria selecionada com prioridade, status e ritmo necessário.<span class="kpi-meta">Padrão ideal: concluir 100% dos tópicos P1 primeiro e manter cobertura ≥ 80% na matéria.</span></span></span>
                                                 </h3>
                                             </div>
                                             <div class="flex items-center gap-2">

@@ -7291,3 +7291,12 @@ app.config.errorHandler = (err, instance, info) => {
 };
 
 app.mount('#app');
+
+const ajustarPosicaoKpiHelp = (e) => {
+    const el = e.target && e.target.closest ? e.target.closest('.kpi-help') : null;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    el.classList.toggle('kpi-help-bottom', rect.top < 240);
+};
+document.addEventListener('pointerenter', ajustarPosicaoKpiHelp, true);
+document.addEventListener('focusin', ajustarPosicaoKpiHelp, true);

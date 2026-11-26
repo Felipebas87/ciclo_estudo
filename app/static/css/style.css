@@ -1148,3 +1148,137 @@ html.dark .heatmap-row:hover {
 html.dark .heatmap-row:hover .heatmap-sticky-col {
     background-color: #2E4668 !important;
 }
+
+/* ============================================================
+   BOTÃO DE AJUDA (?) COM TOOLTIP NOS CARDS DE INTELIGÊNCIA & MÉTRICAS
+   ============================================================ */
+.kpi-help {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 17px;
+    height: 17px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1;
+    cursor: help;
+    flex-shrink: 0;
+    vertical-align: middle;
+    background-color: #E2E8F0;
+    color: #475569;
+    border: 1px solid #CBD5E1;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    text-transform: none;
+    letter-spacing: normal;
+}
+
+.kpi-help:hover,
+.kpi-help:focus-visible {
+    background-color: #2563EB;
+    color: #FFFFFF;
+    border-color: #2563EB;
+    transform: scale(1.08);
+    outline: none;
+    z-index: 60;
+}
+
+html.dark .kpi-help {
+    background-color: rgba(51, 65, 85, 0.85);
+    color: #CBD5E1;
+    border-color: #475569;
+}
+
+html.dark .kpi-help:hover,
+html.dark .kpi-help:focus-visible {
+    background-color: #38BDF8;
+    color: #0F172A;
+    border-color: #38BDF8;
+}
+
+.kpi-help-box {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    width: 260px;
+    max-width: 78vw;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background-color: #0F172A;
+    color: #F8FAFC;
+    border: 1px solid #334155;
+    box-shadow: 0 14px 30px -6px rgba(2, 6, 23, 0.55);
+    font-size: 11.5px;
+    font-weight: 500;
+    line-height: 1.45;
+    text-align: left;
+    white-space: normal;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease, visibility 0.16s ease;
+    z-index: 80;
+}
+
+.kpi-help.kpi-help-right .kpi-help-box {
+    left: auto;
+    right: 0;
+    transform: translateY(4px);
+}
+
+.kpi-help.kpi-help-left .kpi-help-box {
+    left: 0;
+    transform: translateY(4px);
+}
+
+.kpi-help.kpi-help-bottom .kpi-help-box {
+    bottom: auto;
+    top: calc(100% + 8px);
+    transform: translateX(-50%) translateY(-4px);
+}
+
+.kpi-help.kpi-help-bottom.kpi-help-right .kpi-help-box,
+.kpi-help.kpi-help-bottom.kpi-help-left .kpi-help-box {
+    transform: translateY(-4px);
+}
+
+.kpi-help-corner {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+}
+
+.kpi-help-box .kpi-meta {
+    display: block;
+    margin-top: 5px;
+    padding-top: 5px;
+    border-top: 1px solid rgba(148, 163, 184, 0.25);
+    color: #38BDF8;
+    font-weight: 700;
+}
+
+.kpi-help:hover .kpi-help-box,
+.kpi-help:focus-visible .kpi-help-box {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+.kpi-help.kpi-help-right:hover .kpi-help-box,
+.kpi-help.kpi-help-right:focus-visible .kpi-help-box,
+.kpi-help.kpi-help-left:hover .kpi-help-box,
+.kpi-help.kpi-help-left:focus-visible .kpi-help-box,
+.kpi-help.kpi-help-bottom.kpi-help-right:hover .kpi-help-box,
+.kpi-help.kpi-help-bottom.kpi-help-right:focus-visible .kpi-help-box,
+.kpi-help.kpi-help-bottom.kpi-help-left:hover .kpi-help-box,
+.kpi-help.kpi-help-bottom.kpi-help-left:focus-visible .kpi-help-box {
+    transform: translateY(0);
+}
+
+html.dark .kpi-help-box {
+    background-color: #0B1220;
+    border-color: #3D5A82;
+    color: #E2E8F0;
+}
