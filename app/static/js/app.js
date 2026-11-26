@@ -814,7 +814,7 @@ const app = createApp({
             if (!cicloAtivo.value || !editais.value) return 0;
             const ed = editais.value.find(e => e.id === cicloAtivo.value.edital_id);
             if (!ed) return 0;
-            return getEstatisticasEdital(ed).perc_visto.toFixed(0);
+            return Number(getEstatisticasEdital(ed).perc_visto.toFixed(1));
         });
 
         const totaisEncerramento = computed(() => {
