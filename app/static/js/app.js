@@ -160,6 +160,8 @@ const app = createApp({
         const modalCheckinAberto = ref(false);
         const modalResumoAberto = ref(false);
         const resumoSessaoAtual = ref(null);
+        const modalPreviewBlocoAberto = ref(false);
+        const previewBlocoFuturo = ref(null);
         const verticalizadoAberto = ref({});
         const filtroVerticalizado = ref({}); // { [discId]: 'todos' | 'mais_cobrados' | 'prioritarios' | 'p1' | 'pendentes' }
         const ordenacaoVerticalizado = ref({}); // { [discId]: 'trilha' | 'edital' }
@@ -2543,7 +2545,108 @@ const app = createApp({
                 return;
             }
             if (!blocoClicado.concluido && idx > currentIdx) {
-                mostrarAlerta('Você ainda não chegou nesta fase! Conclua ou pule a fase atual.', 'aviso');
+                const isRevisaoAnki = blocoClicado.disciplina?.categoria === 'REVISAO_ANKI';
+                const topicoAnki = isRevisaoAnki ? (blocoClicado.proximo_topico || null) : null;
+                const discAlvoId = topicoAnki?.disciplina_id || blocoClicado.disciplina_id;
+
+                let discObj = null;
+                for (const ed of (editais.value || [])) {
+                    const found = (ed.disciplinas || []).find(d => Number(d.id) === Number(discAlvoId));
+                    if (found) {
+                        discObj = found;
+                        break;
+                    }
+                }
+
+                const topicoPrevisto = isRevisaoAnki
+                    ? topicoAnki
+                    : (getProximoTopicoTrilha(discAlvoId) || blocoClicado.proximo_topico || null);
+
+                const sessoesDisc = (sessoes.value || []).filter(s => Number(s.disciplina_id) === Number(discAlvoId));
+                const statsDisc = getEstatisticasDisciplina(discAlvoId);
+                const totalQuestoes = statsDisc.total_questoes || 0;
+                const totalAcertos = statsDisc.acertos || 0;
+                const totalErros = Math.max(0, totalQuestoes - totalAcertos);
+                const rendimentoPerc = Number((statsDisc.percentual_acerto || 0).toFixed(1));
+
+                const topicosLista = (discObj && Array.isArray(discObj.topicos)) ? discObj.topicos : [];
+                const topicosTotal = topicosLista.length;
+                const topicosVistosSet = new Set(
+                    sessoesDisc
+                        .filter(s => s.topico_id !== null && s.topico_id !== undefined)
+                        .map(s => Number(s.topico_id))
+                );
+                const topicosVistos = topicosVistosSet.size;
+                const topicosFaltam = Math.max(0, topicosTotal - topicosVistos);
+                const coberturaPerc = topicosTotal > 0 ? Number(((topicosVistos / topicosTotal) * 100).toFixed(1)) : 0;
+                const p1Faltam = topicosLista.filter(t => Number(t.prioridade) === 1 && !topicosVistosSet.has(Number(t.id))).length;
+
+                const revisoesAnki = sessoesDisc.filter(s => Boolean(s.is_revisao_anki) || s.tipo === 'revisao').length;
+                const contagemPorTopico = {};
+                sessoesDisc.forEach(s => {
+                    if (!s.is_revisao_anki && s.topico_id !== null && s.topico_id !== undefined) {
+                        contagemPorTopico[s.topico_id] = (contagemPorTopico[s.topico_id] || 0) + 1;
+                    }
+                });
+                const revisoesTopico = Object.values(contagemPorTopico).reduce((acc, c) => acc + Math.max(0, c - 1), 0);
+                const totalRevisoes = revisoesAnki + revisoesTopico;
+
+                const minutosEstudados = sessoesDisc.reduce((acc, s) => acc + (Number(s.tempo_estudado_minutos) || 0), 0);
+                const horasEstudadasFmt = formatarHorasDecimais(minutosEstudados / 60);
+
+                let ultimoEstudoTexto = 'Nunca estudada';
+                let ultimaObservacao = '';
+                if (sessoesDisc.length > 0) {
+                    const ordenadas = [...sessoesDisc].sort((a, b) => {
+                        const da = String(a.data || '').slice(0, 10);
+                        const db = String(b.data || '').slice(0, 10);
+                        if (da !== db) return db.localeCompare(da);
+                        return (b.id || 0) - (a.id || 0);
+                    });
+                    const maisRecente = ordenadas[0];
+                    if (maisRecente && maisRecente.data) {
+                        const dataStr = String(maisRecente.data).slice(0, 10);
+                        const [ano, mes, dia] = dataStr.split('-');
+                        const hojeStr = getDataHojeLocal();
+                        const diffDias = Math.round((new Date(hojeStr + 'T00:00:00') - new Date(dataStr + 'T00:00:00')) / 86400000);
+                        const sufixo = diffDias <= 0 ? 'hoje' : (diffDias === 1 ? 'ontem' : `há ${diffDias} dias`);
+                        ultimoEstudoTexto = `${dia}/${mes}/${ano} (${sufixo})`;
+                    }
+                    const sessaoComObs = ordenadas.find(s => s.observacoes && String(s.observacoes).trim());
+                    if (sessaoComObs) ultimaObservacao = String(sessaoComObs.observacoes).trim();
+                }
+
+                previewBlocoFuturo.value = {
+                    blocoNumero: idx + 1,
+                    blocosRestantes: idx - currentIdx,
+                    duracaoMinutos: blocoClicado.duracao_minutos || 60,
+                    isRevisaoAnki,
+                    disciplinaNome: isRevisaoAnki
+                        ? (topicoAnki?.disciplina_nome || discObj?.nome || blocoClicado.disciplina?.nome || 'Revisão Anki')
+                        : (discObj?.nome || blocoClicado.disciplina?.nome || 'Disciplina'),
+                    grupoConhecimento: discObj?.grupo_conhecimento || blocoClicado.disciplina?.grupo_conhecimento || '',
+                    categoria: blocoClicado.disciplina?.categoria || discObj?.categoria || '',
+                    peso: discObj?.peso ?? blocoClicado.disciplina?.peso ?? null,
+                    dificuldade: discObj?.dificuldade ?? blocoClicado.disciplina?.dificuldade ?? null,
+                    topicoPrevisto,
+                    topicosTotal,
+                    topicosVistos,
+                    topicosFaltam,
+                    coberturaPerc,
+                    p1Faltam,
+                    totalQuestoes,
+                    totalAcertos,
+                    totalErros,
+                    rendimentoPerc,
+                    totalRevisoes,
+                    revisoesAnki,
+                    revisoesTopico,
+                    totalSessoes: sessoesDisc.length,
+                    horasEstudadasFmt,
+                    ultimoEstudoTexto,
+                    ultimaObservacao
+                };
+                modalPreviewBlocoAberto.value = true;
                 return;
             }
 
@@ -6956,6 +7059,8 @@ const app = createApp({
             modalCheckinAberto,
             modalResumoAberto,
             resumoSessaoAtual,
+            modalPreviewBlocoAberto,
+            previewBlocoFuturo,
             formSessao,
             observacaoSessaoExpandida,
             mostrarHistoricoObsModal,
